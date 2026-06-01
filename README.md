@@ -1,3 +1,33 @@
+---
+
+## 🪦 Archived — I Moved On (and That's Okay!)
+
+Hey there, traveler! 👋
+
+This repo is now **archived** — meaning it's read-only, frozen in time like a really cool fossil. 🦕
+
+I had an absolute blast building this thing. It was my first time ever touching **Quickshell**, and honestly? I learned *so much* — from QML quirks to wrangling IPC commands at 2am. If you poked around the code and thought "what was he thinking here?", the answer is probably "I have no idea, but it worked!" 😅
+
+### So... what happened?
+
+I switched to **Hyprland** 🏃, and Hyprland has native scrolling support built right in — so a lot of what I was hacking around in Niri no longer needed a custom shell to solve. It made more sense to move my energy there.
+
+### Is this usable?
+
+Honestly? **It might still work for you!** The code is all here, the README has the full setup guide, and nothing is going anywhere. Fork it, adapt it, learn from it — that's exactly what I did from the projects that inspired me. 🙏
+
+### Shoutouts before I go
+
+This whole thing wouldn't exist without [jutraim](https://github.com/jutraim/niri-caelestia-shell), [Caelestia](https://github.com/caelestia-dots/shell), and [end-4](https://github.com/end-4/dots-hyprland) — absolute legends. 🌟
+
+Thanks for starring, filing issues, and being curious. It meant a lot.
+
+*— Ayush, now somewhere in Hyprland-land* 🚀
+
+---
+
+
+
 <h1 align=center>🌌 Niri-Caelestia Shell</h1>
 
 <div align=center>
