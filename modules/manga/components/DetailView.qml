@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-import qs.config
+import Caelestia.Config
 import qs.services
 import "../../../components"
 import "../../../components/controls"
@@ -94,7 +94,7 @@ Item {
                     type: IconButton.Tonal
                     icon: detailView._inLibrary ? "done" : "add"
                     checked: detailView._inLibrary
-                    toggle: true
+                    isToggle: true
                     onClicked: {
                         if (detailView._inLibrary) {
                             Manga.removeFromLibrary(Manga.currentManga.id)

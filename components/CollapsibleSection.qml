@@ -1,5 +1,5 @@
 import qs.services
-import qs.config
+import Caelestia.Config
 import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts

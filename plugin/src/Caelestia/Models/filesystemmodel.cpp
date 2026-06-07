@@ -4,7 +4,83 @@
 #include <qfuturewatcher.h>
 #include <qtconcurrentrun.h>
 
-namespace caelestia {
+namespace caelestia::models {
+
+FileSystemEntry::FileSystemEntry(const QString& path, const QString& relativePath, QObject* parent)
+    : QObject(parent)
+    , m_fileInfo(path)
+    , m_path(path)
+    , m_relativePath(relativePath)
+    , m_isImageInitialised(false)
+    , m_mimeTypeInitialised(false) {}
+
+QString FileSystemEntry::path() const {
+    return m_path;
+};
+
+QString FileSystemEntry::relativePath() const {
+    return m_relativePath;
+};
+
+QString FileSystemEntry::name() const {
+    return m_fileInfo.fileName();
+};
+
+QString FileSystemEntry::baseName() const {
+    return m_fileInfo.baseName();
+};
+
+QString FileSystemEntry::parentDir() const {
+    return m_fileInfo.absolutePath();
+};
+
+QString FileSystemEntry::suffix() const {
+    return m_fileInfo.completeSuffix();
+};
+
+qint64 FileSystemEntry::size() const {
+    return m_fileInfo.size();
+};
+
+bool FileSystemEntry::isDir() const {
+    return m_fileInfo.isDir();
+};
+
+bool FileSystemEntry::isImage() const {
+    if (!m_isImageInitialised) {
+        QImageReader reader(m_path);
+        m_isImage = reader.canRead();
+        m_isImageInitialised = true;
+    }
+    return m_isImage;
+}
+
+QString FileSystemEntry::mimeType() const {
+    if (!m_mimeTypeInitialised) {
+        static const QMimeDatabase s_db;
+        m_mimeType = s_db.mimeTypeForFile(m_path).name();
+        m_mimeTypeInitialised = true;
+    }
+    return m_mimeType;
+}
+
+void FileSystemEntry::updateRelativePath(const QDir& dir) {
+    const auto relPath = dir.relativeFilePath(m_path);
+    if (m_relativePath != relPath) {
+        m_relativePath = relPath;
+        emit relativePathChanged();
+    }
+}
+
+FileSystemModel::FileSystemModel(QObject* parent)
+    : QAbstractListModel(parent)
+    , m_recursive(false)
+    , m_watchChanges(true)
+    , m_showHidden(false)
+    , m_filter(NoFilter) {
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &FileSystemModel::watchDirIfRecursive);
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &FileSystemModel::updateEntriesForDir);
+}
 
 int FileSystemModel::rowCount(const QModelIndex& parent) const {
     if (parent != QModelIndex()) {
@@ -37,6 +113,11 @@ void FileSystemModel::setPath(const QString& path) {
     emit pathChanged();
 
     m_dir.setPath(m_path);
+
+    for (const auto& entry : std::as_const(m_entries)) {
+        entry->updateRelativePath(m_dir);
+    }
+
     update();
 }
 
@@ -85,6 +166,21 @@ void FileSystemModel::setShowHidden(bool showHidden) {
     update();
 }
 
+bool FileSystemModel::sortReverse() const {
+    return m_sortReverse;
+}
+
+void FileSystemModel::setSortReverse(bool sortReverse) {
+    if (m_sortReverse == sortReverse) {
+        return;
+    }
+
+    m_sortReverse = sortReverse;
+    emit sortReverseChanged();
+
+    update();
+}
+
 FileSystemModel::Filter FileSystemModel::filter() const {
     return m_filter;
 }
@@ -100,41 +196,30 @@ void FileSystemModel::setFilter(Filter filter) {
     update();
 }
 
-int FileSystemModel::maxWatchDepth() const {
-    return m_maxWatchDepth;
+QStringList FileSystemModel::nameFilters() const {
+    return m_nameFilters;
 }
 
-void FileSystemModel::setMaxWatchDepth(int depth) {
-    if (m_maxWatchDepth == depth) return;
-    m_maxWatchDepth = depth;
-    emit maxWatchDepthChanged();
+void FileSystemModel::setNameFilters(const QStringList& nameFilters) {
+    if (m_nameFilters == nameFilters) {
+        return;
+    }
+
+    m_nameFilters = nameFilters;
+    emit nameFiltersChanged();
+
     update();
 }
 
-int FileSystemModel::maxWatchPaths() const {
-    return m_maxWatchPaths;
-}
-
-void FileSystemModel::setMaxWatchPaths(int paths) {
-    if (m_maxWatchPaths == paths) return;
-    m_maxWatchPaths = paths;
-    emit maxWatchPathsChanged();
-    update();
-}
-
-QList<FileSystemEntry*> FileSystemModel::entries() const {
-    return m_entries;
+QQmlListProperty<FileSystemEntry> FileSystemModel::entries() {
+    return QQmlListProperty<FileSystemEntry>(this, &m_entries);
 }
 
 void FileSystemModel::watchDirIfRecursive(const QString& path) {
     if (m_recursive && m_watchChanges) {
         const auto currentDir = m_dir;
         const bool showHidden = m_showHidden;
-        const int maxDepth = m_maxWatchDepth;
-        const int maxPaths = m_maxWatchPaths;
-        const QString basePath = m_path;
-        const int currentWatchCount = static_cast<int>(m_watcher.directories().size());
-        const auto future = QtConcurrent::run([showHidden, path, basePath, maxDepth, maxPaths, currentWatchCount]() {
+        auto future = QtConcurrent::run([showHidden, path]() {
             QDir::Filters filters = QDir::Dirs | QDir::NoDotAndDotDot;
             if (showHidden) {
                 filters |= QDir::Hidden;
@@ -142,31 +227,17 @@ void FileSystemModel::watchDirIfRecursive(const QString& path) {
 
             QDirIterator iter(path, filters, QDirIterator::Subdirectories);
             QStringList dirs;
-            int budget = maxPaths - currentWatchCount;
             while (iter.hasNext()) {
-                const QString dir = iter.next();
-                // Check depth relative to base path
-                const QString relative = dir.mid(basePath.size());
-                const int depth = static_cast<int>(relative.count('/'));
-                if (depth > maxDepth) continue;
-                if (budget-- <= 0) {
-                    qWarning() << "FileSystemModel: maxWatchPaths limit reached (" << maxPaths << "), skipping further watches";
-                    break;
-                }
-                dirs << dir;
+                dirs << iter.next();
             }
             return dirs;
         });
-        const auto watcher = new QFutureWatcher<QStringList>(this);
-        connect(watcher, &QFutureWatcher<QStringList>::finished, this, [currentDir, showHidden, watcher, this]() {
-            const auto paths = watcher->result();
+        future.then(this, [currentDir, showHidden, this](const QStringList& paths) {
             if (currentDir == m_dir && showHidden == m_showHidden && !paths.isEmpty()) {
                 // Ignore if dir or showHidden has changed
                 m_watcher.addPaths(paths);
             }
-            watcher->deleteLater();
         });
-        watcher->setFuture(future);
     }
 }
 
@@ -194,8 +265,8 @@ void FileSystemModel::updateEntries() {
             beginResetModel();
             qDeleteAll(m_entries);
             m_entries.clear();
-            emit entriesChanged();
             endResetModel();
+            emit entriesChanged();
         }
 
         return;
@@ -210,28 +281,26 @@ void FileSystemModel::updateEntries() {
 }
 
 void FileSystemModel::updateEntriesForDir(const QString& dir) {
-    const bool recursive = m_recursive;
-    const bool showHidden = m_showHidden;
+    const auto recursive = m_recursive;
+    const auto showHidden = m_showHidden;
     const auto filter = m_filter;
-    const auto oldEntries = m_entries;
-    const auto baseDir = m_dir;
+    const auto nameFilters = m_nameFilters;
 
-    const auto future = QtConcurrent::run([dir, recursive, showHidden, filter, oldEntries, baseDir](
-                                              QPromise<QPair<QSet<QString>, QSet<QString>>>& promise) {
+    QSet<QString> oldPaths;
+    for (const auto& entry : std::as_const(m_entries)) {
+        oldPaths << entry->path();
+    }
+
+    auto future = QtConcurrent::run([=](QPromise<QPair<QSet<QString>, QSet<QString>>>& promise) {
         const auto flags = recursive ? QDirIterator::Subdirectories : QDirIterator::NoIteratorFlags;
 
         std::optional<QDirIterator> iter;
 
-        if (filter == Images || filter == Videos || filter == ImagesAndVideos) {
-            QStringList nameFilters;
-            if (filter == Images || filter == ImagesAndVideos) {
-                for (const auto& format : QImageReader::supportedImageFormats()) {
-                    nameFilters << "*." + format;
-                }
-            }
-
-            if (filter == Videos || filter == ImagesAndVideos) {
-                nameFilters << "*.mp4" << "*.mkv" << "*.webm" << "*.mov" << "*.avi" << "*.m4v";
+        if (filter == Images) {
+            QStringList extraNameFilters = nameFilters;
+            const auto formats = QImageReader::supportedImageFormats();
+            for (const auto& format : formats) {
+                extraNameFilters << "*." + format;
             }
 
             QDir::Filters filters = QDir::Files;
@@ -239,7 +308,7 @@ void FileSystemModel::updateEntriesForDir(const QString& dir) {
                 filters |= QDir::Hidden;
             }
 
-            iter.emplace(dir, nameFilters, filters, flags);
+            iter.emplace(dir, extraNameFilters, filters, flags);
         } else {
             QDir::Filters filters;
 
@@ -255,11 +324,14 @@ void FileSystemModel::updateEntriesForDir(const QString& dir) {
                 filters |= QDir::Hidden;
             }
 
-            iter.emplace(dir, filters, flags);
+            if (nameFilters.isEmpty()) {
+                iter.emplace(dir, filters, flags);
+            } else {
+                iter.emplace(dir, nameFilters, filters, flags);
+            }
         }
 
         QSet<QString> newPaths;
-        const QMimeDatabase db;
         while (iter->hasNext()) {
             if (promise.isCanceled()) {
                 return;
@@ -272,26 +344,12 @@ void FileSystemModel::updateEntriesForDir(const QString& dir) {
                 if (!reader.canRead()) {
                     continue;
                 }
-            } else if (filter == Videos) {
-                if (!db.mimeTypeForFile(path).name().startsWith("video/")) {
-                    continue;
-                }
-            } else if (filter == ImagesAndVideos) {
-                QImageReader reader(path);
-                if (!reader.canRead() && !db.mimeTypeForFile(path).name().startsWith("video/")) {
-                    continue;
-                }
             }
 
             newPaths.insert(path);
         }
 
-        QSet<QString> oldPaths;
-        for (const auto& entry : oldEntries) {
-            oldPaths.insert(entry->path());
-        }
-
-        if (promise.isCanceled() || newPaths == oldPaths) {
+        if (promise.isCanceled()) {
             return;
         }
 
@@ -303,23 +361,17 @@ void FileSystemModel::updateEntriesForDir(const QString& dir) {
     }
     m_futures.insert(dir, future);
 
-    const auto watcher = new QFutureWatcher<QPair<QSet<QString>, QSet<QString>>>(this);
-
-    connect(watcher, &QFutureWatcher<QPair<QSet<QString>, QSet<QString>>>::finished, this, [dir, watcher, this]() {
-        m_futures.remove(dir);
-
-        if (!watcher->future().isResultReadyAt(0)) {
-            watcher->deleteLater();
-            return;
-        }
-
-        const auto result = watcher->result();
-        applyChanges(result.first, result.second);
-
-        watcher->deleteLater();
-    });
-
-    watcher->setFuture(future);
+    future
+        .then(this,
+            [dir, this](QPair<QSet<QString>, QSet<QString>> result) {
+                m_futures.remove(dir);
+                if (!result.first.isEmpty() || !result.second.isEmpty()) {
+                    applyChanges(result.first, result.second);
+                }
+            })
+        .onCanceled(this, [dir, this]() {
+            m_futures.remove(dir);
+        });
 }
 
 void FileSystemModel::applyChanges(const QSet<QString>& removedPaths, const QSet<QString>& addedPaths) {
@@ -331,9 +383,10 @@ void FileSystemModel::applyChanges(const QSet<QString>& removedPaths, const QSet
     }
     std::sort(removedIndices.begin(), removedIndices.end(), std::greater<int>());
 
+    // Batch remove old entries
     int start = -1;
     int end = -1;
-    for (int idx : removedIndices) {
+    for (int idx : std::as_const(removedIndices)) {
         if (start == -1) {
             start = idx;
             end = idx;
@@ -342,8 +395,7 @@ void FileSystemModel::applyChanges(const QSet<QString>& removedPaths, const QSet
         } else {
             beginRemoveRows(QModelIndex(), end, start);
             for (int i = start; i >= end; --i) {
-                emit removed(m_entries[i]->path());
-                delete m_entries.takeAt(i);
+                m_entries.takeAt(i)->deleteLater();
             }
             endRemoveRows();
 
@@ -354,53 +406,51 @@ void FileSystemModel::applyChanges(const QSet<QString>& removedPaths, const QSet
     if (start != -1) {
         beginRemoveRows(QModelIndex(), end, start);
         for (int i = start; i >= end; --i) {
-            emit removed(m_entries[i]->path());
-            delete m_entries.takeAt(i);
+            m_entries.takeAt(i)->deleteLater();
         }
         endRemoveRows();
     }
 
+    // Create new entries
     QList<FileSystemEntry*> newEntries;
     for (const auto& path : addedPaths) {
         newEntries << new FileSystemEntry(path, m_dir.relativeFilePath(path), this);
     }
-    std::sort(newEntries.begin(), newEntries.end(), &FileSystemModel::compareEntries);
+    std::sort(newEntries.begin(), newEntries.end(), [this](const FileSystemEntry* a, const FileSystemEntry* b) {
+        return compareEntries(a, b);
+    });
 
+    // Batch insert new entries
     int insertStart = -1;
-    int prevRow = -1;
     QList<FileSystemEntry*> batchItems;
-    for (const auto& entry : newEntries) {
-        const auto it = std::lower_bound(m_entries.begin(), m_entries.end(), entry, &FileSystemModel::compareEntries);
-        int row = static_cast<int>(it - m_entries.begin());
+    for (const auto& entry : std::as_const(newEntries)) {
+        const auto it = std::lower_bound(
+            m_entries.begin(), m_entries.end(), entry, [this](const FileSystemEntry* a, const FileSystemEntry* b) {
+                return compareEntries(a, b);
+            });
+        const auto row = static_cast<int>(it - m_entries.begin());
 
         if (insertStart == -1) {
             insertStart = row;
-            prevRow = row;
-            batchItems.clear();
             batchItems << entry;
-        } else if (row == prevRow + 1) {
-            prevRow = row;
+        } else if (row == insertStart + batchItems.size()) {
             batchItems << entry;
         } else {
-            beginInsertRows(QModelIndex(), insertStart, static_cast<int>(insertStart + batchItems.size() - 1));
+            beginInsertRows(QModelIndex(), insertStart, insertStart + static_cast<int>(batchItems.size()) - 1);
             for (int i = 0; i < batchItems.size(); ++i) {
                 m_entries.insert(insertStart + i, batchItems[i]);
-                emit added(batchItems[i]);
             }
             endInsertRows();
 
             insertStart = row;
-            prevRow = row;
             batchItems.clear();
             batchItems << entry;
         }
-        prevRow = static_cast<int>(m_entries.indexOf(entry));
     }
     if (!batchItems.isEmpty()) {
-        beginInsertRows(QModelIndex(), insertStart, static_cast<int>(insertStart + batchItems.size() - 1));
+        beginInsertRows(QModelIndex(), insertStart, insertStart + static_cast<int>(batchItems.size()) - 1);
         for (int i = 0; i < batchItems.size(); ++i) {
             m_entries.insert(insertStart + i, batchItems[i]);
-            emit added(batchItems[i]);
         }
         endInsertRows();
     }
@@ -408,11 +458,12 @@ void FileSystemModel::applyChanges(const QSet<QString>& removedPaths, const QSet
     emit entriesChanged();
 }
 
-bool FileSystemModel::compareEntries(const FileSystemEntry* a, const FileSystemEntry* b) {
+bool FileSystemModel::compareEntries(const FileSystemEntry* a, const FileSystemEntry* b) const {
     if (a->isDir() != b->isDir()) {
-        return a->isDir();
+        return m_sortReverse ^ a->isDir();
     }
-    return a->relativePath().localeAwareCompare(b->relativePath()) < 0;
+    const auto cmp = a->relativePath().localeAwareCompare(b->relativePath());
+    return m_sortReverse ? cmp > 0 : cmp < 0;
 }
 
-} // namespace caelestia
+} // namespace caelestia::models

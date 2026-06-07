@@ -1,86 +1,20 @@
 pragma ComponentBehavior: Bound
 
-import "items"
-import "services"
-import qs.components
-import qs.components.controls
-import qs.components.containers
-import qs.services
-import qs.config
-import Quickshell
-import Quickshell.Io
 import QtQuick
-import QtQuick.Controls
+import Quickshell
+import Caelestia.Config
+import qs.components
+import qs.components.containers
+import qs.components.controls
+import qs.services
+import qs.modules.launcher.items
+import qs.modules.launcher.services
 
 StyledListView {
     id: root
 
-    required property TextField search
-    required property PersistentProperties visibilities
-
-    // Debounce search text to avoid re-filtering on every keystroke
-    property string _debouncedText: search.text
-    Timer {
-        id: _searchDebounce
-        interval: 120
-        onTriggered: root._debouncedText = root.search.text
-    }
-    Connections {
-        target: root.search
-        function onTextChanged(): void {
-            // Immediate update for short strings (mode detection), debounce for actual search
-            if (root.search.text.length <= 1)
-                root._debouncedText = root.search.text;
-            else
-                _searchDebounce.restart();
-        }
-    }
-
-    // Clipboard data
-    ListModel { id: clipboardModel }
-
-    property var _clipFilteredValues: {
-        const query = _debouncedText.slice(`${Config.launcher.actionPrefix}clip `.length).toLowerCase();
-        let result = [];
-        for (let i = 0; i < clipboardModel.count; i++) {
-            const item = clipboardModel.get(i);
-            if (query === "" || item.entryText.toLowerCase().includes(query)) {
-                result.push({ entryId: item.entryId, entryText: item.entryText, isImage: item.isImage });
-            }
-        }
-        return result;
-    }
-
-    Process {
-        id: cliphistProc
-        command: ["cliphist", "list"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                clipboardModel.clear();
-                const lines = text.trim().split("\n");
-                for (const line of lines) {
-                    if (!line) continue;
-                    const parts = line.split("\t");
-                    clipboardModel.append({
-                        entryId: parts[0],
-                        entryText: parts.slice(1).join("\t"),
-                        isImage: line.includes("[[ binary data")
-                    });
-                }
-            }
-        }
-    }
-
-    function refreshClipboard(): void { cliphistProc.running = true; }
-
-    function removeClipEntry(entryId: string): void {
-        for (let i = 0; i < clipboardModel.count; i++) {
-            if (clipboardModel.get(i).entryId === entryId) {
-                clipboardModel.remove(i);
-                break;
-            }
-        }
-    }
+    required property StyledTextField search
+    required property DrawerVisibilities visibilities
 
     model: ScriptModel {
         id: model
@@ -88,28 +22,34 @@ StyledListView {
         onValuesChanged: root.currentIndex = 0
     }
 
-    spacing: Appearance.spacing.sm
+    spacing: Tokens.spacing.small
     orientation: Qt.Vertical
-    implicitHeight: {
-        if (state === "emoji")
-            return Math.min(Config.launcher.maxShown * Config.launcher.sizes.itemHeight, 400);
-        return (Config.launcher.sizes.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing;
-    }
+    implicitHeight: (Tokens.sizes.launcher.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
 
-    highlightMoveDuration: Appearance.anim.durations.normal
-    highlightResizeDuration: 0
+    preferredHighlightBegin: 0
+    preferredHighlightEnd: height
+    highlightRangeMode: ListView.ApplyRange
 
+    highlightFollowsCurrentItem: false
     highlight: StyledRect {
-        radius: Appearance.rounding.small
+        radius: Tokens.rounding.large
         color: Colours.palette.m3onSurface
         opacity: 0.08
+
+        y: root.currentItem?.y ?? 0
+        implicitWidth: root.width
+        implicitHeight: root.currentItem?.implicitHeight ?? 0
+
+        Behavior on y {
+            Anim {}
+        }
     }
 
     state: {
-        const text = _debouncedText;
-        const prefix = Config.launcher.actionPrefix;
+        const text = search.text;
+        const prefix = GlobalConfig.launcher.actionPrefix;
         if (text.startsWith(prefix)) {
-            for (const action of ["calc", "scheme", "variant", "clip", "emoji", "web"])
+            for (const action of ["calc", "scheme", "variant"])
                 if (text.startsWith(`${prefix}${action} `))
                     return action;
 
@@ -122,8 +62,6 @@ StyledListView {
     onStateChanged: {
         if (state === "scheme" || state === "variant")
             Schemes.reload();
-        if (state === "clip")
-            refreshClipboard();
     }
 
     states: [
@@ -131,7 +69,7 @@ StyledListView {
             name: "apps"
 
             PropertyChanges {
-                model.values: Apps.search(root._debouncedText)
+                model.values: Apps.search(search.text)
                 root.delegate: appItem
             }
         },
@@ -139,7 +77,7 @@ StyledListView {
             name: "actions"
 
             PropertyChanges {
-                model.values: Actions.query(root._debouncedText)
+                model.values: Actions.query(search.text)
                 root.delegate: actionItem
             }
         },
@@ -155,7 +93,7 @@ StyledListView {
             name: "scheme"
 
             PropertyChanges {
-                model.values: Schemes.query(root._debouncedText)
+                model.values: Schemes.query(search.text)
                 root.delegate: schemeItem
             }
         },
@@ -163,32 +101,8 @@ StyledListView {
             name: "variant"
 
             PropertyChanges {
-                model.values: M3Variants.query(root._debouncedText)
+                model.values: M3Variants.query(search.text)
                 root.delegate: variantItem
-            }
-        },
-        State {
-            name: "clip"
-
-            PropertyChanges {
-                model.values: root._clipFilteredValues
-                root.delegate: clipItem
-            }
-        },
-        State {
-            name: "emoji"
-
-            PropertyChanges {
-                model.values: [0]
-                root.delegate: emojiItem
-            }
-        },
-        State {
-            name: "web"
-
-            PropertyChanges {
-                model.values: [0]
-                root.delegate: webItem
             }
         }
     ]
@@ -201,16 +115,16 @@ StyledListView {
                     property: "opacity"
                     from: 1
                     to: 0
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardAccel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardAccel
                 }
                 Anim {
                     target: root
                     property: "scale"
                     from: 1
                     to: 0.9
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardAccel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardAccel
                 }
             }
             PropertyAction {
@@ -223,16 +137,16 @@ StyledListView {
                     property: "opacity"
                     from: 0
                     to: 1
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardDecel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardDecel
                 }
                 Anim {
                     target: root
                     property: "scale"
                     from: 0.9
                     to: 1
-                    duration: Appearance.anim.durations.small
-                    easing.bezierCurve: Appearance.anim.curves.standardDecel
+                    duration: Tokens.anim.durations.small
+                    easing: Tokens.anim.standardDecel
                 }
             }
             PropertyAction {
@@ -243,13 +157,16 @@ StyledListView {
         }
     }
 
-    ScrollBar.vertical: StyledScrollBar {}
+    StyledScrollBar.vertical: StyledScrollBar {
+        flickable: root
+    }
 
     add: Transition {
         enabled: !root.state
 
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             from: 0
             to: 1
         }
@@ -259,7 +176,8 @@ StyledListView {
         enabled: !root.state
 
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             from: 1
             to: 0
         }
@@ -270,7 +188,8 @@ StyledListView {
             property: "y"
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -278,10 +197,11 @@ StyledListView {
     addDisplaced: Transition {
         Anim {
             property: "y"
-            duration: Appearance.anim.durations.small
+            type: Anim.StandardSmall
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -291,7 +211,8 @@ StyledListView {
             property: "y"
         }
         Anim {
-            properties: "opacity,scale"
+            type: Anim.DefaultEffects
+            property: "opacity"
             to: 1
         }
     }
@@ -332,31 +253,6 @@ StyledListView {
         id: variantItem
 
         VariantItem {
-            list: root
-        }
-    }
-
-    Component {
-        id: clipItem
-
-        ClipItem {
-            list: root
-        }
-    }
-
-    Component {
-        id: emojiItem
-
-        EmojiList {
-            search: root.search
-            visibilities: root.visibilities
-        }
-    }
-
-    Component {
-        id: webItem
-
-        WebItem {
             list: root
         }
     }

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import qs.components
 import qs.components.containers
 import qs.services
-import qs.config
+import Caelestia.Config
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
@@ -65,7 +65,7 @@ Loader {
                 active: Config.background.desktopClock.enabled && behindClock.isFocusedScreen
 
                 anchors.margins: Appearance.padding.xl * 2
-                anchors.leftMargin: Appearance.padding.xl * 2 + Config.bar.sizes.innerWidth + Math.max(Appearance.padding.sm, Config.border.thickness)
+                anchors.leftMargin: Appearance.padding.xl * 2 + Tokens.sizes.bar.innerWidth + Math.max(Appearance.padding.sm, Config.border.thickness)
 
                 state: Config.background.desktopClock.position
                 states: [

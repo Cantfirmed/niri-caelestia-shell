@@ -1,28 +1,30 @@
 pragma Singleton
 
-import qs.config
-import qs.utils
 import Quickshell
-import QtQuick
+import Caelestia
+import Caelestia.Config
+import qs.utils
 
 Searcher {
     id: root
 
     function launch(entry: DesktopEntry): void {
+        appDb.incrementFrequency(entry.id);
+
         if (entry.runInTerminal)
             Quickshell.execDetached({
-                command: [...Config.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command],
+                command: ["app2unit", "--", ...GlobalConfig.general.apps.terminal, `${Quickshell.shellDir}/assets/wrap_term_launch.sh`, ...entry.command],
                 workingDirectory: entry.workingDirectory
             });
         else
             Quickshell.execDetached({
-                command: [...entry.command],
+                command: ["app2unit", "--", ...entry.command],
                 workingDirectory: entry.workingDirectory
             });
     }
 
     function search(search: string): list<var> {
-        const prefix = Config.launcher.specialPrefix;
+        const prefix = GlobalConfig.launcher.specialPrefix;
 
         if (search.startsWith(`${prefix}i `)) {
             keys = ["id", "name"];
@@ -31,13 +33,13 @@ Searcher {
             keys = ["categories", "name"];
             weights = [0.9, 0.1];
         } else if (search.startsWith(`${prefix}d `)) {
-            keys = ["desc", "name"];
+            keys = ["comment", "name"];
             weights = [0.9, 0.1];
         } else if (search.startsWith(`${prefix}e `)) {
             keys = ["execString", "name"];
             weights = [0.9, 0.1];
         } else if (search.startsWith(`${prefix}w `)) {
-            keys = ["wmClass", "name"];
+            keys = ["startupClass", "name"];
             weights = [0.9, 0.1];
         } else if (search.startsWith(`${prefix}g `)) {
             keys = ["genericName", "name"];
@@ -50,10 +52,10 @@ Searcher {
             weights = [1];
 
             if (!search.startsWith(`${prefix}t `))
-                return query(search).map(e => e.modelData);
+                return query(search).map(e => e.entry);
         }
 
-        const results = query(search.slice(prefix.length + 2)).map(e => e.modelData);
+        const results = query(search.slice(prefix.length + 2)).map(e => e.entry);
         if (search.startsWith(`${prefix}t `))
             return results.filter(a => a.runInTerminal);
         return results;
@@ -63,24 +65,14 @@ Searcher {
         return keys.map(k => item[k]).join(" ");
     }
 
-    list: variants.instances
-    useFuzzy: Config.launcher.useFuzzy.apps
+    list: appDb.apps
+    useFuzzy: GlobalConfig.launcher.useFuzzy.apps
 
-    Variants {
-        id: variants
+    AppDb {
+        id: appDb
 
-        model: [...DesktopEntries.applications.values].sort((a, b) => a.name.localeCompare(b.name))
-
-        QtObject {
-            required property DesktopEntry modelData
-            readonly property string id: modelData.id
-            readonly property string name: modelData.name
-            readonly property string desc: modelData.comment
-            readonly property string execString: modelData.execString
-            readonly property string wmClass: modelData.startupClass
-            readonly property string genericName: modelData.genericName
-            readonly property string categories: modelData.categories.join(" ")
-            readonly property string keywords: modelData.keywords.join(" ")
-        }
+        path: `${Paths.state}/apps.sqlite`
+        favouriteApps: GlobalConfig.launcher.favouriteApps
+        entries: DesktopEntries.applications.values.filter(a => !Strings.testRegexList(GlobalConfig.launcher.hiddenApps, a.id))
     }
 }

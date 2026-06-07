@@ -1,8 +1,7 @@
-import qs.components
-import qs.services
-import qs.config
 import QtQuick
 import QtQuick.Layouts
+import Caelestia.Config
+import qs.components
 
 ColumnLayout {
     id: root
@@ -10,22 +9,20 @@ ColumnLayout {
     required property string icon
     required property string title
 
-    spacing: Appearance.spacing.lg
+    spacing: Tokens.spacing.medium
     Layout.alignment: Qt.AlignHCenter
 
     MaterialIcon {
         Layout.alignment: Qt.AlignHCenter
         animate: true
         text: root.icon
-        font.pointSize: Appearance.font.size.headlineLarge * 3
-        font.bold: true
+        fontStyle: Tokens.font.icon.builders.extraLarge.scale(3).weight(Font.Bold).build()
     }
 
     StyledText {
         Layout.alignment: Qt.AlignHCenter
         animate: true
         text: root.title
-        font.pointSize: Appearance.font.size.titleMedium
-        font.bold: true
+        font: Tokens.font.title.builders.medium.weight(Font.Bold).build()
     }
 }

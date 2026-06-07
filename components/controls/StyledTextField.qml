@@ -1,19 +1,18 @@
 pragma ComponentBehavior: Bound
 
-import ".."
-import qs.services
-import qs.config
 import QtQuick
 import QtQuick.Controls
+import Caelestia.Config
+import qs.components
+import qs.services
 
 TextField {
     id: root
 
     color: Colours.palette.m3onSurface
     placeholderTextColor: Colours.palette.m3outline
-    font.family: Appearance.font.family.sans
-    font.pointSize: Appearance.font.size.bodySmall
-    renderType: Text.QtRendering
+    font: Tokens.font.body.small
+    renderType: echoMode === TextField.Password ? TextField.QtRendering : TextField.NativeRendering
     cursorVisible: !readOnly
 
     background: null
@@ -21,34 +20,48 @@ TextField {
     cursorDelegate: StyledRect {
         id: cursor
 
+        property bool disableBlink
+
         implicitWidth: 2
         color: Colours.palette.m3primary
-        radius: Appearance.rounding.normal
-        
-        // Hide immediately when focus is lost
-        opacity: root.activeFocus && root.cursorVisible ? 1 : 0
+        radius: Tokens.rounding.large
 
-        Timer {
-            // Only run blink timer when focused
-            running: root.activeFocus && root.cursorVisible
-            repeat: true
-            interval: 500
-            onTriggered: cursor.opacity = (cursor.opacity === 1 ? 0 : 1)
-            
-            // Ensure cursor is visible when starting focus or moving
-            onRunningChanged: if (running) cursor.opacity = 1
+        Connections {
+            function onCursorPositionChanged(): void {
+                if (root.activeFocus && root.cursorVisible) {
+                    cursor.opacity = 1;
+                    cursor.disableBlink = true;
+                    enableBlink.restart();
+                }
+            }
+
+            target: root
         }
 
-        // Reset visibility when typing or moving cursor
-        Connections {
-            target: root
-            function onCursorPositionChanged() {
-                if (root.activeFocus) cursor.opacity = 1
-            }
+        Timer {
+            id: enableBlink
+
+            interval: 100
+            onTriggered: cursor.disableBlink = false
+        }
+
+        Timer {
+            running: root.activeFocus && root.cursorVisible && !cursor.disableBlink
+            repeat: true
+            triggeredOnStart: true
+            interval: 500
+            onTriggered: parent.opacity = parent.opacity === 1 ? 0 : 1
+        }
+
+        Binding {
+            when: !root.activeFocus || !root.cursorVisible
+            cursor.opacity: 0
         }
 
         Behavior on opacity {
-            NumberAnimation { duration: 100 }
+            Anim {
+                type: Anim.StandardSmall
+            }
         }
     }
 

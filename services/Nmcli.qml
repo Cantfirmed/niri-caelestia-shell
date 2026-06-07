@@ -12,6 +12,7 @@ Singleton {
     property var wirelessInterfaces: []
     property var ethernetInterfaces: []
     property bool isConnected: false
+    readonly property bool connecting: wirelessInterfaces.some(i => isConnectingState(i.state))
     property string activeInterface: ""
     property string activeConnection: ""
     property bool wifiEnabled: true
@@ -164,6 +165,15 @@ Singleton {
         }
 
         return state === "100 (connected)" || state === "connected" || state.startsWith("connected");
+    }
+
+    function isConnectingState(state: string): bool {
+        return !!state && state.startsWith("connecting");
+    }
+
+    function connectingSsid(): string {
+        const iface = root.wirelessInterfaces.find(i => isConnectingState(i.state));
+        return iface ? iface.connection : "";
     }
 
     function executeCommand(args: list<string>, callback: var): void {
@@ -385,30 +395,19 @@ Singleton {
         }
         executeCommand(cmd, result => {
             if (result.needsPassword && callback) {
-                callback(result);
+                if (callback)
+                    callback(result);
                 return;
             }
 
-            if (!result.success) {
-                const shouldRetry = root.pendingConnection && retries < maxRetries;
-                if (shouldRetry) {
-                    console.warn(lc, "Connection failed, retrying... (attempt " + (retries + 1) + "/" + maxRetries + ")");
-                    Qt.callLater(() => {
-                        connectWireless(ssid, password, bssid, callback, retries + 1);
-                    }, 1000);
-                } else {
-                    if (root.pendingConnection) {
-                        root.pendingConnection = null;
-                    }
-                    root.connectionFailed(ssid);
-                    if (callback) {
-                        callback(result);
-                    }
-                }
-            } else {
-                if (callback) {
+            if (!result.success && root.pendingConnection && retries < maxRetries) {
+                console.warn(lc, "Connection failed, retrying... (attempt " + (retries + 1) + "/" + maxRetries + ")");
+                Qt.callLater(() => {
+                    connectWireless(ssid, password, bssid, callback, retries + 1);
+                }, 1000);
+            } else if (!result.success && root.pendingConnection) {} else if (result.success && callback) {} else if (!result.success && !root.pendingConnection) {
+                if (callback)
                     callback(result);
-                }
             }
         });
     }
@@ -1347,6 +1346,11 @@ Singleton {
                     }
 
                     const needsPassword = cmdIsConnection && root.detectPasswordRequired(error);
+
+                    if (!success && cmdIsConnection && root.pendingConnection) {
+                        const failedSsid = root.pendingConnection.ssid;
+                        root.connectionFailed(failedSsid);
+                    }
 
                     callbackCalled = true;
                     callback({

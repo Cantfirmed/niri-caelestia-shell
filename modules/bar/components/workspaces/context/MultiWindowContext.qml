@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
-import qs.config
+import Caelestia.Config
 
 Rectangle {
     id: root

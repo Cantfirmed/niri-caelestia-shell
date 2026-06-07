@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import qs.services
-import qs.config
+import Caelestia.Config
 import qs.components
 import QtQuick
 import QtQuick.Layouts
@@ -20,7 +20,7 @@ StyledRect {
     readonly property int focusedWindowId: Niri.focusedWindow?.id ?? -1
 
     implicitHeight: layout.implicitHeight + Appearance.padding.xs * 2
-    implicitWidth: Config.bar.sizes.innerWidth
+    implicitWidth: Tokens.sizes.bar.innerWidth
 
     color: Colours.tPalette.m3surfaceContainer
     radius: Appearance.rounding.full

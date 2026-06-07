@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.services
 import qs.components
-import qs.config
+import Caelestia.Config
 import QtQuick
 import QtQuick.Layouts
 
@@ -13,9 +13,9 @@ Item {
     property bool popupActive: (Niri.wsContextAnchor === root) || (Niri.wsContextAnchor === workspace) || (Niri.wsContextType === "workspaces")
 
     Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-    Layout.preferredHeight: Config.bar.sizes.innerWidth - Appearance.padding.xs * 2
+    Layout.preferredHeight: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
 
-    implicitWidth: Config.bar.sizes.innerWidth - Appearance.padding.xs * 2 + (popupActive ? Config.bar.workspaces.windowContextWidth : 0)
+    implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2 + (popupActive ? Config.bar.workspaces.windowContextWidth : 0)
     Behavior on implicitWidth {
         Anim {
             easing.bezierCurve: Appearance.anim.curves.emphasized
@@ -31,8 +31,8 @@ Item {
 
         Item {
             Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: Config.bar.sizes.innerWidth - Appearance.padding.xs * 2
-            Layout.preferredHeight: Config.bar.sizes.innerWidth - Appearance.padding.xs * 2
+            Layout.preferredWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
+            Layout.preferredHeight: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
 
             StyledText {
                 id: indicator

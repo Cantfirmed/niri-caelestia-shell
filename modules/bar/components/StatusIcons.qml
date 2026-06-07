@@ -1,14 +1,14 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.services
-import qs.utils
-import qs.config
+import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Services.UPower
-import QtQuick
-import QtQuick.Layouts
+import Caelestia.Config
+import qs.components
+import qs.services
+import qs.utils
 
 StyledRect {
     id: root
@@ -17,11 +17,11 @@ StyledRect {
     readonly property alias items: iconColumn
 
     color: Colours.tPalette.m3surfaceContainer
-    radius: Appearance.rounding.full
+    radius: Tokens.rounding.full
 
     clip: true
-    implicitWidth: Config.bar.sizes.innerWidth
-    implicitHeight: iconColumn.implicitHeight + Appearance.padding.md * 2 - (Config.bar.status.showLockStatus && !Niri.capsLock && !Niri.numLock ? iconColumn.spacing : 0)
+    implicitWidth: Tokens.sizes.bar.innerWidth
+    implicitHeight: iconColumn.implicitHeight + Tokens.padding.medium * 2 - (Config.bar.status.showLockStatus && !Hypr.capsLock && !Hypr.numLock ? iconColumn.spacing : 0)
 
     ColumnLayout {
         id: iconColumn
@@ -29,9 +29,9 @@ StyledRect {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Appearance.padding.md
+        anchors.bottomMargin: Tokens.padding.medium
 
-        spacing: Appearance.spacing.md / 2
+        spacing: Tokens.spacing.medium / 2
 
         // Lock keys status
         WrappedLoader {
@@ -43,21 +43,23 @@ StyledRect {
 
                 Item {
                     implicitWidth: capslockIcon.implicitWidth
-                    implicitHeight: Niri.capsLock ? capslockIcon.implicitHeight : 0
+                    implicitHeight: Hypr.capsLock ? capslockIcon.implicitHeight : 0
 
                     MaterialIcon {
                         id: capslockIcon
 
                         anchors.centerIn: parent
 
-                        scale: Niri.capsLock ? 1 : 0.5
-                        opacity: Niri.capsLock ? 1 : 0
+                        scale: Hypr.capsLock ? 1 : 0.5
+                        opacity: Hypr.capsLock ? 1 : 0
 
                         text: "keyboard_capslock_badge"
                         color: root.colour
 
                         Behavior on opacity {
-                            Anim {}
+                            Anim {
+                                type: Anim.DefaultEffects
+                            }
                         }
 
                         Behavior on scale {
@@ -71,24 +73,26 @@ StyledRect {
                 }
 
                 Item {
-                    Layout.topMargin: Niri.capsLock && Niri.numLock ? iconColumn.spacing : 0
+                    Layout.topMargin: Hypr.capsLock && Hypr.numLock ? iconColumn.spacing : 0
 
                     implicitWidth: numlockIcon.implicitWidth
-                    implicitHeight: Niri.numLock ? numlockIcon.implicitHeight : 0
+                    implicitHeight: Hypr.numLock ? numlockIcon.implicitHeight : 0
 
                     MaterialIcon {
                         id: numlockIcon
 
                         anchors.centerIn: parent
 
-                        scale: Niri.numLock ? 1 : 0.5
-                        opacity: Niri.numLock ? 1 : 0
+                        scale: Hypr.numLock ? 1 : 0.5
+                        opacity: Hypr.numLock ? 1 : 0
 
                         text: "looks_one"
                         color: root.colour
 
                         Behavior on opacity {
-                            Anim {}
+                            Anim {
+                                type: Anim.DefaultEffects
+                            }
                         }
 
                         Behavior on scale {
@@ -134,20 +138,32 @@ StyledRect {
 
             sourceComponent: StyledText {
                 animate: true
-                text: Niri.kbLayout
+                text: Hypr.kbLayout
                 color: root.colour
-                font.family: Appearance.font.family.mono
+                font: Tokens.font.mono.medium
             }
         }
 
         // Network icon
         WrappedLoader {
             name: "network"
-            active: Config.bar.status.showNetwork
+            active: Config.bar.status.showNetwork && (!Nmcli.activeEthernet || Config.bar.status.showWifi)
 
             sourceComponent: MaterialIcon {
                 animate: true
-                text: Network.active ? Icons.getNetworkIcon(Network.active.strength ?? 0) : "wifi_off"
+                text: Nmcli.active ? Icons.getNetworkIcon(Nmcli.active.strength ?? 0) : "wifi_off"
+                color: root.colour
+            }
+        }
+
+        // Ethernet icon
+        WrappedLoader {
+            name: "ethernet"
+            active: Config.bar.status.showNetwork && Nmcli.activeEthernet
+
+            sourceComponent: MaterialIcon {
+                animate: true
+                text: "cable"
                 color: root.colour
             }
         }
@@ -160,15 +176,15 @@ StyledRect {
             active: Config.bar.status.showBluetooth
 
             sourceComponent: ColumnLayout {
-                spacing: Appearance.spacing.md / 2
+                spacing: Tokens.spacing.medium / 2
 
                 // Bluetooth icon
                 MaterialIcon {
                     animate: true
                     text: {
-                        if (!Bluetooth.defaultAdapter?.enabled)
+                        if (!Bluetooth.defaultAdapter?.enabled) // qmllint disable unresolved-type
                             return "bluetooth_disabled";
-                        if (Bluetooth.devices.values.some(d => d.connected))
+                        if (Bluetooth.devices.values.some(d => d.connected)) // qmllint disable unresolved-type
                             return "bluetooth_connected";
                         return "bluetooth";
                     }
@@ -178,7 +194,7 @@ StyledRect {
                 // Connected bluetooth devices
                 Repeater {
                     model: ScriptModel {
-                        values: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected)
+                        values: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected) // qmllint disable unresolved-type
                     }
 
                     MaterialIcon {
@@ -187,26 +203,26 @@ StyledRect {
                         required property BluetoothDevice modelData
 
                         animate: true
-                        text: Icons.getBluetoothIcon(modelData.icon)
+                        text: Icons.getBluetoothIcon(modelData?.icon)
                         color: root.colour
                         fill: 1
 
                         SequentialAnimation on opacity {
-                            running: device.modelData.state !== BluetoothDeviceState.Connected
+                            running: device.modelData?.state !== BluetoothDeviceState.Connected // qmllint disable unresolved-type
                             alwaysRunToEnd: true
                             loops: Animation.Infinite
 
                             Anim {
                                 from: 1
                                 to: 0
-                                duration: Appearance.anim.durations.large
-                                easing.bezierCurve: Appearance.anim.curves.standardAccel
+                                duration: Tokens.anim.durations.large
+                                easing: Tokens.anim.standardAccel
                             }
                             Anim {
                                 from: 0
                                 to: 1
-                                duration: Appearance.anim.durations.large
-                                easing.bezierCurve: Appearance.anim.curves.standardDecel
+                                duration: Tokens.anim.durations.large
+                                easing: Tokens.anim.standardDecel
                             }
                         }
                     }
@@ -233,15 +249,7 @@ StyledRect {
                             return "rocket_launch";
                         return "balance";
                     }
-
-                    const perc = UPower.displayDevice.percentage;
-                    const charging = !UPower.onBattery;
-                    if (perc === 1)
-                        return charging ? "battery_charging_full" : "battery_full";
-                    let level = Math.floor(perc * 7);
-                    if (charging && (level === 4 || level === 1))
-                        level--;
-                    return charging ? `battery_charging_${(level + 3) * 10}` : `battery_${level}_bar`;
+                    return Icons.getBatteryIcon(UPower.displayDevice.percentage, [UPowerDeviceState.Charging, UPowerDeviceState.FullyCharged, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state));
                 }
                 color: !UPower.onBattery || UPower.displayDevice.percentage > 0.2 ? root.colour : Colours.palette.m3error
                 fill: 1
@@ -252,8 +260,8 @@ StyledRect {
     component WrappedLoader: Loader {
         required property string name
 
-        Layout.alignment: Qt.AlignHCenter
         asynchronous: true
+        Layout.alignment: Qt.AlignHCenter
         visible: active
     }
 }

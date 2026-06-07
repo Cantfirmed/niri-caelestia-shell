@@ -1,41 +1,56 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.config
-import Quickshell
-import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
+import Caelestia
+import Caelestia.Config
+import qs.components
+import qs.components.filedialog
 
 Item {
     id: root
 
-    required property PersistentProperties visibilities
-    required property PersistentProperties state
+    required property DrawerVisibilities visibilities
+    required property DashboardState dashState
+    required property FileDialog facePicker
+
+    readonly property var dashboardTabs: {
+        const allTabs = [
+            {
+                component: dashComponent,
+                iconName: "dashboard",
+                text: qsTr("Dashboard"),
+                enabled: Config.dashboard.showDashboard
+            },
+            {
+                component: mediaComponent,
+                iconName: "queue_music",
+                text: qsTr("Media"),
+                enabled: Config.dashboard.showMedia
+            },
+            {
+                component: performanceComponent,
+                iconName: "speed",
+                text: qsTr("Performance"),
+                enabled: Config.dashboard.showPerformance
+            },
+            {
+                component: weatherComponent,
+                iconName: "cloud",
+                text: qsTr("Weather"),
+                enabled: Config.dashboard.showWeather
+            }
+        ];
+        return allTabs.filter(tab => tab.enabled);
+    }
+
     readonly property real nonAnimWidth: view.implicitWidth + viewWrapper.anchors.margins * 2
+    readonly property real nonAnimHeight: tabs.implicitHeight + tabs.anchors.topMargin + view.implicitHeight + viewWrapper.anchors.margins * 2
 
     implicitWidth: nonAnimWidth
-    implicitHeight: tabs.implicitHeight + tabs.anchors.topMargin + column.implicitHeight + viewWrapper.anchors.margins * 2
-
-    focus: true
-
-    onVisibleChanged: {
-        if (visible)
-            forceActiveFocus();
-    }
-
-    Keys.onPressed: event => {
-        if (event.key === Qt.Key_H || (event.key === Qt.Key_Tab && event.modifiers & Qt.ControlModifier && event.modifiers & Qt.ShiftModifier)) {
-            root.state.currentTab = Math.max(root.state.currentTab - 1, 0);
-            event.accepted = true;
-        } else if (event.key === Qt.Key_L || (event.key === Qt.Key_Tab && event.modifiers & Qt.ControlModifier && !(event.modifiers & Qt.ShiftModifier))) {
-            root.state.currentTab = Math.min(root.state.currentTab + 1, tabs.count - 1);
-            event.accepted = true;
-        } else if (event.key === Qt.Key_Escape) {
-            root.visibilities.dashboard = false;
-            event.accepted = true;
-        }
-    }
+    implicitHeight: nonAnimHeight
 
     Tabs {
         id: tabs
@@ -43,11 +58,12 @@ Item {
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.topMargin: Appearance.padding.md
-        anchors.margins: Appearance.padding.xl
+        anchors.topMargin: CUtils.clamp(anchors.margins - Config.border.thickness, 0, anchors.margins)
+        anchors.margins: Tokens.padding.large
 
         nonAnimWidth: root.nonAnimWidth - anchors.margins * 2
-        state: root.state
+        dashState: root.dashState
+        tabs: root.dashboardTabs
     }
 
     ClippingRectangle {
@@ -57,120 +73,127 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.margins: Appearance.padding.xl
+        anchors.margins: Tokens.padding.large
 
-        radius: Appearance.rounding.normal
+        radius: Tokens.rounding.large
         color: "transparent"
 
-        ColumnLayout {
-            id: column
-            // anchors.fill: parent
+        Flickable {
+            id: view
 
-            Flickable {
-                id: view
+            readonly property int currentIndex: root.dashState.currentTab
+            readonly property Item currentItem: {
+                repeater.count; // Trigger update on count change
+                return repeater.itemAt(currentIndex);
+            }
 
-                readonly property int currentIndex: root.state.currentTab
-                readonly property Item currentItem: row.children[currentIndex]
+            anchors.fill: parent
 
-                // anchors.fill: parent
+            flickableDirection: Flickable.HorizontalFlick
 
-                flickableDirection: Flickable.HorizontalFlick
+            implicitWidth: currentItem?.implicitWidth ?? 0
+            implicitHeight: currentItem?.implicitHeight ?? 0
 
-                implicitWidth: currentItem.implicitWidth
-                implicitHeight: currentItem.implicitHeight
+            contentX: currentItem?.x ?? 0
+            contentWidth: row.implicitWidth
+            contentHeight: row.implicitHeight
 
-                contentX: currentItem.x
-                contentWidth: row.implicitWidth
-                contentHeight: row.implicitHeight
+            onContentXChanged: {
+                if (!moving || !currentItem)
+                    return;
 
-                onContentXChanged: {
-                    if (!moving)
-                        return;
+                const x = contentX - currentItem.x;
+                if (x > currentItem.implicitWidth / 2)
+                    root.dashState.currentTab = Math.min(root.dashState.currentTab + 1, tabs.count - 1);
+                else if (x < -currentItem.implicitWidth / 2)
+                    root.dashState.currentTab = Math.max(root.dashState.currentTab - 1, 0);
+            }
 
-                    const x = contentX - currentItem.x;
-                    if (x > currentItem.implicitWidth / 2)
-                        root.state.currentTab = Math.min(root.state.currentTab + 1, tabs.count - 1);
-                    else if (x < -currentItem.implicitWidth / 2)
-                        root.state.currentTab = Math.max(root.state.currentTab - 1, 0);
-                }
+            onDragEnded: {
+                if (!currentItem)
+                    return;
 
-                onDragEnded: {
-                    const x = contentX - currentItem.x;
-                    if (x > currentItem.implicitWidth / 10)
-                        root.state.currentTab = Math.min(root.state.currentTab + 1, tabs.count - 1);
-                    else if (x < -currentItem.implicitWidth / 10)
-                        root.state.currentTab = Math.max(root.state.currentTab - 1, 0);
-                    else
-                        contentX = Qt.binding(() => currentItem.x);
-                }
+                const x = contentX - currentItem.x;
+                if (x > currentItem.implicitWidth / 10)
+                    root.dashState.currentTab = Math.min(root.dashState.currentTab + 1, tabs.count - 1);
+                else if (x < -currentItem.implicitWidth / 10)
+                    root.dashState.currentTab = Math.max(root.dashState.currentTab - 1, 0);
+                else
+                    contentX = Qt.binding(() => currentItem?.x ?? 0);
+            }
 
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    hoverEnabled: true
-                    cursorShape: pressed || view.dragging ? Qt.ClosedHandCursor : Qt.ArrowCursor
-                    // Prevent this MouseArea from interfering with Flickable's own drag
-                    // propagateComposedEvents: true
-                    // onPressed: mouse => mouse.accepted = true
-                    // onReleased: mouse => mouse.accepted = false
-                    // onClicked: mouse => mouse.accepted = false
-                    // onDoubleClicked: mouse => mouse.accepted = false
-                    // onWheel: wheel => wheel.accepted = false
-                }
+            RowLayout {
+                id: row
 
-                RowLayout {
-                    id: row
+                Repeater {
+                    id: repeater
 
-                    Pane {
-                        sourceComponent: Dash {
-                            visibilities: root.visibilities
-                            state: root.state
-                        }
+                    model: ScriptModel {
+                        values: root.dashboardTabs
                     }
 
-                    Pane {
-                        sourceComponent: Media {
-                            visibilities: root.visibilities
-                        }
-                    }
+                    delegate: Loader {
+                        id: paneLoader
 
-                    Pane {
-                        sourceComponent: Performance {}
-                    }
-                }
+                        required property int index
+                        required property var modelData
 
-                Behavior on contentX {
-                    Anim {}
+                        Layout.alignment: Qt.AlignTop
+
+                        sourceComponent: modelData.component
+
+                        Component.onCompleted: active = Qt.binding(() => {
+                            if (index === view.currentIndex)
+                                return true;
+                            const vx = Math.floor(view.visibleArea.xPosition * view.contentWidth);
+                            const vex = Math.floor(vx + view.visibleArea.widthRatio * view.contentWidth);
+                            return (vx >= x && vx <= x + implicitWidth) || (vex >= x && vex <= x + implicitWidth);
+                        })
+                    }
                 }
             }
 
+            Component {
+                id: dashComponent
 
+                Dash {
+                    visibilities: root.visibilities
+                    dashState: root.dashState
+                    facePicker: root.facePicker
+                }
+            }
+
+            Component {
+                id: mediaComponent
+
+                Media {
+                    visibilities: root.visibilities
+                }
+            }
+
+            Component {
+                id: performanceComponent
+
+                Performance {}
+            }
+
+            Component {
+                id: weatherComponent
+
+                WeatherTab {}
+            }
+
+            Behavior on contentX {
+                Anim {}
+            }
         }
     }
 
     Behavior on implicitWidth {
-        Anim {
-            duration: Appearance.anim.durations.large
-            easing.bezierCurve: Appearance.anim.curves.emphasized
-        }
+        Anim {}
     }
 
     Behavior on implicitHeight {
-        Anim {
-            duration: Appearance.anim.durations.large
-            easing.bezierCurve: Appearance.anim.curves.emphasized
-        }
-    }
-
-    component Pane: Loader {
-        Layout.alignment: Qt.AlignTop
-
-        Component.onCompleted: active = Qt.binding(() => {
-            if (!root.visibilities.dashboard)
-                return false;
-            const vx = Math.floor(view.visibleArea.xPosition * view.contentWidth);
-            const vex = Math.floor(vx + view.visibleArea.widthRatio * view.contentWidth);
-            return (vx >= x && vx <= x + implicitWidth) || (vex >= x && vex <= x + implicitWidth);
-        })
+        Anim {}
     }
 }

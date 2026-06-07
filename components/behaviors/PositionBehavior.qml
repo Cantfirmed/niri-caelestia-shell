@@ -1,4 +1,4 @@
-import qs.config
+import Caelestia.Config
 import QtQuick
 
 // Reusable position animation behavior for x/y coordinates

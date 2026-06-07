@@ -1,6 +1,6 @@
 import qs.components
 import qs.services
-import qs.config
+import Caelestia.Config
 import QtQuick
 
 StyledRect {
@@ -20,9 +20,9 @@ StyledRect {
     color: Colours.palette.m3surfaceContainer
     radius: entered ? Appearance.rounding.small / 2 : Appearance.rounding.full
 
-    anchors.topMargin: entered ? -Appearance.padding.md : -Config.bar.sizes.innerWidth
+    anchors.topMargin: entered ? -Appearance.padding.md : -Tokens.sizes.bar.innerWidth
 
-    width: Config.bar.sizes.innerWidth - Appearance.spacing.sm
+    width: Tokens.sizes.bar.innerWidth - Appearance.spacing.sm
     height: minimap.height + Appearance.spacing.sm * 2
 
     Behavior on anchors.topMargin {

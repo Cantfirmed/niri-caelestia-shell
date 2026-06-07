@@ -2,12 +2,12 @@
 
 #include <QtConcurrent/qtconcurrentrun.h>
 #include <QtQuick/qquickitemgrabresult.h>
-#include <qcryptographichash.h>
-#include <qdir.h>
-#include <qfile.h>
 #include <qfuturewatcher.h>
 #include <qimage.h>
+#include <qloggingcategory.h>
 #include <qquickwindow.h>
+
+Q_LOGGING_CATEGORY(lcImageAnalyser, "caelestia.imageanalyser", QtInfoMsg)
 
 namespace caelestia {
 
@@ -104,9 +104,8 @@ void ImageAnalyser::requestUpdate() {
         return;
     }
 
-    if (!m_sourceItem ||
-        (m_sourceItem->window() && m_sourceItem->window()->isVisible() && m_sourceItem->width() > 0 &&
-                            m_sourceItem->height() > 0)) {
+    if (!m_sourceItem || (m_sourceItem->window() && m_sourceItem->window()->isVisible() && m_sourceItem->width() > 0 &&
+                             m_sourceItem->height() > 0)) {
         update();
     } else if (m_sourceItem) {
         if (!m_sourceItem->window()) {
@@ -138,25 +137,17 @@ void ImageAnalyser::update() {
 
     if (m_sourceItem) {
         const QSharedPointer<const QQuickItemGrabResult> grabResult = m_sourceItem->grabToImage();
+        if (!grabResult) {
+            QObject::connect(m_sourceItem, &QQuickItem::windowChanged, this, &ImageAnalyser::requestUpdate,
+                Qt::SingleShotConnection);
+            return;
+        }
         QObject::connect(grabResult.data(), &QQuickItemGrabResult::ready, this, [grabResult, this]() {
             m_futureWatcher->setFuture(QtConcurrent::run(&ImageAnalyser::analyse, grabResult->image(), m_rescaleSize));
         });
     } else {
-        QString actualSource = m_source;
-        if (m_source.endsWith(".mp4", Qt::CaseInsensitive) || m_source.endsWith(".mkv", Qt::CaseInsensitive) ||
-            m_source.endsWith(".webm", Qt::CaseInsensitive) || m_source.endsWith(".mov", Qt::CaseInsensitive) ||
-            m_source.endsWith(".avi", Qt::CaseInsensitive) || m_source.endsWith(".m4v", Qt::CaseInsensitive)) {
-            const QByteArray hash = QCryptographicHash::hash(m_source.toUtf8(), QCryptographicHash::Md5).toHex();
-            const QString home = QDir::homePath();
-            const QString cacheBase = qEnvironmentVariable("XDG_STATE_HOME", home + "/.local/state");
-            actualSource = cacheBase + "/caelestia/generated/video_frames/" + hash + ".png";
-        }
-
         m_futureWatcher->setFuture(QtConcurrent::run([=, this](QPromise<AnalyseResult>& promise) {
-            if (!QFile::exists(actualSource)) {
-                return;
-            }
-            const QImage image(actualSource);
+            const QImage image(m_source);
             analyse(promise, image, m_rescaleSize);
         }));
     }
@@ -164,7 +155,7 @@ void ImageAnalyser::update() {
 
 void ImageAnalyser::analyse(QPromise<AnalyseResult>& promise, const QImage& image, int rescaleSize) {
     if (image.isNull()) {
-        qWarning() << "ImageAnalyser::analyse: image is null";
+        qCWarning(lcImageAnalyser) << "analyse: image is null";
         return;
     }
 
@@ -208,14 +199,14 @@ void ImageAnalyser::analyse(QPromise<AnalyseResult>& promise, const QImage& imag
                 continue;
             }
 
-            const quint32 mr = static_cast<quint32>(pixel[0] & 0xF8);
+            const quint32 mr = static_cast<quint32>(pixel[2] & 0xF8);
             const quint32 mg = static_cast<quint32>(pixel[1] & 0xF8);
-            const quint32 mb = static_cast<quint32>(pixel[2] & 0xF8);
+            const quint32 mb = static_cast<quint32>(pixel[0] & 0xF8);
             ++colours[(mr << 16) | (mg << 8) | mb];
 
-            const qreal r = pixel[0] / 255.0;
+            const qreal r = pixel[2] / 255.0;
             const qreal g = pixel[1] / 255.0;
-            const qreal b = pixel[2] / 255.0;
+            const qreal b = pixel[0] / 255.0;
             totalLuminance += std::sqrt(0.299 * r * r + 0.587 * g * g + 0.114 * b * b);
             ++count;
         }
