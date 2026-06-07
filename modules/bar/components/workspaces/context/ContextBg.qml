@@ -22,7 +22,7 @@ Item {
 
     readonly property int rounding: Appearance.rounding.small
     readonly property int gPadding: isItem ? Appearance.padding.xs / 2 : 0
-    readonly property int cornerPieceSize: Config.bar.workspaces.windowIconSize + Appearance.padding.xs
+    readonly property int cornerPieceSize: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + Appearance.padding.xs
 
     property bool activated: false
     Component.onCompleted: root.activated = true
@@ -35,7 +35,7 @@ Item {
 
         color: root.bgColor
 
-        width: root.activated && Niri.wsContextAnchor ? Config.bar.workspaces.windowContextWidth + Config.bar.workspaces.windowIconSize : Config.bar.workspaces.windowIconSize
+        width: root.activated && Niri.wsContextAnchor ? Config.bar.workspaces.windowContextWidth + (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) : (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
         height: (root.anchorWs?.height ?? 0) + root.gPadding * 2
 
         x: 0
@@ -103,7 +103,7 @@ Item {
 
         anchors.margins: -Appearance.padding.xs
 
-        anchors.leftMargin: Config.bar.workspaces.windowIconSize
+        anchors.leftMargin: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
         topLeftRadius: 0
         bottomLeftRadius: 0
 
@@ -130,14 +130,14 @@ Item {
 
         Corner {
             cornerType: 2
-            anchors.leftMargin: Config.bar.workspaces.windowIconSize - 1
+            anchors.leftMargin: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - 1
             height: !(Niri.wsContextAnchor || root.activated) || root.isWorkspace ? 0 : root.cornerPieceSize
         }
         Corner {
             property bool lastWindow: (root.isItem && (root.anchorWs.curWindowIndex === root.anchorWs.wsWindowCount - 1))
 
             cornerType: 0
-            anchors.leftMargin: Config.bar.workspaces.windowIconSize - 1
+            anchors.leftMargin: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - 1
             height: !(Niri.wsContextAnchor || root.activated) || (root.isWorkspace || lastWindow) ? 0 : root.cornerPieceSize
         }
     }

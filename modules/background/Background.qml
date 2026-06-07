@@ -12,7 +12,7 @@ Loader {
     active: Config.background.enabled
 
     sourceComponent: Variants {
-        model: Quickshell.screens
+        model: Visibilities.activeScreens
 
         StyledWindow {
             id: win
@@ -20,6 +20,7 @@ Loader {
             required property var modelData
 
             screen: modelData
+            visible: Visibilities.hasPhysicalScreens
             name: "background"
             WlrLayershell.exclusionMode: ExclusionMode.Ignore
             WlrLayershell.layer: Config.background.wallpaperEnabled ? WlrLayer.Background : WlrLayer.Bottom

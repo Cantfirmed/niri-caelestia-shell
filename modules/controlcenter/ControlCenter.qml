@@ -28,7 +28,7 @@ Item {
     }
 
     implicitWidth: implicitHeight * Config.controlCenter.sizes.ratio
-    implicitHeight: screen.height * Config.controlCenter.sizes.heightMult
+    implicitHeight: (screen ? screen.height : 0) * Config.controlCenter.sizes.heightMult
 
     GridLayout {
         anchors.fill: parent

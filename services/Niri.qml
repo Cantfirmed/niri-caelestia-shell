@@ -78,6 +78,19 @@ Singleton {
         }
     }
 
+    Connections {
+        target: root.wsContextAnchor
+        ignoreUnknownSignals: true
+        function onDestroyed() {
+            root.wsContextAnchor = null;
+            Qt.callLater(() => {
+                if (root.wsContextAnchor === null) {
+                    root.wsContextType = "none";
+                }
+            });
+        }
+    }
+
     // --- Windows ---
     readonly property var windows: NiriIpc.windows
     readonly property int focusedWindowIndex: NiriIpc.focusedWindowIndex

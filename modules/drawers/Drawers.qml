@@ -11,7 +11,7 @@ import QtQuick
 import QtQuick.Effects
 
 Variants {
-    model: Quickshell.screens
+    model: Visibilities.activeScreens
 
     Scope {
         id: scope
@@ -27,9 +27,10 @@ Variants {
             id: win
 
             screen: scope.modelData
+            visible: Visibilities.hasPhysicalScreens
             name: "drawers"
             WlrLayershell.exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.keybinds || visibilities.editingWeatherLocation || visibilities.dashboard || visibilities.manga || visibilities.novel || panels.popouts.isDetached ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session || visibilities.keybinds || visibilities.editingWeatherLocation || visibilities.dashboard || visibilities.manga || visibilities.novel || visibilities.displaySelect || visibilities.soundPanel || panels.popouts.isDetached ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
             mask: Region {
                 x: bar.implicitWidth
@@ -56,8 +57,8 @@ Variants {
 
                     x: modelData.x + bar.implicitWidth
                     y: modelData.y + Config.border.thickness
-                    width: modelData.width
-                    height: modelData.height
+                    width: modelData.visible ? modelData.width : 0
+                    height: modelData.visible ? modelData.height : 0
                     intersection: Intersection.Subtract
                 }
             }
@@ -104,14 +105,25 @@ Variants {
                 property bool dashboard
                 property bool utilities
                 property bool clipboardRequested
+                property bool wallpaperRequested
                 property bool quicktoggles
                 property bool keybinds
                 property bool editingWeatherLocation
                 property bool notifsExpanded
                 property bool manga
                 property bool novel
-
-                Component.onCompleted: Visibilities.screens[scope.modelData.name] = this
+                property bool displaySelect
+                property bool soundPanel
+                property string _screenName: ""
+                Component.onCompleted: {
+                    _screenName = scope.modelData.name;
+                    Visibilities.screens[_screenName] = this;
+                }
+                Component.onDestruction: {
+                    if (_screenName) {
+                        delete Visibilities.screens[_screenName];
+                    }
+                }
             }
 
             Interactions {
@@ -139,7 +151,13 @@ Variants {
                     visibilities: visibilities
                     popouts: panels.popouts
 
-                    Component.onCompleted: Visibilities.bars.set(scope.modelData, this)
+                    property var _screen: scope.modelData
+                    Component.onCompleted: Visibilities.bars.set(_screen, this)
+                    Component.onDestruction: {
+                        if (_screen) {
+                            Visibilities.bars.delete(_screen);
+                        }
+                    }
                 }
             }
         }

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import qs.components.containers
+import qs.services
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -14,7 +15,7 @@ Scope {
         property string mode: "screenshot" // "screenshot", "ocr", "lens"
 
         Variants {
-            model: Quickshell.screens
+            model: Visibilities.activeScreens
 
             StyledWindow {
                 id: win
@@ -22,6 +23,7 @@ Scope {
                 required property ShellScreen modelData
 
                 screen: modelData
+                visible: Visibilities.hasPhysicalScreens
                 name: "area-picker"
                 WlrLayershell.exclusionMode: ExclusionMode.Ignore
                 WlrLayershell.layer: WlrLayer.Overlay

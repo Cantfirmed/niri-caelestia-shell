@@ -2,6 +2,7 @@ pragma Singleton
 
 import Quickshell
 import Quickshell.Io
+import QtQuick
 
 Singleton {
     id: root
@@ -17,8 +18,13 @@ Singleton {
     }
 
     Process {
+        id: idleProc
         running: root.enabled
         command: ["systemd-inhibit", "--what=idle", "--who=caelestia-shell", "--why=Idle inhibitor active", "--mode=block", "sleep", "inf"]
+    }
+
+    Component.onDestruction: {
+        idleProc.running = false;
     }
 
     IpcHandler {

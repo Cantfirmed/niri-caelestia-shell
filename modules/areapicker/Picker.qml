@@ -29,8 +29,8 @@ MouseArea {
 
     property real sx: 0
     property real sy: 0
-    property real ex: screen.width
-    property real ey: screen.height
+    property real ex: screen ? screen.width : 0
+    property real ey: screen ? screen.height : 0
 
     property real rsx: Math.min(sx, ex)
     property real rsy: Math.min(sy, ey)

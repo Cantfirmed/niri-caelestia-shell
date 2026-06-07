@@ -4,6 +4,7 @@ JsonObject {
     property bool enabled: true
     property int dragThreshold: 30
     property bool vimKeybinds: false
+    property string lidBehavior: "suspend"
     property Commands commands: Commands {}
 
     property Sizes sizes: Sizes {}
@@ -13,6 +14,7 @@ JsonObject {
         property list<string> shutdown: ["systemctl", "poweroff"]
         property list<string> hibernate: ["systemctl", "hibernate"]
         property list<string> reboot: ["systemctl", "reboot"]
+        property list<string> sleep: ["systemctl", "suspend"]
     }
 
     component Sizes: JsonObject {

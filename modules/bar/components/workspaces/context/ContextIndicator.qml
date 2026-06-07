@@ -19,7 +19,7 @@ Item {
     readonly property real padding: Appearance.padding.xs
     readonly property color bgColor: (Niri.wsContextType === "workspaces" && Niri.wsContextAnchor ? Colours.palette.m3surfaceContainer : Colours.palette.m3surfaceContainerHigh)
 
-    property real cornerPieceSize: Config.bar.workspaces.windowIconSize + padding
+    property real cornerPieceSize: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + padding
     property bool activated: false
 
     Component.onCompleted: root.activated = true

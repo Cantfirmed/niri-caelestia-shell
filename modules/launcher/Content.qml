@@ -256,6 +256,9 @@ Item {
                         if (root.visibilities.clipboardRequested) {
                             search.text = Config.launcher.actionPrefix + "clip ";
                             root.visibilities.clipboardRequested = false;
+                        } else if (root.visibilities.wallpaperRequested) {
+                            search.text = Config.launcher.actionPrefix + "wallpaper ";
+                            root.visibilities.wallpaperRequested = false;
                         }
                     } else {
                         search.text = "";

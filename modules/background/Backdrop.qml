@@ -11,13 +11,14 @@ import Quickshell.Wayland
 
 Variants {
     id: root
-    model: Quickshell.screens
+    model: Visibilities.activeScreens
 
     PanelWindow {
         id: backdropWindow
         required property var modelData
 
         screen: modelData
+        visible: Visibilities.hasPhysicalScreens
 
         WlrLayershell.layer: WlrLayer.Background
         WlrLayershell.namespace: "quickshell:Backdrop"
