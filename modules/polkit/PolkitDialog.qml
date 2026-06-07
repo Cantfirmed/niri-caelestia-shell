@@ -20,7 +20,7 @@ import Quickshell.Wayland
  */
 Variants {
     id: root
-    model: Quickshell.screens
+    model: Visibilities.activeScreens
 
     PanelWindow {
         id: win
@@ -41,7 +41,7 @@ Variants {
         color: "transparent"
 
         // ── Visible only when a polkit request is in flight ───────────────────
-        visible: PolkitService.active
+        visible: PolkitService.active && Visibilities.hasPhysicalScreens
 
         // ── Backdrop scrim ────────────────────────────────────────────────────
         Rectangle {

@@ -20,36 +20,36 @@ Column {
     spacing: Appearance.spacing.xxl
 
     SessionButton {
-        id: logout
+        id: shutdown
 
-        icon: "logout"
-        command: Config.session.commands.logout
+        icon: "power_settings_new"
+        command: Config.session.commands.shutdown
 
-        KeyNavigation.down: shutdown
+        KeyNavigation.down: sleep
 
         Connections {
             target: root.visibilities
 
             function onSessionChanged(): void {
                 if (root.visibilities.session)
-                    logout.focus = true;
+                    shutdown.focus = true;
             }
 
             function onLauncherChanged(): void {
                 if (root.visibilities.session && !root.visibilities.launcher)
-                    logout.focus = true;
+                    shutdown.focus = true;
             }
         }
     }
 
     SessionButton {
-        id: shutdown
+        id: sleep
 
-        icon: "power_settings_new"
-        command: Config.session.commands.shutdown
+        icon: "dark_mode"
+        command: Config.session.commands.sleep
 
-        KeyNavigation.up: logout
-        KeyNavigation.down: hibernate
+        KeyNavigation.up: shutdown
+        KeyNavigation.down: reboot
     }
 
     AnimatedImage {
@@ -64,15 +64,17 @@ Column {
         source: Paths.absolutePath(Config.paths.sessionGif)
     }
 
+    /* Commented out as hibernation is not configured on the system
     SessionButton {
         id: hibernate
 
         icon: "downloading"
         command: Config.session.commands.hibernate
 
-        KeyNavigation.up: shutdown
+        KeyNavigation.up: sleep
         KeyNavigation.down: reboot
     }
+    */
 
     SessionButton {
         id: reboot
@@ -80,7 +82,17 @@ Column {
         icon: "cached"
         command: Config.session.commands.reboot
 
-        KeyNavigation.up: hibernate
+        KeyNavigation.up: sleep
+        KeyNavigation.down: logout
+    }
+
+    SessionButton {
+        id: logout
+
+        icon: "logout"
+        command: Config.session.commands.logout
+
+        KeyNavigation.up: reboot
     }
 
     component SessionButton: StyledRect {
@@ -95,13 +107,16 @@ Column {
         radius: Appearance.rounding.large
         color: button.activeFocus ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
 
-        Keys.onEnterPressed: Quickshell.execDetached(button.command)
-        Keys.onReturnPressed: Quickshell.execDetached(button.command)
+        Keys.onEnterPressed: {
+            Quickshell.execDetached(button.command);
+            root.visibilities.session = false;
+        }
+        Keys.onReturnPressed: {
+            Quickshell.execDetached(button.command);
+            root.visibilities.session = false;
+        }
         Keys.onEscapePressed: root.visibilities.session = false
         Keys.onPressed: event => {
-            // ...existing code...
-                return;
-
             if (event.modifiers & Qt.ControlModifier) {
                 if (event.key === Qt.Key_J && KeyNavigation.down) {
                     KeyNavigation.down.focus = true;
@@ -127,6 +142,7 @@ Column {
 
             function onClicked(): void {
                 Quickshell.execDetached(button.command);
+                root.visibilities.session = false;
             }
         }
 

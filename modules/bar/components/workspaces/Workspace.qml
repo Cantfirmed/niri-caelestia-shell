@@ -23,14 +23,6 @@ ColumnLayout {
     readonly property bool isOccupied: occupied[ws] ?? false
     readonly property bool hasWindows: isOccupied && Config.bar.workspaces.showWindows
 
-    // To make the windows repopulate, for Niri.
-    // onGroupOffsetChanged: {
-    //     windows.active = false;
-    //     windows.active = true;
-    // }
-
-    // clip: true
-
     Behavior on scale {
         Anim {}
     }
@@ -48,7 +40,7 @@ ColumnLayout {
         workspace: root
     }
 
-    Loader {
+    SafeLoader {
         id: windows
 
         Layout.alignment: Qt.AlignCenter
@@ -56,8 +48,8 @@ ColumnLayout {
         Layout.topMargin: -Config.bar.sizes.innerWidth / 10
 
         visible: active
-        active: root.hasWindows
         asynchronous: true
+        activeState: root.hasWindows
 
         sourceComponent: DraggableWindowColumn {
             id: dragDropLayout

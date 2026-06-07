@@ -27,6 +27,9 @@ StyledRect {
 
     signal requestWindowPopout
 
+    property bool dying: false
+    Component.onDestruction: dying = true
+
     Connections {
         target: Niri
         function onWsContextTypeChanged() {
@@ -55,8 +58,8 @@ StyledRect {
     }
 
     Loader {
+        id: contextBgLoader
         // Right click on window context menu
-        active: Config.bar.workspaces.windowRighClickContext && Niri.wsContextType !== "none"
         asynchronous: true
 
         anchors.left: parent.left
@@ -69,6 +72,14 @@ StyledRect {
             wsOffset: root.y
             anchorWs: Niri.wsContextAnchor
         }
+    }
+
+    Binding {
+        target: contextBgLoader
+        property: "active"
+        value: Config.bar.workspaces.windowRighClickContext && Niri.wsContextType !== "none"
+        restoreMode: Binding.RestoreNone
+        when: !root.dying
     }
 
     //TODO, For Niri, workspace context menu on right click.

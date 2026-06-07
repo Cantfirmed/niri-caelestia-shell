@@ -10,6 +10,8 @@ import qs.modules.utilities.toasts as Toasts
 import qs.modules.quicktoggles as QuickToggles
 import qs.modules.manga as MangaModule
 import qs.modules.novel as NovelModule
+import qs.modules.displayselect as DisplaySelect
+import "../soundpanel" as SoundPanel
 import Quickshell
 import QtQuick
 
@@ -30,6 +32,8 @@ Item {
     readonly property QuickToggles.Wrapper quicktoggles: quicktoggles
     readonly property MangaModule.Wrapper manga: manga
     readonly property NovelModule.Wrapper novel: novel
+    readonly property DisplaySelect.Wrapper displayselect: displayselect
+    readonly property SoundPanel.Wrapper soundpanel: soundpanel
 
     anchors.fill: parent
     anchors.margins: Config.border.thickness
@@ -136,6 +140,20 @@ Item {
 
         anchors.bottom: parent.bottom
         anchors.right: parent.right
+    }
+
+    DisplaySelect.Wrapper {
+        id: displayselect
+
+        visibilities: root.visibilities
+
+        anchors.fill: parent
+    }
+
+    SoundPanel.Wrapper {
+        id: soundpanel
+
+        visibilities: root.visibilities
     }
 
     Toasts.Toasts {

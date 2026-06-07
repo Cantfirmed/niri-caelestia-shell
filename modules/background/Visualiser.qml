@@ -16,7 +16,7 @@ Item {
     required property Item wallpaper
 
     readonly property bool shouldBeActive: Config.background.visualiser.enabled && (!Config.background.visualiser.autoHide || Niri.getActiveWorkspaceWindows().length === 0)
-    property real offset: shouldBeActive ? 0 : screen.height * 0.2
+    property real offset: shouldBeActive ? 0 : (screen ? screen.height * 0.2 : 0)
 
     opacity: shouldBeActive ? 1 : 0
 
@@ -58,7 +58,10 @@ Item {
 
                     anchors.fill: parent
                     anchors.margins: Config.border.thickness
-                    anchors.leftMargin: Visibilities.bars.get(root.screen).exclusiveZone + Appearance.spacing.sm * Config.background.visualiser.spacing
+                    anchors.leftMargin: {
+                        const bar = Visibilities.bars.get(root.screen);
+                        return (bar ? bar.exclusiveZone : 0) + Appearance.spacing.sm * Config.background.visualiser.spacing;
+                    }
 
                     Side {
                         content: content

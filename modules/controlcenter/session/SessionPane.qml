@@ -12,6 +12,7 @@ import Quickshell
 import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 
 Item {
     id: root
@@ -22,6 +23,7 @@ Item {
     property bool vimKeybinds: Config.session.vimKeybinds ?? false
     property int dragThreshold: Config.session.dragThreshold ?? 30
     property int buttonSize: Config.session.sizes.button ?? 80
+    property string lidBehavior: Config.session.lidBehavior ?? "suspend"
 
     anchors.fill: parent
 
@@ -30,6 +32,7 @@ Item {
         Config.session.vimKeybinds = root.vimKeybinds;
         Config.session.dragThreshold = root.dragThreshold;
         Config.session.sizes.button = root.buttonSize;
+        Config.session.lidBehavior = root.lidBehavior;
         Config.markDirty("session");
     }
 
@@ -135,6 +138,50 @@ Item {
                                 root.dragThreshold = Math.round(newValue);
                                 root.saveConfig();
                             }
+                        }
+                    }
+                }
+
+                // Lid Close Behavior Section
+                SectionContainer {
+                    alignTop: true
+
+                    StyledText {
+                        text: qsTr("Lid Close Behavior")
+                        font.pointSize: Appearance.font.size.bodyMedium
+                    }
+
+                    ButtonGroup {
+                        id: lidBehaviorGroup
+                    }
+
+                    StyledRadioButton {
+                        ButtonGroup.group: lidBehaviorGroup
+                        text: qsTr("Suspend")
+                        checked: root.lidBehavior === "suspend"
+                        onClicked: {
+                            root.lidBehavior = "suspend";
+                            root.saveConfig();
+                        }
+                    }
+
+                    StyledRadioButton {
+                        ButtonGroup.group: lidBehaviorGroup
+                        text: qsTr("Ignore when external monitor is connected")
+                        checked: root.lidBehavior === "ignoreExternal"
+                        onClicked: {
+                            root.lidBehavior = "ignoreExternal";
+                            root.saveConfig();
+                        }
+                    }
+
+                    StyledRadioButton {
+                        ButtonGroup.group: lidBehaviorGroup
+                        text: qsTr("Always ignore (docked mode)")
+                        checked: root.lidBehavior === "ignore"
+                        onClicked: {
+                            root.lidBehavior = "ignore";
+                            root.saveConfig();
                         }
                     }
                 }

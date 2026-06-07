@@ -20,7 +20,8 @@ Singleton {
     property bool _ddcChecked: false
 
     function getMonitorForScreen(screen: ShellScreen): var {
-        return monitors.find(m => m.modelData === screen);
+        if (!screen) return null;
+        return monitors.find(m => m.modelData === screen) ?? null;
     }
 
     // Get the currently focused/active monitor name
@@ -86,7 +87,7 @@ Singleton {
     Variants {
         id: variants
 
-        model: Quickshell.screens
+        model: Visibilities.activeScreens
 
         Monitor {}
     }

@@ -12,7 +12,7 @@ from urllib.parse import quote
 
 try:
     from curl_cffi.requests import Session as CffiSession
-    _session = CffiSession(impersonate="firefox")
+    _session = CffiSession(impersonate="chrome110")
     _USE_CFFI = True
     print("[novel-utils] Using curl_cffi (Firefox impersonation)")
 except ImportError:
