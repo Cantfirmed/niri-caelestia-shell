@@ -19,7 +19,7 @@ class Toast : public QObject {
     Q_PROPERTY(int timeout READ timeout CONSTANT)
     Q_PROPERTY(Type type READ type CONSTANT)
 
-  public:
+public:
     enum class Type {
         Info = 0,
         Success,
@@ -42,11 +42,11 @@ class Toast : public QObject {
     Q_INVOKABLE void lock(QObject* sender);
     Q_INVOKABLE void unlock(QObject* sender);
 
-  signals:
+signals:
     void closedChanged();
     void finishedClose();
 
-  private:
+private:
     QSet<QObject*> m_locks;
 
     bool m_closed;
@@ -64,7 +64,7 @@ class Toaster : public QObject {
 
     Q_PROPERTY(QQmlListProperty<caelestia::Toast> toasts READ toasts NOTIFY toastsChanged)
 
-  public:
+public:
     explicit Toaster(QObject* parent = nullptr);
 
     [[nodiscard]] QQmlListProperty<Toast> toasts();
@@ -72,10 +72,10 @@ class Toaster : public QObject {
     Q_INVOKABLE void toast(const QString& title, const QString& message, const QString& icon = QString(),
         caelestia::Toast::Type type = Toast::Type::Info, int timeout = 5000);
 
-  signals:
+signals:
     void toastsChanged();
 
-  private:
+private:
     QList<Toast*> m_toasts;
 };
 

@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import qs.services
-import qs.config
+import Caelestia.Config
 import QtQuick
 import qs.components.effects
 import qs.components
@@ -19,7 +19,7 @@ Item {
     readonly property real padding: Appearance.padding.xs
     readonly property color bgColor: (Niri.wsContextType === "workspaces" && Niri.wsContextAnchor ? Colours.palette.m3surfaceContainer : Colours.palette.m3surfaceContainerHigh)
 
-    property real cornerPieceSize: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + padding
+    property real cornerPieceSize: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + padding
     property bool activated: false
 
     Component.onCompleted: root.activated = true
@@ -41,7 +41,7 @@ Item {
         }
 
         z: zOrder
-        width: root.activated && Niri.wsContextAnchor ? Config.bar.sizes.innerWidth - root.padding / 2 : 0
+        width: root.activated && Niri.wsContextAnchor ? Tokens.sizes.bar.innerWidth - root.padding / 2 : 0
         height: (root.anchorWs.height) + root.padding
         x: 0
         y: root.anchorWs?.mapToItem(root, 0, 0).y - root.padding / 2

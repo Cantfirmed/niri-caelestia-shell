@@ -1,38 +1,33 @@
+import QtQuick
+import Quickshell
+import Caelestia.Config
+import Caelestia.Models
 import qs.components
 import qs.components.effects
 import qs.components.images
 import qs.services
-import qs.config
-import Caelestia.Models
-import Quickshell
-import Quickshell.Widgets
-import QtQuick
-import QtQuick.Effects
 
 Item {
     id: root
 
     required property FileSystemEntry modelData
-    required property PersistentProperties visibilities
-
-    readonly property bool isVideo: Wallpapers.isPathVideo(modelData.path)
+    required property DrawerVisibilities visibilities
 
     scale: 0.5
     opacity: 0
-    z: PathView.z ?? 0
+    z: PathView.z ?? 0 // qmllint disable missing-property
 
     Component.onCompleted: {
         scale = Qt.binding(() => PathView.isCurrentItem ? 1 : PathView.onPath ? 0.8 : 0);
         opacity = Qt.binding(() => PathView.onPath ? 1 : 0);
     }
 
-    implicitWidth: image.width + Appearance.padding.lg * 2
-    implicitHeight: image.height + label.height + Appearance.spacing.sm / 2 + Appearance.padding.xl + Appearance.padding.md
+    implicitWidth: image.width + Tokens.padding.medium * 2
+    implicitHeight: image.height + label.height + Tokens.spacing.extraSmall + Tokens.padding.large + Tokens.padding.medium
 
     StateLayer {
-        radius: Appearance.rounding.normal
-
-        function onClicked(): void {
+        radius: Tokens.rounding.large
+        onClicked: {
             Wallpapers.setWallpaper(root.modelData.path);
             root.visibilities.launcher = false;
         }
@@ -45,7 +40,9 @@ Item {
         level: 4
 
         Behavior on opacity {
-            Anim {}
+            Anim {
+                type: Anim.DefaultEffects
+            }
         }
     }
 
@@ -53,44 +50,27 @@ Item {
         id: image
 
         anchors.horizontalCenter: parent.horizontalCenter
-        y: Appearance.padding.xl
+        y: Tokens.padding.large
         color: Colours.tPalette.m3surfaceContainer
-        radius: Appearance.rounding.normal
+        radius: Tokens.rounding.large
 
-        implicitWidth: Config.launcher.sizes.wallpaperWidth
+        implicitWidth: Tokens.sizes.launcher.wallpaperWidth
         implicitHeight: implicitWidth / 16 * 9
 
         MaterialIcon {
             anchors.centerIn: parent
-            text: root.isVideo ? "movie" : "image"
+            text: "image"
             color: Colours.tPalette.m3outline
-            font.pointSize: Appearance.font.size.headlineLarge * 2
-            font.weight: 600
+            fontStyle: Tokens.font.icon.builders.extraLarge.scale(2).weight(Font.DemiBold).build()
         }
 
         CachingImage {
-            path: Wallpapers.getColorSource(root.modelData.path)
-            smooth: !root.PathView.view.moving
-            sourceSize.width: image.implicitWidth * 2
-            sourceSize.height: image.implicitHeight * 2
-
             anchors.fill: parent
-        }
-
-        // Play symbol overlay for videos
-        MaterialIcon {
-            anchors.centerIn: parent
-            anchors.horizontalCenterOffset: font.pointSize * 0.1 // Adjust for play icon visual centering
-            text: "play_arrow"
-            color: "white"
-            font.pointSize: Appearance.font.size.headlineLarge * 2
-            visible: root.isVideo
-
-            layer.enabled: true
-            layer.effect: MultiEffect {
-                shadowEnabled: true
-                shadowColor: Qt.alpha("black", 0.5)
-                blurMax: 12
+            path: root.modelData.path
+            smooth: !root.PathView.view.moving
+            sourceSize: {
+                const dpr = (QsWindow.window as QsWindow)?.devicePixelRatio ?? 1;
+                return Qt.size(image.implicitWidth * dpr, image.implicitHeight * dpr);
             }
         }
     }
@@ -99,15 +79,15 @@ Item {
         id: label
 
         anchors.top: image.bottom
-        anchors.topMargin: Appearance.spacing.sm / 2
+        anchors.topMargin: Tokens.spacing.extraSmall
         anchors.horizontalCenter: parent.horizontalCenter
 
-        width: image.width - Appearance.padding.md * 2
+        width: image.width - Tokens.padding.medium * 2
         horizontalAlignment: Text.AlignHCenter
         elide: Text.ElideRight
         renderType: Text.QtRendering
         text: root.modelData.relativePath
-        font.pointSize: Appearance.font.size.bodyMedium
+        font: Tokens.font.label.medium
     }
 
     Behavior on scale {
@@ -115,6 +95,8 @@ Item {
     }
 
     Behavior on opacity {
-        Anim {}
+        Anim {
+            type: Anim.DefaultEffects
+        }
     }
 }

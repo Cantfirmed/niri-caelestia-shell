@@ -1,46 +1,55 @@
-import qs.components
-import qs.services
-import qs.config
 import "dash"
-import Quickshell
 import QtQuick.Layouts
+import Caelestia.Config
+import qs.components
+import qs.components.filedialog
+import qs.services
 
 GridLayout {
     id: root
 
-    required property PersistentProperties visibilities
-    required property PersistentProperties state
+    required property DrawerVisibilities visibilities
+    required property DashboardState dashState
+    required property FileDialog facePicker
 
-    rowSpacing: Appearance.spacing.lg
-    columnSpacing: Appearance.spacing.lg
+    rowSpacing: Tokens.spacing.medium
+    columnSpacing: Tokens.spacing.medium
 
     Rect {
         Layout.column: 2
         Layout.columnSpan: 3
-        Layout.preferredWidth: user.implicitWidth
-        Layout.preferredHeight: user.implicitHeight
+        Layout.preferredWidth: Tokens.sizes.dashboard.userWidth
+        Layout.fillHeight: true
+
+        radius: Tokens.rounding.extraLarge
 
         User {
             id: user
 
             visibilities: root.visibilities
-            state: root.state
+            facePicker: root.facePicker
         }
     }
 
     Rect {
         Layout.row: 0
         Layout.columnSpan: 2
-        Layout.preferredWidth: Config.dashboard.sizes.weatherWidth
-        Layout.fillHeight: true
+        Layout.preferredWidth: Tokens.sizes.dashboard.weatherWidth
+        Layout.preferredHeight: weather.implicitHeight
 
-        Weather {}
+        radius: Tokens.rounding.extraLarge * 1.5
+
+        SmallWeather {
+            id: weather
+        }
     }
 
     Rect {
         Layout.row: 1
         Layout.preferredWidth: dateTime.implicitWidth
         Layout.fillHeight: true
+
+        radius: Tokens.rounding.large
 
         DateTime {
             id: dateTime
@@ -54,10 +63,12 @@ GridLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: calendar.implicitHeight
 
+        radius: Tokens.rounding.extraLarge
+
         Calendar {
             id: calendar
 
-            state: root.state
+            dashState: root.dashState
         }
     }
 
@@ -66,6 +77,8 @@ GridLayout {
         Layout.column: 4
         Layout.preferredWidth: resources.implicitWidth
         Layout.fillHeight: true
+
+        radius: Tokens.rounding.large
 
         Resources {
             id: resources
@@ -79,13 +92,14 @@ GridLayout {
         Layout.preferredWidth: media.implicitWidth
         Layout.fillHeight: true
 
+        radius: Tokens.rounding.extraLarge * 2
+
         Media {
             id: media
         }
     }
 
     component Rect: StyledRect {
-        radius: Appearance.rounding.small
         color: Colours.tPalette.m3surfaceContainer
     }
 }

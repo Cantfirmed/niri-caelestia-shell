@@ -1,52 +1,65 @@
 pragma ComponentBehavior: Bound
 
+import QtQuick
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Wayland
+import Caelestia.Config
 import qs.components
 import qs.services
-import qs.config
-import qs.modules.controlcenter
-import Quickshell
-import Quickshell.Wayland
-import QtQuick
+import qs.modules.nexus
+import qs.modules.windowinfo
 
 Item {
     id: root
 
     required property ShellScreen screen
+    required property real offsetScale
 
-    readonly property real nonAnimWidth: x > 0 || hasCurrent ? children.find(c => c.shouldBeActive)?.implicitWidth ?? content.implicitWidth : 0
+    readonly property alias content: content
+    readonly property alias winfo: winfo
+    readonly property alias nexus: nexus
+
+    readonly property real nonAnimWidth: children.find(c => c.shouldBeActive)?.implicitWidth ?? content.implicitWidth
     readonly property real nonAnimHeight: children.find(c => c.shouldBeActive)?.implicitHeight ?? content.implicitHeight
+    readonly property Item current: (content.item as Content)?.current ?? null
+    readonly property bool isDetached: detachedMode.length > 0
 
-    property string currentName
+    property alias currentName: popoutState.currentName
+    property alias hasCurrent: popoutState.hasCurrent
     property real currentCenter
-    property bool hasCurrent
 
     property string detachedMode
     property string queuedMode
-    readonly property bool isDetached: detachedMode.length > 0
 
-    property int animLength: Appearance.anim.durations.normal
-    property list<real> animCurve: Appearance.anim.curves.emphasized
+    // Dummy object so Tokens attached prop resolves to global config
+    // Anim configs are not per-monitor
+    readonly property QtObject dummy: QtObject {}
+    property int animLength: dummy.Tokens.anim.durations.expressiveDefaultSpatial
+    property var animCurve: dummy.Tokens.anim.expressiveDefaultSpatial // The easingCurve type is Qt 6.11+ so we gotta use var for now
+
+    function setAnims(detach: bool): void {
+        const type = `expressive${detach ? "Slow" : "Default"}Spatial`;
+        animLength = dummy.Tokens.anim.durations[type];
+        animCurve = dummy.Tokens.anim[type];
+    }
 
     function detach(mode: string): void {
-        animLength = Appearance.anim.durations.large;
-        if (mode != "winfo") {
-            detachedMode = "any";
+        setAnims(true);
+        if (mode === "winfo") {
+            detachedMode = mode;
+        } else {
             queuedMode = mode;
+            detachedMode = "any";
         }
-        
+        setAnims(false);
         focus = true;
     }
 
     function close(): void {
         hasCurrent = false;
-        animCurve = Appearance.anim.curves.emphasizedAccel;
-        animLength = Appearance.anim.durations.normal;
         detachedMode = "";
-        animCurve = Appearance.anim.curves.emphasized;
     }
-
-    visible: width > 0 && height > 0
-    clip: true
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
@@ -55,7 +68,7 @@ Item {
     Keys.onEscapePressed: {
         // Forward escape to password popout if active, otherwise close
         if (currentName === "wirelesspassword" && content.item) {
-            const passwordPopout = content.item.children.find(c => c.name === "wirelesspassword");
+            const passwordPopout = (content.item as Content)?.children.find(c => c.name === "wirelesspassword");
             if (passwordPopout && passwordPopout.item) {
                 passwordPopout.item.closeDialog();
                 return;
@@ -71,7 +84,17 @@ Item {
         }
     }
 
-    // TODO: Implement focus grab for Niri when available
+    PopoutState {
+        id: popoutState
+
+        onDetachRequested: mode => root.detach(mode)
+    }
+
+    HyprlandFocusGrab {
+        active: root.isDetached
+        windows: [QsWindow.window]
+        onCleared: root.close()
+    }
 
     Binding {
         when: root.isDetached || (root.hasCurrent && root.currentName === "wirelesspassword")
@@ -85,67 +108,60 @@ Item {
         id: content
 
         shouldBeActive: root.hasCurrent && !root.detachedMode
-        asynchronous: true
-        anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.fill: parent
 
         sourceComponent: Content {
-            wrapper: root
+            popouts: popoutState
         }
     }
 
     Comp {
-        shouldBeActive: root.detachedMode === "any"
-        asynchronous: true
+        id: winfo
+
+        shouldBeActive: root.detachedMode === "winfo"
         anchors.centerIn: parent
 
-        sourceComponent: ControlCenter {
+        sourceComponent: WindowInfo {
             screen: root.screen
-            active: root.queuedMode
+            client: Hypr.activeToplevel
+        }
+    }
 
-            function close(): void {
-                root.close();
+    Comp {
+        id: nexus
+
+        shouldBeActive: root.detachedMode === "any"
+        anchors.centerIn: parent
+
+        sourceComponent: StyledClippingRect {
+            radius: Tokens.rounding.extraLarge
+            implicitWidth: nexusInner.implicitWidth
+            implicitHeight: nexusInner.implicitHeight
+
+            Nexus {
+                id: nexusInner
+
+                anchors.fill: parent
+                nState.screen: root.screen
+                nState.currentPageIdx: ["appearance", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
+                onClose: root.close()
             }
         }
-    }
-
-    property real animX: x
-    property real animY: y
-
-    Behavior on animX {
-        Anim {
-            duration: root.animLength
-            easing.bezierCurve: root.animCurve
-        }
-    }
-
-    Behavior on animY {
-        enabled: root.implicitWidth > 0
-
-        Anim {
-            duration: root.animLength
-            easing.bezierCurve: root.animCurve
-        }
-    }
-
-    transform: Translate {
-        x: root.animX - root.x
-        y: root.animY - root.y
     }
 
     Behavior on implicitWidth {
         Anim {
             duration: root.animLength
-            easing.bezierCurve: root.animCurve
+            easing: root.animCurve
         }
     }
 
     Behavior on implicitHeight {
-        enabled: root.implicitWidth > 0
+        enabled: root.offsetScale < 1
 
         Anim {
             duration: root.animLength
-            easing.bezierCurve: root.animCurve
+            easing: root.animCurve
         }
     }
 
@@ -154,10 +170,10 @@ Item {
 
         property bool shouldBeActive
 
-        asynchronous: true
         active: false
         opacity: 0
 
+        // Makes the loader load on the same frame shouldBeActive becomes true, which ensures size is set
         states: State {
             name: "active"
             when: comp.shouldBeActive
@@ -178,6 +194,7 @@ Item {
                         property: "active"
                     }
                     Anim {
+                        type: Anim.DefaultEffects
                         property: "opacity"
                     }
                 }
@@ -188,6 +205,7 @@ Item {
 
                 SequentialAnimation {
                     Anim {
+                        type: Anim.DefaultEffects
                         property: "opacity"
                     }
                     PropertyAction {
@@ -197,8 +215,4 @@ Item {
             }
         ]
     }
-    // for debug
-    // Component.onCompleted: {
-    // root.detach("winfo");
-    // }
 }

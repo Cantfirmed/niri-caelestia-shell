@@ -5,7 +5,7 @@ import QtQuick
 import Quickshell
 import Caelestia
 import Caelestia.Internal
-import qs.config
+import Caelestia.Config
 import qs.services
 import qs.utils
 

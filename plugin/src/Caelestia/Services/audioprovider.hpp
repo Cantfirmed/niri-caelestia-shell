@@ -1,11 +1,10 @@
 #pragma once
 
 #include "service.hpp"
-#include <cstdint>
 #include <qqmlintegration.h>
 #include <qtimer.h>
 
-namespace caelestia {
+namespace caelestia::services {
 
 class AudioProcessor : public QObject {
     Q_OBJECT
@@ -16,17 +15,15 @@ public:
 
     void init();
 
+public slots:
+    void start();
+    void stop();
+
 protected:
-    uint32_t m_sampleRate;
-    uint32_t m_chunkSize;
+    virtual void process() = 0;
 
 private:
-    QTimer* m_timer;
-
-    Q_INVOKABLE void start();
-    Q_INVOKABLE void stop();
-
-    virtual void process() = 0;
+    QTimer* m_timer = nullptr;
 };
 
 class AudioProvider : public Service {
@@ -48,4 +45,4 @@ private:
     void stop() override;
 };
 
-} // namespace caelestia
+} // namespace caelestia::services

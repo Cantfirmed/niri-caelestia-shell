@@ -6,7 +6,7 @@ import qs.components.containers
 import qs.components.effects
 import qs.components.widgets
 import qs.services
-import qs.config
+import Caelestia.Config
 import qs.utils
 import Quickshell
 import Quickshell.Bluetooth
@@ -156,7 +156,7 @@ Item {
                 Toggle {
                     icon: "settings"
                     inactiveOnColour: Colours.palette.m3onSurfaceVariant
-                    toggle: false
+                    isToggle: false
                     onClicked: {
                         root.visibilities.quicktoggles = false;
                         openControlCenter("network");
@@ -184,7 +184,7 @@ Item {
         Layout.preferredWidth: implicitWidth + (stateLayer.pressed ? Appearance.padding.xl : internalChecked ? Appearance.padding.sm : 0)
         radius: stateLayer.pressed ? Appearance.rounding.small / 2 : internalChecked ? Appearance.rounding.small : Appearance.rounding.normal
         inactiveColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
-        toggle: true
+        isToggle: true
         radiusAnim.duration: Appearance.anim.durations.expressiveFastSpatial
         radiusAnim.easing.bezierCurve: Appearance.anim.curves.expressiveFastSpatial
 

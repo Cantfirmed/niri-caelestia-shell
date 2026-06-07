@@ -1,35 +1,55 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Services.SystemTray
+import Caelestia.Config
 import qs.components
 import qs.services
-import qs.config
-import Quickshell.Services.SystemTray
-import QtQuick
 
 StyledRect {
     id: root
 
+    readonly property alias layout: layout
     readonly property alias items: items
+    readonly property alias expandIcon: expandIcon
+
+    readonly property int padding: Config.bar.tray.background ? Tokens.padding.medium : Tokens.padding.extraSmall
+    readonly property int spacing: Config.bar.tray.background ? Tokens.spacing.small : 0
+
+    property bool expanded
+
+    readonly property real nonAnimHeight: {
+        if (!Config.bar.tray.compact)
+            return layout.implicitHeight + padding * 2;
+        return (expanded ? expandIcon.implicitHeight + layout.implicitHeight + spacing : expandIcon.implicitHeight) + padding * 2;
+    }
 
     clip: true
-    visible: width > 0 && height > 0 // To avoid warnings about being visible with no size
+    visible: height > 0
 
-    implicitWidth: Config.bar.sizes.innerWidth
-    implicitHeight: layout.implicitHeight + (Config.bar.tray.background ? Appearance.padding.md : Appearance.padding.xs) * 2
+    implicitWidth: Tokens.sizes.bar.innerWidth
+    implicitHeight: nonAnimHeight
 
-    color: Qt.alpha(Colours.tPalette.m3surfaceContainer, Config.bar.tray.background ? Colours.tPalette.m3surfaceContainer.a : 0)
-    radius: Appearance.rounding.full
+    color: Qt.alpha(Colours.tPalette.m3surfaceContainer, (Config.bar.tray.background && items.count > 0) ? Colours.tPalette.m3surfaceContainer.a : 0)
+    radius: Tokens.rounding.full
 
     Column {
         id: layout
 
-        anchors.centerIn: parent
-        spacing: Appearance.spacing.sm
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: root.padding
+        spacing: Tokens.spacing.small
+
+        opacity: root.expanded || !Config.bar.tray.compact ? 1 : 0
 
         add: Transition {
             Anim {
                 properties: "scale"
                 from: 0
                 to: 1
-                easing.bezierCurve: Appearance.anim.curves.standardDecel
+                easing: Tokens.anim.standardDecel
             }
         }
 
@@ -37,7 +57,7 @@ StyledRect {
             Anim {
                 properties: "scale"
                 to: 1
-                easing.bezierCurve: Appearance.anim.curves.standardDecel
+                easing: Tokens.anim.standardDecel
             }
             Anim {
                 properties: "x,y"
@@ -47,20 +67,56 @@ StyledRect {
         Repeater {
             id: items
 
-            model: SystemTray.items
+            model: ScriptModel {
+                values: SystemTray.items.values.filter(i => !GlobalConfig.bar.tray.hiddenIcons.includes(i.id))
+            }
+
             TrayItem {}
+        }
+
+        Behavior on opacity {
+            Anim {
+                type: Anim.DefaultEffects
+            }
         }
     }
 
-    Behavior on implicitWidth {
-        Anim {
-            easing.bezierCurve: Appearance.anim.curves.emphasized
+    Loader {
+        id: expandIcon
+
+        asynchronous: true
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+
+        active: Config.bar.tray.compact && items.count > 0
+
+        sourceComponent: Item {
+            implicitWidth: expandIconInner.implicitWidth
+            implicitHeight: expandIconInner.implicitHeight - Tokens.padding.small
+
+            MaterialIcon {
+                id: expandIconInner
+
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: Config.bar.tray.background ? Tokens.padding.extraSmall : -Tokens.padding.extraSmall
+                text: "expand_less"
+                fontStyle: Tokens.font.icon.large
+                rotation: root.expanded ? 180 : 0
+
+                Behavior on rotation {
+                    Anim {}
+                }
+
+                Behavior on anchors.bottomMargin {
+                    Anim {}
+                }
+            }
         }
     }
 
     Behavior on implicitHeight {
-        Anim {
-            easing.bezierCurve: Appearance.anim.curves.emphasized
-        }
+        Anim {}
     }
 }

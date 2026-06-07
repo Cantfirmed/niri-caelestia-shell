@@ -1,27 +1,51 @@
-import qs.config
+import "cards"
 import QtQuick
+import QtQuick.Layouts
+import Caelestia.Config
+import qs.components
+import qs.modules.bar.popouts as BarPopouts
 
 Item {
     id: root
 
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
-    anchors.right: parent.right
+    required property var props
+    required property DrawerVisibilities visibilities
+    required property BarPopouts.Wrapper popouts
+    required property matrix4x4 deformMatrix
 
-    // implicitWidth: 300
-    // implicitHeight: 100
+    readonly property real nonAnimHeight: idleInhibit.nonAnimHeight + record.nonAnimHeight + toggles.implicitHeight + layout.spacing * 2
 
-    // Rectangle {
-    //     anchors.fill: parent
-    // }
+    implicitWidth: layout.implicitWidth
+    implicitHeight: layout.implicitHeight
 
-    Behavior on implicitHeight {
-        Anim {}
+    ColumnLayout {
+        id: layout
+
+        anchors.fill: parent
+        spacing: Tokens.spacing.medium
+
+        IdleInhibit {
+            id: idleInhibit
+        }
+
+        Record {
+            id: record
+
+            props: root.props
+            visibilities: root.visibilities
+            z: 1
+        }
+
+        Toggles {
+            id: toggles
+
+            visibilities: root.visibilities
+            popouts: root.popouts
+        }
     }
 
-    component Anim: NumberAnimation {
-        duration: Appearance.anim.durations.expressiveDefaultSpatial
-        easing.type: Easing.BezierSpline
-        easing.bezierCurve: Appearance.anim.curves.expressiveDefaultSpatial
+    RecordingDeleteModal {
+        props: root.props
+        deformMatrix: root.deformMatrix
     }
 }

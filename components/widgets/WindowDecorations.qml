@@ -4,7 +4,7 @@ import qs.services
 import qs.components.controls
 import QtQuick
 import QtQuick.Layouts
-import qs.config
+import Caelestia.Config
 
 // 3 Styled Radial buttons
 RowLayout {

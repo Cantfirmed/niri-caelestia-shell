@@ -1,8 +1,11 @@
 #include "appdb.hpp"
 
+#include <qloggingcategory.h>
 #include <qsqldatabase.h>
 #include <qsqlquery.h>
 #include <quuid.h>
+
+Q_LOGGING_CATEGORY(lcAppDb, "caelestia.appdb", QtInfoMsg)
 
 namespace caelestia {
 
@@ -11,7 +14,7 @@ AppEntry::AppEntry(QObject* entry, unsigned int frequency, QObject* parent)
     , m_entry(entry)
     , m_frequency(frequency) {
     const auto mo = m_entry->metaObject();
-    const auto tmo = metaObject();
+    const auto tmo = &AppEntry::staticMetaObject;
 
     for (const auto& prop :
         { "name", "comment", "execString", "startupClass", "genericName", "categories", "keywords" }) {
@@ -180,7 +183,7 @@ void AppDb::setFavouriteApps(const QStringList& favApps) {
         if (re.isValid()) {
             m_favouriteAppsRegex << re;
         } else {
-            qWarning() << "AppDb::setFavouriteApps: Regular expression is not valid: " << re.pattern();
+            qCWarning(lcAppDb) << "setFavouriteApps: regular expression is not valid:" << re.pattern();
         }
     }
 
@@ -213,26 +216,33 @@ void AppDb::incrementFrequency(const QString& id) {
     if (app) {
         const auto before = getSortedApps();
         app->incrementFrequency();
-
-        if (before != getSortedApps()) {
+        getSortedApps();
+        if (before != m_sortedApps) {
             emit appsChanged();
         }
     } else {
-        qWarning() << "AppDb::incrementFrequency: could not find app with id" << id;
+        qCWarning(lcAppDb) << "incrementFrequency: could not find app with id" << id;
     }
 }
 
 QList<AppEntry*>& AppDb::getSortedApps() const {
     m_sortedApps = m_apps.values();
-    std::sort(m_sortedApps.begin(), m_sortedApps.end(), [this](AppEntry* a, AppEntry* b) {
-        bool aIsFav = isFavourite(a);
-        bool bIsFav = isFavourite(b);
-        if (aIsFav != bIsFav) {
+
+    // Pre-compute favourite status to avoid repeated regex matching during sort
+    QSet<QString> favSet;
+    favSet.reserve(m_sortedApps.size());
+    for (const auto* app : std::as_const(m_sortedApps)) {
+        if (isFavourite(app))
+            favSet.insert(app->id());
+    }
+
+    std::sort(m_sortedApps.begin(), m_sortedApps.end(), [&favSet](AppEntry* a, AppEntry* b) {
+        const bool aIsFav = favSet.contains(a->id());
+        const bool bIsFav = favSet.contains(b->id());
+        if (aIsFav != bIsFav)
             return aIsFav;
-        }
-        if (a->frequency() != b->frequency()) {
+        if (a->frequency() != b->frequency())
             return a->frequency() > b->frequency();
-        }
         return a->name().localeAwareCompare(b->name()) < 0;
     });
     return m_sortedApps;
@@ -268,7 +278,8 @@ void AppDb::updateAppFrequencies() {
         app->setFrequency(getFrequency(app->id()));
     }
 
-    if (before != getSortedApps()) {
+    getSortedApps();
+    if (before != m_sortedApps) {
         emit appsChanged();
     }
 }
@@ -295,11 +306,13 @@ void AppDb::updateApps() {
         newIds.insert(entry->property("id").toString());
     }
 
-    for (auto it = m_apps.keyBegin(); it != m_apps.keyEnd(); ++it) {
-        const auto& id = *it;
-        if (!newIds.contains(id)) {
+    for (auto it = m_apps.begin(); it != m_apps.end();) {
+        if (!newIds.contains(it.key())) {
             dirty = true;
-            m_apps.take(id)->deleteLater();
+            it.value()->deleteLater();
+            it = m_apps.erase(it);
+        } else {
+            ++it;
         }
     }
 

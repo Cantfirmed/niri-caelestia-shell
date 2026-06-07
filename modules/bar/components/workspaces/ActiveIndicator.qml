@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 import qs.components
 import qs.components.effects
 import qs.services
-import qs.config
+import Caelestia.Config
 import QtQuick
 
 StyledRect {
@@ -45,7 +45,7 @@ StyledRect {
 
     clip: true
     y: offset + mask.y
-    implicitWidth: Config.bar.sizes.innerWidth - Appearance.padding.xs * 2
+    implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
     implicitHeight: size
     radius: Appearance.rounding.full
     color: Colours.palette.m3primary

@@ -1,20 +1,16 @@
+import QtQuick.Layouts
+import Caelestia.Config
 import qs.components
 import qs.services
-import qs.config
-import QtQuick
-import QtQuick.Layouts
 
-// Lock status display - uses Niri service for reactive state
 ColumnLayout {
-    id: root
-
-    spacing: Appearance.spacing.sm
+    spacing: Tokens.spacing.small
 
     StyledText {
-        text: qsTr("Capslock: %1").arg(Niri.capsLock ? "Enabled" : "Disabled")
+        text: qsTr("Capslock: %1").arg(Hypr.capsLock ? "Enabled" : "Disabled")
     }
 
     StyledText {
-        text: qsTr("Numlock: %1").arg(Niri.numLock ? "Enabled" : "Disabled")
+        text: qsTr("Numlock: %1").arg(Hypr.numLock ? "Enabled" : "Disabled")
     }
 }

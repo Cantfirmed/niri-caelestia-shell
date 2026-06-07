@@ -4,7 +4,7 @@
 #include <aubio/aubio.h>
 #include <qqmlintegration.h>
 
-namespace caelestia {
+namespace caelestia::services {
 
 class BeatProcessor : public AudioProcessor {
     Q_OBJECT
@@ -16,18 +16,18 @@ public:
 signals:
     void beat(smpl_t bpm);
 
+protected:
+    void process() override;
+
 private:
     aubio_tempo_t* m_tempo;
     fvec_t* m_in;
     fvec_t* m_out;
-
-    void process() override;
 };
 
 class BeatTracker : public AudioProvider {
     Q_OBJECT
     QML_ELEMENT
-    QML_SINGLETON
 
     Q_PROPERTY(smpl_t bpm READ bpm NOTIFY bpmChanged)
 
@@ -46,4 +46,4 @@ private:
     void updateBpm(smpl_t bpm);
 };
 
-} // namespace caelestia
+} // namespace caelestia::services

@@ -1,13 +1,17 @@
 qml_module(caelestia-internal
     URI Caelestia.Internal
     SOURCES
-        cachingimagemanager.hpp cachingimagemanager.cpp
-        circularindicatormanager.hpp circularindicatormanager.cpp
-        niriipc.hpp niriipc.cpp
-        nirisocket.hpp nirisocket.cpp
+        circularbuffer.cpp
+        circularindicatormanager.cpp
+        linearindicatormanager.cpp
+        hyprdevices.cpp
+        hyprextras.cpp
+        logindmanager.cpp
+        sparklineitem.cpp
+        visualiserbars.cpp
     LIBRARIES
         Qt::Gui
         Qt::Quick
-        Qt::Concurrent
         Qt::Network
+        Qt::DBus
 )

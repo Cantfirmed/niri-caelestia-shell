@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 import qs.components
 import qs.services
 import qs.utils
-import qs.config
+import Caelestia.Config
 import QtQuick
 import Quickshell.Widgets
 import "context"
@@ -81,8 +81,8 @@ Item {
         StyledRect {
             anchors.centerIn: parent
 
-            implicitHeight: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
-            implicitWidth: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
+            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
+            implicitWidth: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
             color: "transparent"
             radius: Appearance.rounding.small / 2
 
@@ -90,7 +90,7 @@ Item {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                implicitSize: (iconItem.isFocused && iconItem.isWsFocused) ? (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) : (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs
+                implicitSize: (iconItem.isFocused && iconItem.isWsFocused) ? (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs
                 source: Icons.getAppIcon(windowData.app_id ?? "", "image-missing")
                 Behavior on implicitSize {
                     Anim {
@@ -108,14 +108,14 @@ Item {
         StyledRect {
             anchors.centerIn: parent
 
-            implicitHeight: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
-            implicitWidth: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
+            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
+            implicitWidth: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
 
             MaterialIcon {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                font.pointSize: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs : (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs * 2
+                font.pointSize: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs * 2
                 grade: 0
                 text: Icons.getAppCategoryIcon(windowData.app_id, "help_center")
                 color: (iconItem.isWsFocused ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant)

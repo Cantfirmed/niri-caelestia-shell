@@ -1,10 +1,10 @@
 pragma ComponentBehavior: Bound
 
-import ".."
-import qs.services
-import qs.config
 import QtQuick
 import QtQuick.Effects
+import Caelestia.Config
+import qs.components
+import qs.services
 
 StyledRect {
     property alias innerRadius: maskInner.radius
@@ -17,7 +17,7 @@ StyledRect {
     anchors.fill: parent
     color: Colours.tPalette.m3surfaceContainer
 
-    layer.enabled: visible && width > 0 && height > 0
+    layer.enabled: true
     layer.effect: MultiEffect {
         maskSource: mask
         maskEnabled: true
@@ -30,15 +30,15 @@ StyledRect {
         id: mask
 
         anchors.fill: parent
-        layer.enabled: parent.layer.enabled
+        layer.enabled: true
         visible: false
 
         Rectangle {
             id: maskInner
 
             anchors.fill: parent
-            anchors.margins: Appearance.padding.md
-            radius: Appearance.rounding.small
+            anchors.margins: Tokens.padding.medium
+            radius: Tokens.rounding.large
         }
     }
 }

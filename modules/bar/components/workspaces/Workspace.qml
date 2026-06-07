@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.components
 // import qs.components.effects
-import qs.config
+import Caelestia.Config
 import QtQuick
 import QtQuick.Layouts
 
@@ -45,7 +45,7 @@ ColumnLayout {
 
         Layout.alignment: Qt.AlignCenter
         // Layout.fillHeight: true
-        Layout.topMargin: -Config.bar.sizes.innerWidth / 10
+        Layout.topMargin: -Tokens.sizes.bar.innerWidth / 10
 
         visible: active
         asynchronous: true

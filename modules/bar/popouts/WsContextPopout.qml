@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import qs.services
-import qs.config
+import Caelestia.Config
 import QtQuick
 
 Item {
@@ -15,8 +15,8 @@ Item {
         // For item context, check if anchor has wsWindowCount (WindowIcon) or use 1
         return anchorWs?.wsWindowCount ?? anchorWs?.windowCount ?? 1;
     }
-    readonly property real itemH: anchorWs ? (anchorWs.height + Config.bar.workspaces.windowIconGap * 2) : (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
-    readonly property real expandedW: Config.bar.workspaces.windowContextWidth - (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
+    readonly property real itemH: anchorWs ? (anchorWs.height + Config.bar.workspaces.windowIconGap * 2) : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
+    readonly property real expandedW: Config.bar.workspaces.windowContextWidth - (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
 
     implicitHeight: anchorWs ? ((itemH + Appearance.padding.xs) * anchorWsCount) : itemH - Appearance.padding.md
     implicitWidth: root.expandedW

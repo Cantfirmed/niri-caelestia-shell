@@ -1,4 +1,4 @@
-import qs.config
+import Caelestia.Config
 import QtQuick
 
 // Reusable size animation behavior for width/height/implicitWidth/implicitHeight

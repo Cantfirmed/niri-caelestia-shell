@@ -1,31 +1,24 @@
 #pragma once
 
-#include <qmutex.h>
 #include <qobject.h>
-namespace caelestia {
+#include <qset.h>
+
+namespace caelestia::services {
 
 class Service : public QObject {
     Q_OBJECT
 
-    Q_PROPERTY(int refCount READ refCount NOTIFY refCountChanged)
-
 public:
     explicit Service(QObject* parent = nullptr);
 
-    [[nodiscard]] int refCount();
-
-    void ref();
-    void unref();
-
-signals:
-    void refCountChanged();
+    void ref(QObject* sender);
+    void unref(QObject* sender);
 
 private:
-    int m_refCount;
-    QMutex m_mutex;
+    QSet<QObject*> m_refs;
 
     virtual void start() = 0;
     virtual void stop() = 0;
 };
 
-} // namespace caelestia
+} // namespace caelestia::services

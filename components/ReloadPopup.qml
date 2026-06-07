@@ -4,7 +4,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Wayland
 
-import qs.config
+import Caelestia.Config
 import qs.services
 
 Scope {

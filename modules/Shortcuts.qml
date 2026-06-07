@@ -1,65 +1,122 @@
-import qs.components.misc
-import qs.modules.controlcenter
-import qs.services
-import qs.config
-import Caelestia
+import QtQuick
 import Quickshell
 import Quickshell.Io
-import QtQuick
+import Caelestia
+import qs.components.misc
+import qs.services
+import qs.modules.nexus
 
 Scope {
     id: root
 
     property bool launcherInterrupted
+    readonly property bool hasFullscreen: false
 
-    readonly property bool hasExternalMonitor: {
-        const outputs = Niri.outputs;
-        if (!outputs) return false;
-        for (const connector in outputs) {
-            const lower = connector.toLowerCase();
-            if (!lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi")) {
-                return true;
-            }
-        }
-        return false;
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "nexus"
+        description: "Open nexus"
+        onPressed: WindowFactory.create()
     }
 
-    Connections {
-        target: Config
-
-        function onConfigSaved(): void {
-            if (Config.utilities.toasts.configLoaded)
-                Toaster.toast(qsTr("Config saved"), qsTr("Configuration saved successfully"), "rule_settings");
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "showall"
+        description: "Toggle launcher, dashboard and osd"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const v = Visibilities.getForActive();
+            v.launcher = v.dashboard = v.osd = v.utilities = !(v.launcher || v.dashboard || v.osd || v.utilities);
         }
+    }
 
-        function onConfigLoaded(elapsed: int): void {
-            if (Config.utilities.toasts.configLoaded)
-                Toaster.toast(qsTr("Config loaded"), qsTr("Config loaded in %1ms").arg(elapsed), "rule_settings");
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "dashboard"
+        description: "Toggle dashboard"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const visibilities = Visibilities.getForActive();
+            visibilities.dashboard = !visibilities.dashboard;
         }
+    }
 
-        function onConfigError(message: string): void {
-            Toaster.toast(qsTr("Config error"), message, "settings_alert", Toast.Error);
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "session"
+        description: "Toggle session menu"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const visibilities = Visibilities.getForActive();
+            visibilities.session = !visibilities.session;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "launcher"
+        description: "Toggle launcher"
+        onPressed: root.launcherInterrupted = false
+        onReleased: {
+            if (!root.launcherInterrupted && !root.hasFullscreen) {
+                const visibilities = Visibilities.getForActive();
+                visibilities.launcher = !visibilities.launcher;
+            }
+            root.launcherInterrupted = false;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "launcherInterrupt"
+        description: "Interrupt launcher keybind"
+        onPressed: root.launcherInterrupted = true
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "sidebar"
+        description: "Toggle sidebar"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const visibilities = Visibilities.getForActive();
+            visibilities.sidebar = !visibilities.sidebar;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "utilities"
+        description: "Toggle utilities"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const visibilities = Visibilities.getForActive();
+            visibilities.utilities = !visibilities.utilities;
         }
     }
 
     IpcHandler {
-        target: "drawers"
-
         function toggle(drawer: string): void {
-            if (drawer === "manga" && !Config.extra.manga) {
-                Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning)
-                return
-            }
-            if (drawer === "novel" && !Config.extra.novel) {
-                Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning)
-                return
-            }
-
             if (list().split("\n").includes(drawer)) {
+                if (root.hasFullscreen && ["launcher", "session", "dashboard"].includes(drawer))
+                    return;
                 const visibilities = Visibilities.getForActive();
                 visibilities[drawer] = !visibilities[drawer];
             } else {
-                console.warn(`[IPC] Drawer "${drawer}" does not exist`);
+                console.warn(lc, `Drawer "${drawer}" does not exist`);
             }
         }
 
@@ -67,19 +124,19 @@ Scope {
             const visibilities = Visibilities.getForActive();
             return Object.keys(visibilities).filter(k => typeof visibilities[k] === "boolean").join("\n");
         }
+
+        target: "drawers"
     }
 
     IpcHandler {
-        target: "controlCenter"
-
         function open(): void {
             WindowFactory.create();
         }
+
+        target: "nexus"
     }
 
     IpcHandler {
-        target: "toaster"
-
         function info(title: string, message: string, icon: string): void {
             Toaster.toast(title, message, icon, Toast.Info);
         }
@@ -95,6 +152,8 @@ Scope {
         function error(title: string, message: string, icon: string): void {
             Toaster.toast(title, message, icon, Toast.Error);
         }
+
+        target: "toaster"
     }
 
     IpcHandler {
@@ -131,7 +190,7 @@ Scope {
     IpcHandler {
         target: "mangaReader"
         function toggle(): void {
-            if (!Config.extra.manga) {
+            if (!GlobalConfig.extra.manga) {
                 Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning)
                 return
             }
@@ -143,7 +202,7 @@ Scope {
     IpcHandler {
         target: "novelReader"
         function toggle(): void {
-            if (!Config.extra.novel) {
+            if (!GlobalConfig.extra.novel) {
                 Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning)
                 return
             }
@@ -202,5 +261,25 @@ Scope {
             const visibilities = Visibilities.getForActive();
             if (visibilities) visibilities.soundPanel = !visibilities.soundPanel;
         }
+    }
+
+    // Helper property to check for external monitors
+    readonly property bool hasExternalMonitor: {
+        const outputs = Niri.outputs;
+        if (!outputs) return false;
+        for (const connector in outputs) {
+            const lower = connector.toLowerCase();
+            if (!lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    LoggingCategory {
+        id: lc
+
+        name: "caelestia.qml.shortcuts"
+        defaultLogLevel: LoggingCategory.Info
     }
 }

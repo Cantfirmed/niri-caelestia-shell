@@ -4,7 +4,7 @@ import qs.components
 import qs.components.controls
 import qs.components.containers
 import qs.services
-import qs.config
+import Caelestia.Config
 import Quickshell
 import Quickshell.Services.Pipewire
 import Quickshell.Widgets
@@ -236,7 +236,7 @@ Card {
                     IconButton {
                         icon: streamItem.modelData.audio.muted ? "volume_off" : "volume_up"
                         type: IconButton.Tonal
-                        toggle: true
+                        isToggle: true
                         checked: streamItem.modelData.audio.muted
                         onClicked: {
                             Audio.setStreamMuted(streamItem.modelData, !streamItem.modelData.audio.muted);
