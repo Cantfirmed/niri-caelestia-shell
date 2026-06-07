@@ -9,6 +9,8 @@ qml_module(caelestia-internal
         logindmanager.cpp
         sparklineitem.cpp
         visualiserbars.cpp
+        niriipc.cpp
+        nirisocket.cpp
     LIBRARIES
         Qt::Gui
         Qt::Quick
