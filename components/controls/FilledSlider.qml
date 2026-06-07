@@ -1,21 +1,22 @@
-import ".."
 import "../effects"
-import qs.services
-import qs.config
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Templates
+import Caelestia.Config
+import qs.components
+import qs.services
 
 Slider {
     id: root
 
     required property string icon
     property real oldValue
+    property bool initialized
 
     orientation: Qt.Vertical
 
     background: StyledRect {
-        color: Colours.tPalette.m3surfaceContainer
-        radius: Appearance.rounding.full
+        color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+        radius: Tokens.rounding.full
 
         StyledRect {
             anchors.left: parent.left
@@ -32,7 +33,7 @@ Slider {
     handle: Item {
         id: handle
 
-        property bool moving
+        property alias moving: icon.moving
 
         y: root.visualPosition * (root.availableHeight - height)
         implicitWidth: root.width
@@ -50,7 +51,7 @@ Slider {
             anchors.fill: parent
 
             color: Colours.palette.m3inverseSurface
-            radius: Appearance.rounding.full
+            radius: Tokens.rounding.full
 
             MouseArea {
                 id: handleInteraction
@@ -64,40 +65,30 @@ Slider {
             MaterialIcon {
                 id: icon
 
-                property bool moving: handle.moving
+                property bool moving
 
-                function update(): void {
-                    animate = !moving;
-                    text = moving ? Qt.binding(() => Math.round(root.value * 100)) : Qt.binding(() => root.icon);
-                    font.pointSize = moving ? Appearance.font.size.labelLarge : Appearance.font.size.bodyLarge;
-                    font.family = moving ? Appearance.font.family.sans : Appearance.font.family.material;
-                }
-
-                animate: true
-                text: root.icon
-                color: Colours.palette.m3inverseOnSurface
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: 1
+                text: moving ? Math.round(root.value * 100) : root.icon
+                color: Colours.palette.m3inverseOnSurface
+                font: moving ? Tokens.font.body.small : Tokens.font.icon.medium
 
                 Behavior on moving {
                     SequentialAnimation {
                         Anim {
                             target: icon
                             property: "scale"
-                            from: 1
-                            to: 0
-                            duration: Appearance.anim.durations.normal / 2
-                            easing.bezierCurve: Appearance.anim.curves.standardAccel
+                            to: 0.3
+                            duration: Tokens.anim.durations.small / 2
+                            easing: Tokens.anim.standardAccel
                         }
-                        ScriptAction {
-                            script: icon.update()
-                        }
+                        PropertyAction {}
                         Anim {
                             target: icon
                             property: "scale"
-                            from: 0
                             to: 1
-                            duration: Appearance.anim.durations.normal / 2
-                            easing.bezierCurve: Appearance.anim.curves.standardDecel
+                            duration: Tokens.anim.durations.normal / 2
+                            easing: Tokens.anim.standardDecel
                         }
                     }
                 }
@@ -108,6 +99,10 @@ Slider {
     onPressedChanged: handle.moving = pressed
 
     onValueChanged: {
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
         if (Math.abs(value - oldValue) < 0.01)
             return;
         oldValue = value;
@@ -127,7 +122,7 @@ Slider {
 
     Behavior on value {
         Anim {
-            duration: Appearance.anim.durations.large
+            type: Anim.StandardLarge
         }
     }
 }

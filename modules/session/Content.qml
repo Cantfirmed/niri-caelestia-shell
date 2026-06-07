@@ -1,127 +1,110 @@
 pragma ComponentBehavior: Bound
 
-import qs.components
-import qs.services
-import qs.config
-import qs.utils
-import Quickshell
 import QtQuick
+import Quickshell
+import Caelestia
+import Caelestia.Config
+import qs.components
+import qs.components.controls
+import qs.services
+import qs.utils
 
 Column {
     id: root
 
-    required property PersistentProperties visibilities
+    required property DrawerVisibilities visibilities
 
-    padding: Appearance.padding.xl
-
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.left: parent.left
-
-    spacing: Appearance.spacing.xxl
+    padding: Tokens.padding.large
+    rightPadding: CUtils.clamp(padding - Config.border.thickness, 0, padding)
+    spacing: Tokens.spacing.large
 
     SessionButton {
-        id: shutdown
+        id: logout
 
-        icon: "power_settings_new"
-        command: Config.session.commands.shutdown
+        icon: Config.session.icons.logout
+        command: Config.session.commands.logout
 
-        KeyNavigation.down: sleep
+        KeyNavigation.down: shutdown
+
+        Component.onCompleted: forceActiveFocus()
 
         Connections {
-            target: root.visibilities
-
-            function onSessionChanged(): void {
-                if (root.visibilities.session)
-                    shutdown.focus = true;
-            }
-
             function onLauncherChanged(): void {
-                if (root.visibilities.session && !root.visibilities.launcher)
-                    shutdown.focus = true;
+                if (!root.visibilities.launcher)
+                    logout.forceActiveFocus();
             }
+
+            target: root.visibilities
         }
     }
 
     SessionButton {
-        id: sleep
+        id: shutdown
 
-        icon: "dark_mode"
-        command: Config.session.commands.sleep
+        icon: Config.session.icons.shutdown
+        command: Config.session.commands.shutdown
+
+        KeyNavigation.up: logout
+        KeyNavigation.down: hibernate
+    }
+
+    AnimatedImage {
+        width: Tokens.sizes.session.button
+        height: Tokens.sizes.session.button
+        sourceSize.width: width * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1)
+
+        playing: visible
+        asynchronous: true
+        speed: Config.general.sessionGifSpeed
+        source: Paths.absolutePath(Config.paths.sessionGif)
+        fillMode: AnimatedImage.PreserveAspectFit
+    }
+
+    SessionButton {
+        id: hibernate
+
+        icon: Config.session.icons.hibernate
+        command: Config.session.commands.hibernate
 
         KeyNavigation.up: shutdown
         KeyNavigation.down: reboot
     }
 
-    AnimatedImage {
-        width: Config.session.sizes.button
-        height: Config.session.sizes.button
-        sourceSize.width: width
-        sourceSize.height: height
-
-        playing: visible
-        asynchronous: true
-        speed: 0.7
-        source: Paths.absolutePath(Config.paths.sessionGif)
-    }
-
-    /* Commented out as hibernation is not configured on the system
-    SessionButton {
-        id: hibernate
-
-        icon: "downloading"
-        command: Config.session.commands.hibernate
-
-        KeyNavigation.up: sleep
-        KeyNavigation.down: reboot
-    }
-    */
-
     SessionButton {
         id: reboot
 
-        icon: "cached"
+        icon: Config.session.icons.reboot
         command: Config.session.commands.reboot
 
-        KeyNavigation.up: sleep
-        KeyNavigation.down: logout
+        KeyNavigation.up: hibernate
     }
 
-    SessionButton {
-        id: logout
-
-        icon: "logout"
-        command: Config.session.commands.logout
-
-        KeyNavigation.up: reboot
-    }
-
-    component SessionButton: StyledRect {
+    component SessionButton: IconButton {
         id: button
 
-        required property string icon
         required property list<string> command
 
-        implicitWidth: Config.session.sizes.button
-        implicitHeight: Config.session.sizes.button
+        implicitWidth: Tokens.sizes.session.button
+        implicitHeight: Tokens.sizes.session.button
 
-        radius: Appearance.rounding.large
-        color: button.activeFocus ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
+        inactiveColour: activeFocus ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
+        inactiveOnColour: activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+        radius: pressed ? Tokens.rounding.medium : activeFocus ? Tokens.rounding.extraLarge : Tokens.rounding.largeIncreased
+        font: Tokens.font.icon.builders.large.scale(1.3).build()
+        onClicked: Quickshell.execDetached(button.command)
 
-        Keys.onEnterPressed: {
-            Quickshell.execDetached(button.command);
-            root.visibilities.session = false;
-        }
-        Keys.onReturnPressed: {
-            Quickshell.execDetached(button.command);
-            root.visibilities.session = false;
-        }
+        Keys.onEnterPressed: Quickshell.execDetached(button.command)
+        Keys.onReturnPressed: Quickshell.execDetached(button.command)
         Keys.onEscapePressed: root.visibilities.session = false
         Keys.onPressed: event => {
+            if (!Config.session.vimKeybinds)
+                return;
+
             if (event.modifiers & Qt.ControlModifier) {
-                if (event.key === Qt.Key_J && KeyNavigation.down) {
+                if ((event.key === Qt.Key_J || event.key === Qt.Key_N) && KeyNavigation.down) {
                     KeyNavigation.down.focus = true;
                     event.accepted = true;
-                } else if (event.key === Qt.Key_K && KeyNavigation.up) {
+                } else if ((event.key === Qt.Key_K || event.key === Qt.Key_P) && KeyNavigation.up) {
                     KeyNavigation.up.focus = true;
                     event.accepted = true;
                 }
@@ -134,25 +117,6 @@ Column {
                     event.accepted = true;
                 }
             }
-        }
-
-        StateLayer {
-            radius: parent.radius
-            color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
-
-            function onClicked(): void {
-                Quickshell.execDetached(button.command);
-                root.visibilities.session = false;
-            }
-        }
-
-        MaterialIcon {
-            anchors.centerIn: parent
-
-            text: button.icon
-            color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
-            font.pointSize: Appearance.font.size.headlineLarge
-            font.weight: 500
         }
     }
 }

@@ -1,13 +1,11 @@
 #include "toaster.hpp"
 
-#include <qdebug.h>
 #include <qlogging.h>
 #include <qtimer.h>
 
 namespace caelestia {
 
-Toast::Toast(const QString& title, const QString& message, const QString& icon, Type type, int timeout,
-    QObject* parent)
+Toast::Toast(const QString& title, const QString& message, const QString& icon, Type type, int timeout, QObject* parent)
     : QObject(parent)
     , m_closed(false)
     , m_title(title)
@@ -102,8 +100,7 @@ QQmlListProperty<Toast> Toaster::toasts() {
     return QQmlListProperty<Toast>(this, &m_toasts);
 }
 
-void Toaster::toast(const QString& title, const QString& message, const QString& icon, Toast::Type type,
-    int timeout) {
+void Toaster::toast(const QString& title, const QString& message, const QString& icon, Toast::Type type, int timeout) {
     auto* toast = new Toast(title, message, icon, type, timeout, this);
     QObject::connect(toast, &Toast::finishedClose, this, [toast, this]() {
         if (m_toasts.removeOne(toast)) {

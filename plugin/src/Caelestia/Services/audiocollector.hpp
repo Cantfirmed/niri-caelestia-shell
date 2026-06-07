@@ -2,15 +2,22 @@
 
 #include "service.hpp"
 #include <atomic>
-#include <cstdint>
-#include <mutex>
 #include <pipewire/pipewire.h>
+#include <qmutex.h>
+#include <qqmlintegration.h>
 #include <spa/param/audio/format-utils.h>
 #include <stop_token>
 #include <thread>
 #include <vector>
 
-namespace caelestia {
+namespace caelestia::services {
+
+namespace ac {
+
+constexpr quint32 SAMPLE_RATE = 44100;
+constexpr quint32 CHUNK_SIZE = 512;
+
+} // namespace ac
 
 class AudioCollector;
 
@@ -29,12 +36,9 @@ private:
     std::stop_token m_token;
     AudioCollector* m_collector;
 
-    void cleanup();
-
     static void handleTimeout(void* data, uint64_t expirations);
     void streamStateChanged(pw_stream_state state);
     void processStream();
-    void processSamples(const int16_t* samples, uint32_t count);
 
     [[nodiscard]] unsigned int nextPowerOf2(unsigned int n);
 };
@@ -43,35 +47,30 @@ class AudioCollector : public Service {
     Q_OBJECT
 
 public:
-    explicit AudioCollector(uint32_t sampleRate = 44100, uint32_t chunkSize = 512, QObject* parent = nullptr);
-    ~AudioCollector();
+    AudioCollector(const AudioCollector&) = delete;
+    AudioCollector& operator=(const AudioCollector&) = delete;
 
-    static AudioCollector* instance();
-
-    [[nodiscard]] uint32_t sampleRate() const;
-    [[nodiscard]] uint32_t chunkSize() const;
+    static AudioCollector& instance();
 
     void clearBuffer();
-    void loadChunk(const int16_t* samples, uint32_t count);
-    uint32_t readChunk(float* out, uint32_t count = 0);
-    uint32_t readChunk(double* out, uint32_t count = 0);
+    void loadChunk(const qint16* samples, quint32 count);
+    quint32 readChunk(float* out, quint32 count = 0);
+    quint32 readChunk(double* out, quint32 count = 0);
 
 private:
-    inline static AudioCollector* s_instance = nullptr;
-    inline static std::mutex s_mutex;
+    explicit AudioCollector(QObject* parent = nullptr);
+    ~AudioCollector();
 
     std::jthread m_thread;
     std::vector<float> m_buffer1;
     std::vector<float> m_buffer2;
     std::atomic<std::vector<float>*> m_readBuffer;
     std::atomic<std::vector<float>*> m_writeBuffer;
-    uint32_t m_sampleCount;
+    quint32 m_sampleCount;
 
-    const uint32_t m_sampleRate;
-    const uint32_t m_chunkSize;
-
+    void reload();
     void start() override;
     void stop() override;
 };
 
-} // namespace caelestia
+} // namespace caelestia::services

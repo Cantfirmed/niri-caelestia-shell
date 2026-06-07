@@ -11,12 +11,14 @@ class Requests : public QObject {
     QML_ELEMENT
     QML_SINGLETON
 
-  public:
+public:
     explicit Requests(QObject* parent = nullptr);
 
-    Q_INVOKABLE void get(const QUrl& url, QJSValue callback, QJSValue onError = QJSValue()) const;
+    Q_INVOKABLE void get(
+        const QUrl& url, QJSValue callback, QJSValue onError = QJSValue(), QJSValue headers = QJSValue()) const;
+    Q_INVOKABLE void resetCookies() const;
 
-  private:
+private:
     QNetworkAccessManager* m_manager;
 };
 

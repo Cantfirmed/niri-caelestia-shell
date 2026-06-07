@@ -1,54 +1,40 @@
-import qs.components
-import qs.config
-import Quickshell
+pragma ComponentBehavior: Bound
+
 import QtQuick
+import Caelestia.Config
+import qs.components
 
 Item {
     id: root
 
-    required property PersistentProperties visibilities
+    required property DrawerVisibilities visibilities
+    required property bool sidebarVisible
+    readonly property real nonAnimWidth: content.implicitWidth
 
-    visible: width > 0
-    implicitWidth: 0
-    implicitHeight: content.implicitHeight
+    readonly property bool shouldBeActive: visibilities.session && Config.session.enabled
+    property real offsetScale: shouldBeActive ? 0 : 1
+    property real sidebarOffset: sidebarVisible ? 14 : 0
 
-    states: State {
-        name: "visible"
-        when: root.visibilities.session && Config.session.enabled
+    visible: offsetScale < 1
+    anchors.rightMargin: (-implicitWidth - 5 - sidebarOffset) * offsetScale
+    implicitWidth: content.implicitWidth
+    implicitHeight: content.implicitHeight || 510 // Hard coded fallback for first open
+    opacity: 1 - offsetScale
 
-        PropertyChanges {
-            root.implicitWidth: content.implicitWidth
-        }
+    Behavior on offsetScale {
+        Anim {}
     }
 
-    transitions: [
-        Transition {
-            from: ""
-            to: "visible"
-
-            Anim {
-                target: root
-                property: "implicitWidth"
-                duration: Appearance.anim.durations.normal
-                easing.bezierCurve: Appearance.anim.curves.emphasizedDecel
-            }
-        },
-        Transition {
-            from: "visible"
-            to: ""
-
-            Anim {
-                target: root
-                property: "implicitWidth"
-                duration: Appearance.anim.durations.small
-                easing.bezierCurve: root.visibilities.osd ? Appearance.anim.curves.emphasizedDecel : Appearance.anim.curves.emphasizedAccel
-            }
-        }
-    ]
-
-    Content {
+    Loader {
         id: content
 
-        visibilities: root.visibilities
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.left: parent.left
+
+        active: root.shouldBeActive || root.visible
+
+        sourceComponent: Content {
+            visibilities: root.visibilities
+        }
     }
 }

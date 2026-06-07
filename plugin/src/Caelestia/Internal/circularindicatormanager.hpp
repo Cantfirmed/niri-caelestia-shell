@@ -15,13 +15,13 @@ class CircularIndicatorManager : public QObject {
     Q_PROPERTY(qreal rotation READ rotation NOTIFY rotationChanged)
     Q_PROPERTY(qreal progress READ progress WRITE setProgress NOTIFY progressChanged)
     Q_PROPERTY(qreal completeEndProgress READ completeEndProgress WRITE setCompleteEndProgress NOTIFY
-                   completeEndProgressChanged)
+            completeEndProgressChanged)
     Q_PROPERTY(qreal duration READ duration NOTIFY indeterminateAnimationTypeChanged)
     Q_PROPERTY(qreal completeEndDuration READ completeEndDuration NOTIFY indeterminateAnimationTypeChanged)
     Q_PROPERTY(IndeterminateAnimationType indeterminateAnimationType READ indeterminateAnimationType WRITE
-                   setIndeterminateAnimationType NOTIFY indeterminateAnimationTypeChanged)
+            setIndeterminateAnimationType NOTIFY indeterminateAnimationTypeChanged)
 
-  public:
+public:
     explicit CircularIndicatorManager(QObject* parent = nullptr);
 
     enum IndeterminateAnimationType {
@@ -46,7 +46,7 @@ class CircularIndicatorManager : public QObject {
     [[nodiscard]] IndeterminateAnimationType indeterminateAnimationType() const;
     void setIndeterminateAnimationType(IndeterminateAnimationType t);
 
-  signals:
+signals:
     void startFractionChanged();
     void endFractionChanged();
     void rotationChanged();
@@ -54,7 +54,7 @@ class CircularIndicatorManager : public QObject {
     void completeEndProgressChanged();
     void indeterminateAnimationTypeChanged();
 
-  private:
+private:
     IndeterminateAnimationType m_type;
     QEasingCurve m_curve;
 

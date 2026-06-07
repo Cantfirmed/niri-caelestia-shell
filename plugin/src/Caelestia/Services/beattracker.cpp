@@ -4,25 +4,35 @@
 #include "audioprovider.hpp"
 #include <aubio/aubio.h>
 
-namespace caelestia {
+namespace caelestia::services {
 
 BeatProcessor::BeatProcessor(QObject* parent)
     : AudioProcessor(parent)
-    , m_tempo(new_aubio_tempo("default", 1024, m_chunkSize, m_sampleRate))
-    , m_in(new_fvec(m_chunkSize))
+    , m_tempo(new_aubio_tempo("default", 1024, ac::CHUNK_SIZE, ac::SAMPLE_RATE))
+    , m_in(new_fvec(ac::CHUNK_SIZE))
     , m_out(new_fvec(2)) {};
 
 BeatProcessor::~BeatProcessor() {
-    del_aubio_tempo(m_tempo);
-    del_fvec(m_in);
-    del_fvec(m_out);
+    if (m_tempo) {
+        del_aubio_tempo(m_tempo);
+    }
+    if (m_in) {
+        del_fvec(m_in);
+    }
+    if (m_out) {
+        del_fvec(m_out);
+    }
 }
 
 void BeatProcessor::process() {
-    AudioCollector::instance()->readChunk(m_in->data, m_chunkSize);
+    if (!m_tempo || !m_in) {
+        return;
+    }
+
+    AudioCollector::instance().readChunk(m_in->data);
 
     aubio_tempo_do(m_tempo, m_in, m_out);
-    if (m_out->data[0] != 0.0f) {
+    if (!qFuzzyIsNull(m_out->data[0])) {
         emit beat(aubio_tempo_get_bpm(m_tempo));
     }
 }
@@ -47,4 +57,4 @@ void BeatTracker::updateBpm(smpl_t bpm) {
     }
 }
 
-} // namespace caelestia
+} // namespace caelestia::services

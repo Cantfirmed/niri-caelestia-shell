@@ -2,15 +2,16 @@
 
 #include "audiocollector.hpp"
 #include "service.hpp"
-#include <qdebug.h>
+#include <qloggingcategory.h>
 #include <qthread.h>
 
-namespace caelestia {
+Q_LOGGING_CATEGORY(lcAp, "caelestia.services.ap", QtInfoMsg)
+Q_LOGGING_CATEGORY(lcApProcessor, "caelestia.services.ap.processor", QtInfoMsg)
+
+namespace caelestia::services {
 
 AudioProcessor::AudioProcessor(QObject* parent)
-    : QObject(parent)
-    , m_sampleRate(AudioCollector::instance()->sampleRate())
-    , m_chunkSize(AudioCollector::instance()->chunkSize()) {}
+    : QObject(parent) {}
 
 AudioProcessor::~AudioProcessor() {
     stop();
@@ -18,12 +19,12 @@ AudioProcessor::~AudioProcessor() {
 
 void AudioProcessor::init() {
     m_timer = new QTimer(this);
-    m_timer->setInterval(static_cast<int>(m_chunkSize * 1000.0 / m_sampleRate));
+    m_timer->setInterval(static_cast<int>(ac::CHUNK_SIZE * 1000.0 / ac::SAMPLE_RATE));
     connect(m_timer, &QTimer::timeout, this, &AudioProcessor::process);
 }
 
 void AudioProcessor::start() {
-    AudioCollector::instance()->ref();
+    QMetaObject::invokeMethod(&AudioCollector::instance(), &AudioCollector::ref, Qt::QueuedConnection, this);
     if (m_timer) {
         m_timer->start();
     }
@@ -33,7 +34,7 @@ void AudioProcessor::stop() {
     if (m_timer) {
         m_timer->stop();
     }
-    AudioCollector::instance()->unref();
+    QMetaObject::invokeMethod(&AudioCollector::instance(), &AudioCollector::unref, Qt::QueuedConnection, this);
 }
 
 AudioProvider::AudioProvider(QObject* parent)
@@ -50,7 +51,7 @@ AudioProvider::~AudioProvider() {
 
 void AudioProvider::init() {
     if (!m_processor) {
-        qWarning() << "AudioProvider::init: attempted to init with no processor set";
+        qCWarning(lcAp) << "init: attempted to init with no processor set";
         return;
     }
 
@@ -66,14 +67,15 @@ void AudioProvider::init() {
 
 void AudioProvider::start() {
     if (m_processor) {
-        QMetaObject::invokeMethod(m_processor, "start", Qt::QueuedConnection);
+        AudioCollector::instance(); // Create instance on main thread
+        QMetaObject::invokeMethod(m_processor, &AudioProcessor::start);
     }
 }
 
 void AudioProvider::stop() {
     if (m_processor) {
-        QMetaObject::invokeMethod(m_processor, "stop", Qt::QueuedConnection);
+        QMetaObject::invokeMethod(m_processor, &AudioProcessor::stop);
     }
 }
 
-} // namespace caelestia
+} // namespace caelestia::services

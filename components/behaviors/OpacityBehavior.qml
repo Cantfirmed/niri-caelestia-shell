@@ -1,4 +1,4 @@
-import qs.config
+import Caelestia.Config
 import QtQuick
 
 // Reusable opacity animation behavior

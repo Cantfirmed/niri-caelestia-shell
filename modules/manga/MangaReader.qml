@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-import qs.config
+import Caelestia.Config
 import qs.services
 import "../../components"
 import "../../components/controls"

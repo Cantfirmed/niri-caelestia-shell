@@ -1,28 +1,25 @@
 pragma ComponentBehavior: Bound
 
-import "services"
+import QtQuick
+import Caelestia
+import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.services
-import qs.config
-import Quickshell
-import QtQuick
+import qs.modules.launcher.services
 
 Item {
     id: root
 
-    required property var wrapper
-    required property PersistentProperties visibilities
+    required property DrawerVisibilities visibilities
     required property var panels
+    required property real maxHeight
 
-    readonly property int padding: Appearance.padding.xl
-    readonly property int rounding: Appearance.rounding.large
+    readonly property int padding: Tokens.padding.large
+    readonly property int rounding: Tokens.rounding.extraLarge
 
     implicitWidth: listWrapper.width + padding * 2
-    implicitHeight: searchWrapper.height + listWrapper.height + padding * 2
-
-    anchors.top: parent.top
-    anchors.horizontalCenter: parent.horizontalCenter
+    implicitHeight: searchWrapper.height + listWrapper.height + padding + searchWrapper.anchors.bottomMargin
 
     Item {
         id: listWrapper
@@ -37,9 +34,10 @@ Item {
         ContentList {
             id: list
 
-            wrapper: root.wrapper
+            content: root
             visibilities: root.visibilities
             panels: root.panels
+            maxHeight: root.maxHeight - searchWrapper.implicitHeight - root.padding * 3
             search: search
             padding: root.padding
             rounding: root.rounding
@@ -47,81 +45,16 @@ Item {
     }
 
     StyledRect {
-        id: modeIndicator
-
-        visible: list.activeMode !== "apps"
-        color: Colours.tPalette.m3tertiaryContainer
-        radius: Appearance.rounding.full
-
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: searchWrapper.top
-        anchors.bottomMargin: Appearance.spacing.sm
-
-        implicitWidth: modeRow.implicitWidth + Appearance.padding.md * 2
-        implicitHeight: modeRow.implicitHeight + Appearance.padding.xs * 2
-
-        Row {
-            id: modeRow
-            anchors.centerIn: parent
-            spacing: Appearance.spacing.xs
-
-            MaterialIcon {
-                anchors.verticalCenter: parent.verticalCenter
-                text: {
-                    switch (list.activeMode) {
-                    case "actions": return "terminal";
-                    case "calc": return "calculate";
-                    case "clip": return "content_paste";
-                    case "web": return "travel_explore";
-                    case "scheme": return "palette";
-                    case "variant": return "format_paint";
-                    case "wallpapers": return "wallpaper";
-                    case "emoji": return "mood";
-                    default: return "search";
-                    }
-                }
-                color: Colours.palette.m3onTertiaryContainer
-                font.pointSize: Appearance.font.size.labelLarge
-            }
-
-            StyledText {
-                anchors.verticalCenter: parent.verticalCenter
-                text: {
-                    switch (list.activeMode) {
-                    case "actions": return qsTr("Actions");
-                    case "calc": return qsTr("Calculator");
-                    case "clip": return qsTr("Clipboard");
-                    case "web": return qsTr("Web Search");
-                    case "scheme": return qsTr("Colour Scheme");
-                    case "variant": return qsTr("Variant");
-                    case "wallpapers": return qsTr("Wallpapers");
-                    case "emoji": return qsTr("Emoji Picker");
-                    default: return "";
-                    }
-                }
-                color: Colours.palette.m3onTertiaryContainer
-                font.pointSize: Appearance.font.size.labelMedium
-                font.bold: true
-            }
-        }
-
-        Behavior on opacity {
-            Anim {
-                duration: Appearance.anim.durations.small
-            }
-        }
-    }
-
-    StyledRect {
         id: searchWrapper
 
-        color: Colours.tPalette.m3surfaceContainer
-        radius: Appearance.rounding.small
+        color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+        radius: Tokens.rounding.full
 
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.margins: root.padding
+        anchors.bottomMargin: CUtils.clamp(root.padding - Config.border.thickness, 0, root.padding)
 
         implicitHeight: Math.max(searchIcon.implicitHeight, search.implicitHeight, clearIcon.implicitHeight)
 
@@ -141,13 +74,13 @@ Item {
 
             anchors.left: searchIcon.right
             anchors.right: clearIcon.left
-            anchors.leftMargin: Appearance.spacing.sm
-            anchors.rightMargin: Appearance.spacing.sm
+            anchors.leftMargin: Tokens.spacing.small
+            anchors.rightMargin: Tokens.spacing.small
 
-            topPadding: Appearance.padding.lg
-            bottomPadding: Appearance.padding.lg
+            topPadding: Tokens.padding.medium
+            bottomPadding: Tokens.padding.medium
 
-            placeholderText: qsTr("Type \"%1\" for commands").arg(Config.launcher.actionPrefix)
+            placeholderText: qsTr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
             onAccepted: {
                 const currentItem = list.currentList?.currentItem;
@@ -157,15 +90,9 @@ Item {
                             Wallpapers.previewColourLock = true;
                         Wallpapers.setWallpaper(currentItem.modelData.path);
                         root.visibilities.launcher = false;
-                    } else if (text.startsWith(Config.launcher.actionPrefix)) {
-                        if (text.startsWith(`${Config.launcher.actionPrefix}calc `))
+                    } else if (text.startsWith(GlobalConfig.launcher.actionPrefix)) {
+                        if (text.startsWith(`${GlobalConfig.launcher.actionPrefix}calc `))
                             currentItem.onClicked();
-                        else if (text.startsWith(`${Config.launcher.actionPrefix}clip `))
-                            currentItem.onClicked();
-                        else if (text.startsWith(`${Config.launcher.actionPrefix}web `))
-                            currentItem.onClicked();
-                        else if (text.startsWith(`${Config.launcher.actionPrefix}emoji `))
-                             currentItem.currentItem?.onClicked();
                         else
                             currentItem.modelData.onClicked(list.currentList);
                     } else {
@@ -175,89 +102,43 @@ Item {
                 }
             }
 
-            Keys.onUpPressed: {
-                if (list.activeMode === "emoji")
-                    list.currentList.currentItem?.moveUp();
-                else
-                    list.currentList?.decrementCurrentIndex();
-            }
-            Keys.onDownPressed: {
-                if (list.activeMode === "emoji")
-                    list.currentList.currentItem?.moveDown();
-                else
-                    list.currentList?.incrementCurrentIndex();
-            }
-            Keys.onLeftPressed: {
-                if (list.activeMode === "emoji")
-                    list.currentList.currentItem?.moveLeft();
-                else
-                    event.accepted = false;
-            }
-            Keys.onRightPressed: {
-                if (list.activeMode === "emoji")
-                    list.currentList.currentItem?.moveRight();
-                else
-                    event.accepted = false;
-            }
+            Keys.onUpPressed: list.currentList?.decrementCurrentIndex()
+            Keys.onDownPressed: list.currentList?.incrementCurrentIndex()
+
             Keys.onEscapePressed: root.visibilities.launcher = false
 
             Keys.onPressed: event => {
-                // Ignore events if we're not focused
-                if (!search.focus)
+                if (!GlobalConfig.launcher.vimKeybinds)
                     return;
 
-                if (list.activeMode === "emoji") {
-                    if (event.key === Qt.Key_PageUp) {
-                        list.currentList.currentItem?.prevCategory();
-                        event.accepted = true;
-                        return;
-                    } else if (event.key === Qt.Key_PageDown) {
-                        list.currentList.currentItem?.nextCategory();
-                        event.accepted = true;
-                        return;
-                    }
-                }
-
                 if (event.modifiers & Qt.ControlModifier) {
-                    if (event.key === Qt.Key_J) {
-                        if (list.activeMode === "emoji")
-                            list.currentList.currentItem?.incrementCurrentIndex();
-                        else
-                            list.currentList?.incrementCurrentIndex();
+                    if (event.key === Qt.Key_J || event.key === Qt.Key_N) {
+                        list.currentList?.incrementCurrentIndex();
                         event.accepted = true;
-                    } else if (event.key === Qt.Key_K) {
-                        if (list.activeMode === "emoji")
-                            list.currentList.currentItem?.decrementCurrentIndex();
-                        else
-                            list.currentList?.decrementCurrentIndex();
+                    } else if (event.key === Qt.Key_K || event.key === Qt.Key_P) {
+                        list.currentList?.decrementCurrentIndex();
                         event.accepted = true;
                     }
                 } else if (event.key === Qt.Key_Tab) {
-                    if (list.activeMode === "emoji")
-                        list.currentList.currentItem?.incrementCurrentIndex();
-                    else
-                        list.currentList?.incrementCurrentIndex();
+                    list.currentList?.incrementCurrentIndex();
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && (event.modifiers & Qt.ShiftModifier))) {
-                    if (list.activeMode === "emoji")
-                        list.currentList.currentItem?.decrementCurrentIndex();
-                    else
-                        list.currentList?.decrementCurrentIndex();
+                    list.currentList?.decrementCurrentIndex();
                     event.accepted = true;
                 }
             }
 
-            Connections {
-                target: root.visibilities
+            Component.onCompleted: forceActiveFocus()
 
+            Connections {
                 function onLauncherChanged(): void {
                     if (root.visibilities.launcher) {
-                        search.focus = true;
+                        search.forceActiveFocus();
                         if (root.visibilities.clipboardRequested) {
-                            search.text = Config.launcher.actionPrefix + "clip ";
+                            search.text = GlobalConfig.launcher.actionPrefix + "clip ";
                             root.visibilities.clipboardRequested = false;
                         } else if (root.visibilities.wallpaperRequested) {
-                            search.text = Config.launcher.actionPrefix + "wallpaper ";
+                            search.text = GlobalConfig.launcher.actionPrefix + "wallpaper ";
                             root.visibilities.wallpaperRequested = false;
                         }
                     } else {
@@ -269,9 +150,11 @@ Item {
                 }
 
                 function onSessionChanged(): void {
-                    if (root.visibilities.launcher && !root.visibilities.session)
-                        search.focus = true;
+                    if (!root.visibilities.session)
+                        search.forceActiveFocus();
                 }
+
+                target: root.visibilities
             }
         }
 
@@ -308,13 +191,13 @@ Item {
 
             Behavior on width {
                 Anim {
-                    duration: Appearance.anim.durations.small
+                    type: Anim.StandardSmall
                 }
             }
 
             Behavior on opacity {
                 Anim {
-                    duration: Appearance.anim.durations.small
+                    type: Anim.StandardSmall
                 }
             }
         }

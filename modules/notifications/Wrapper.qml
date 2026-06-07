@@ -1,20 +1,24 @@
-import Quickshell
 import QtQuick
+import qs.components
 
 Item {
     id: root
 
-    required property PersistentProperties visibilities
-    required property Item panel
+    required property DrawerVisibilities visibilities
+    required property Item sidebarPanel
+    property alias osdPanel: content.osdPanel
+    property alias sessionPanel: content.sessionPanel
+    property alias utilitiesPanel: content.utilitiesPanel
 
     visible: height > 0
+    anchors.topMargin: -5
+    implicitWidth: Math.max(sidebarPanel.width, content.implicitWidth)
     implicitHeight: content.implicitHeight
-    implicitWidth: content.implicitWidth
 
     Content {
         id: content
 
+        anchors.topMargin: -root.anchors.topMargin
         visibilities: root.visibilities
-        panel: root.panel
     }
 }

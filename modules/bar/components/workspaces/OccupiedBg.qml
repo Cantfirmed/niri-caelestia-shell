@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import qs.components
 import qs.services
-import qs.config
+import Caelestia.Config
 import Quickshell
 import QtQuick
 
@@ -72,7 +72,7 @@ Item {
             bottomRightRadius: isContextActiveInWs ? Appearance.rounding.normal : radius
 
             y: (start?.y ?? 0)
-            // implicitWidth: Config.bar.sizes.innerWidth - Appearance.padding.xs * 2 + 2
+            // implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2 + 2
             implicitHeight: start && end ? end.y + end.size - start.y : 0
             // implicitHeight: end?.y + end?.height - start?.y
 

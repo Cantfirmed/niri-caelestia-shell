@@ -1,18 +1,18 @@
-cmake_minimum_required(VERSION 3.16)
-project(caelestia VERSION 1.2)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-find_package(Qt6 REQUIRED COMPONENTS Core Qml Gui Quick Concurrent Multimedia Network Sql DBus)
-
-
-if(QT_KNOWN_POLICY_QTP0001)
-    qt_policy(SET QTP0001 NEW)
+find_package(Qt6 REQUIRED COMPONENTS ShaderTools Core Qml Gui Quick QuickControls2 Concurrent Sql Network DBus)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(Qalculate IMPORTED_TARGET libqalculate REQUIRED)
+pkg_check_modules(Pipewire IMPORTED_TARGET libpipewire-0.3 REQUIRED)
+pkg_check_modules(Aubio IMPORTED_TARGET aubio REQUIRED)
+pkg_check_modules(Cava IMPORTED_TARGET libcava QUIET)
+if(NOT Cava_FOUND)
+    pkg_check_modules(Cava IMPORTED_TARGET cava REQUIRED)
 endif()
-
-string(REGEX MATCH "^[0-9]+\\.[0-9]+" VERSION_SHORT "${VERSION}")
+include(cmake/sensorslib.cmake)
 
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml")
-qt_standard_project_setup()
+qt_standard_project_setup(REQUIRES 6.9)
+
+include(cmake/pch.cmake)
+include(cmake/qml-module.cmake)
+
 add_subdirectory(src/Caelestia)

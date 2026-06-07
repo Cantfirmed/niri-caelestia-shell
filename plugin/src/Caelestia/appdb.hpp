@@ -14,7 +14,9 @@ class AppEntry : public QObject {
     QML_ELEMENT
     QML_UNCREATABLE("AppEntry instances can only be retrieved from an AppDb")
 
+    // The actual DesktopEntry, but we don't have access to the type so it's a QObject
     Q_PROPERTY(QObject* entry READ entry CONSTANT)
+
     Q_PROPERTY(quint32 frequency READ frequency NOTIFY frequencyChanged)
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString name READ name NOTIFY nameChanged)
@@ -98,8 +100,8 @@ private:
     const QString m_uuid;
     QString m_path;
     QObjectList m_entries;
-    QStringList m_favouriteApps;
-    QList<QRegularExpression> m_favouriteAppsRegex;
+    QStringList m_favouriteApps;                    // unedited string list from qml
+    QList<QRegularExpression> m_favouriteAppsRegex; // pre-regexified m_favouriteApps list
     QHash<QString, AppEntry*> m_apps;
     mutable QList<AppEntry*> m_sortedApps;
 

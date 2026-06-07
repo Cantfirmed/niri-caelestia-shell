@@ -7,16 +7,14 @@
   fish,
   ddcutil,
   brightnessctl,
+  app2unit,
   networkmanager,
   lm_sensors,
   swappy,
   wl-clipboard,
   libqalculate,
-  fftw,
   bash,
-  ffmpeg,
-
-  gst_all_1,
+  hyprland,
   material-symbols,
   rubik,
   nerd-fonts,
@@ -24,16 +22,17 @@
   quickshell,
   aubio,
   libcava,
+  fftw,
   pipewire,
   xkeyboard-config,
   cmake,
   ninja,
   pkg-config,
   caelestia-cli,
+  m3shapes,
   debug ? false,
   withCli ? false,
   extraRuntimeDeps ? [],
-  ...
 }: let
   version = "1.0.0";
 
@@ -42,13 +41,14 @@
       fish
       ddcutil
       brightnessctl
+      app2unit
       networkmanager
       lm_sensors
       swappy
       wl-clipboard
       libqalculate
       bash
-      ffmpeg
+      hyprland
     ]
     ++ extraRuntimeDeps
     ++ lib.optional withCli caelestia-cli;
@@ -57,13 +57,22 @@
     fontDirectories = [material-symbols rubik nerd-fonts.caskaydia-cove];
   };
 
+  cmakeBuildType =
+    if debug
+    then "Debug"
+    else "RelWithDebInfo";
+
   cmakeVersionFlags = [
     (lib.cmakeFeature "VERSION" version)
     (lib.cmakeFeature "GIT_REVISION" rev)
     (lib.cmakeFeature "DISTRIBUTOR" "nix-flake")
   ];
 
+  # The build sandbox has no network access so add it as a flake input instead
+  m3shapesFlag = lib.cmakeFeature "FETCHCONTENT_SOURCE_DIR_M3SHAPES_EXTERNAL" "${m3shapes}";
+
   extras = stdenv.mkDerivation {
+    inherit cmakeBuildType;
     name = "caelestia-extras${lib.optionalString debug "-debug"}";
     src = lib.fileset.toSource {
       root = ./..;
@@ -81,6 +90,7 @@
   };
 
   plugin = stdenv.mkDerivation {
+    inherit cmakeBuildType;
     name = "caelestia-qml-plugin${lib.optionalString debug "-debug"}";
     src = lib.fileset.toSource {
       root = ./..;
@@ -88,7 +98,7 @@
     };
 
     nativeBuildInputs = [cmake ninja pkg-config];
-    buildInputs = [qt6.qtbase qt6.qtdeclarative qt6.qt5compat fftw qt6.qtmultimedia libqalculate pipewire aubio libcava];
+    buildInputs = [qt6.qtbase qt6.qtdeclarative qt6.qtshadertools libqalculate pipewire aubio libcava fftw lm_sensors];
 
     dontWrapQtApps = true;
     cmakeFlags =
@@ -98,20 +108,37 @@
       ]
       ++ cmakeVersionFlags;
   };
+
+  m3shapesModule = stdenv.mkDerivation {
+    inherit cmakeBuildType;
+    name = "caelestia-m3shapes${lib.optionalString debug "-debug"}";
+    src = lib.fileset.toSource {
+      root = ./..;
+      fileset = ./../CMakeLists.txt;
+    };
+
+    nativeBuildInputs = [cmake ninja];
+    buildInputs = [qt6.qtbase qt6.qtdeclarative];
+
+    dontWrapQtApps = true;
+    cmakeFlags =
+      [
+        (lib.cmakeFeature "ENABLE_MODULES" "m3shapes")
+        (lib.cmakeFeature "INSTALL_QMLDIR" qt6.qtbase.qtQmlPrefix)
+        m3shapesFlag
+      ]
+      ++ cmakeVersionFlags;
+  };
 in
   stdenv.mkDerivation {
-    inherit version;
+    inherit version cmakeBuildType;
     pname = "caelestia-shell${lib.optionalString debug "-debug"}";
     src = ./..;
 
     nativeBuildInputs = [cmake ninja makeWrapper qt6.wrapQtAppsHook];
-    buildInputs = [quickshell extras plugin xkeyboard-config qt6.qtbase qt6.qtmultimedia];
+    buildInputs = [quickshell extras plugin m3shapesModule xkeyboard-config qt6.qtbase];
     propagatedBuildInputs = runtimeDeps;
 
-    cmakeBuildType =
-      if debug
-      then "Debug"
-      else "RelWithDebInfo";
     cmakeFlags =
       [
         (lib.cmakeFeature "ENABLE_MODULES" "shell")
@@ -124,14 +151,11 @@ in
     prePatch = ''
       substituteInPlace assets/pam.d/fprint \
         --replace-fail pam_fprintd.so /run/current-system/sw/lib/security/pam_fprintd.so
-      substituteInPlace shell.qml \
-        --replace-fail 'ShellRoot {' 'ShellRoot {  settings.watchFiles: false'
     '';
 
     postInstall = ''
       makeWrapper ${quickshell}/bin/qs $out/bin/caelestia-shell \
       	--prefix PATH : "${lib.makeBinPath runtimeDeps}" \
-        --prefix QML2_IMPORT_PATH : "${lib.makeSearchPath qt6.qtbase.qtQmlPrefix [qt6.qtdeclarative qt6.qt5compat qt6.qtmultimedia plugin]}" \
       	--set FONTCONFIG_FILE "${fontconfig}" \
       	--set CAELESTIA_LIB_DIR ${extras}/lib \
         --set CAELESTIA_XKB_RULES_PATH ${xkeyboard-config}/share/xkeyboard-config-2/rules/base.lst \
@@ -139,10 +163,13 @@ in
 
       mkdir -p $out/lib
       ln -s ${extras}/lib/* $out/lib/
+
+      # Ensure wrap_term_launch.sh is executable
+      chmod 755 $out/share/caelestia-shell/assets/wrap_term_launch.sh
     '';
 
     passthru = {
-      inherit plugin extras;
+      inherit plugin extras m3shapesModule;
     };
 
     meta = {

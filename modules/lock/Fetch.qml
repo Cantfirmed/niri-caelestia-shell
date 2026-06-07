@@ -1,89 +1,179 @@
 pragma ComponentBehavior: Bound
 
+import QtQuick
+import QtQuick.Layouts
+import Quickshell.Services.UPower
+import Caelestia
+import Caelestia.Config
 import qs.components
 import qs.components.effects
 import qs.services
-import qs.config
 import qs.utils
-import Quickshell.Services.UPower
-import QtQuick
-import QtQuick.Layouts
 
-// System fetch widget — flex-filling middle slot of the left lock panel.
-// anchors.margins: padding.xl mirrors Resources.qml / Media.qml internal inset.
-ColumnLayout {
+StyledRect {
     id: root
 
-    anchors.fill: parent
-    anchors.margins: Appearance.padding.xl
+    required property real rootHeight
+    readonly property int cBoxSize: Tokens.font.body.medium.pointSize * 2
 
-    spacing: Appearance.spacing.md
+    implicitHeight: layout.implicitHeight + layout.anchors.topMargin + layout.anchors.margins
+    radius: Tokens.rounding.medium
+    color: Colours.tPalette.m3surfaceContainer
 
-    // ── Terminal header ────────────────────────────────────────────────────────
-    //  icon + filename — mono, muted, matches section-label style across shell
-    RowLayout {
-        Layout.fillWidth: true
-        spacing: Appearance.spacing.sm
+    ColumnLayout {
+        id: layout
 
-        MaterialIcon {
-            text: "chevron_right"
-            font.pointSize: Appearance.font.size.bodyMedium
-            color: Colours.palette.m3onSurfaceVariant
+        anchors.fill: parent
+        anchors.margins: Tokens.padding.extraLarge
+        anchors.topMargin: Tokens.padding.extraLarge
+        anchors.bottomMargin: Tokens.padding.extraLarge
+
+        spacing: Tokens.spacing.small
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: false
+            spacing: Tokens.spacing.medium
+
+            StyledRect {
+                implicitWidth: prompt.implicitWidth + Tokens.padding.medium * 2
+                implicitHeight: prompt.implicitHeight + Tokens.padding.small * 2
+
+                color: Colours.palette.m3primary
+                radius: Tokens.rounding.medium
+
+                MonoText {
+                    id: prompt
+
+                    anchors.centerIn: parent
+                    text: ">"
+                    color: Colours.palette.m3onPrimary
+                }
+            }
+
+            MonoText {
+                Layout.fillWidth: true
+                text: "caelestiafetch.sh"
+                elide: Text.ElideRight
+            }
+
+            WrappedLoader {
+                Layout.fillHeight: true
+                Layout.preferredWidth: height
+                Layout.preferredHeight: 0
+                active: !iconLoader.active
+
+                sourceComponent: SysInfo.isDefaultLogo ? caelestiaLogo : distroIcon
+            }
         }
 
-        StyledText {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Systemfetch.sh"
-            font.pointSize: Appearance.font.size.bodySmall
-            font.family: Appearance.font.family.mono
-            color: Colours.palette.m3onSurfaceVariant
-            elide: Text.ElideRight
+            Layout.fillHeight: true
+            spacing: Tokens.spacing.extraLarge
+
+            WrappedLoader {
+                id: iconLoader
+
+                Layout.fillHeight: true
+                active: root.width > Tokens.sizes.lock.largeLogoWidth
+
+                sourceComponent: SysInfo.isDefaultLogo ? caelestiaLogo : distroIcon
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: Tokens.padding.medium
+                Layout.bottomMargin: iconLoader.active || colourRowLoader.active ? Tokens.padding.medium : 0
+                spacing: Tokens.spacing.medium
+
+                Repeater {
+                    model: {
+                        const items = [];
+                        const hasBatt = UPower.displayDevice.isLaptopBattery;
+                        const rHeight = root.rootHeight;
+
+                        if (!hasBatt && rHeight > Tokens.sizes.lock.fetch4LinesHeight)
+                            items.push(`OS  : ${SysInfo.osPrettyName || SysInfo.osName}`);
+
+                        if (rHeight > (hasBatt ? Tokens.sizes.lock.fetch4LinesHeight : Tokens.sizes.lock.fetch3LinesHeight))
+                            items.push(`WM  : ${SysInfo.wm}`);
+
+                        if (!hasBatt || rHeight > Tokens.sizes.lock.fetch3LinesHeight)
+                            items.push(`USER: ${SysInfo.user}`);
+
+                        items.push(`UP  : ${SysInfo.uptime}`);
+
+                        if (hasBatt)
+                            items.push(`BATT: ${[UPowerDeviceState.Charging, UPowerDeviceState.FullyCharged, UPowerDeviceState.PendingCharge].includes(UPower.displayDevice.state) ? "(+) " : ""}${Math.round(UPower.displayDevice.percentage * 100)}%`);
+
+                        return items;
+                    }
+
+                    MonoText {
+                        required property string modelData
+
+                        Layout.fillWidth: true
+                        text: modelData
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+        }
+
+        WrappedLoader {
+            id: colourRowLoader
+
+            Layout.topMargin: iconLoader.active ? Tokens.spacing.small : 0
+            Layout.alignment: Qt.AlignHCenter
+            active: root.rootHeight > Tokens.sizes.lock.showColourBoxRowHeight
+
+            sourceComponent: RowLayout {
+                id: coloursRow
+
+                spacing: Tokens.spacing.largeIncreased
+
+                Repeater {
+                    model: CUtils.clamp(Math.floor((layout.width + coloursRow.spacing) / (root.cBoxSize + coloursRow.spacing)), 0, 8)
+
+                    StyledRect {
+                        required property int index
+
+                        implicitWidth: implicitHeight
+                        implicitHeight: root.cBoxSize
+                        color: Colours.palette[`term${index}`]
+                        radius: Tokens.rounding.medium
+                    }
+                }
+            }
         }
     }
 
-    // ── Info key-value rows ────────────────────────────────────────────────────
-    // Placed directly in root ColumnLayout — top-aligned, equal spacing between rows
-    InfoRow { label: "OS";  value: SysInfo.osPrettyName || SysInfo.osName }
-    InfoRow { label: "WM";  value: SysInfo.wm }
-    InfoRow { label: "USR"; value: SysInfo.user }
-    InfoRow { label: "UP";  value: SysInfo.uptime }
+    Component {
+        id: caelestiaLogo
 
-    InfoRow {
-        visible: UPower.displayDevice.isLaptopBattery
-        label: "BAT"
-        value: `${UPower.onBattery ? "" : "+ "}${Math.round(UPower.displayDevice.percentage * 100)}%`
+        Logo {
+            width: height
+        }
     }
 
-    Item { Layout.preferredHeight: Appearance.font.size.labelLarge }
+    Component {
+        id: distroIcon
 
-    // Flex spacer — pushes swatches to the bottom of the available area
-    Item { Layout.fillHeight: true }
-
-    // ── Inline component: key : value row ─────────────────────────────────────
-    component InfoRow: RowLayout {
-        id: infoRow
-
-        required property string label
-        required property string value
-
-        Layout.fillWidth: true
-        spacing: Appearance.spacing.xs
-
-        StyledText {
-            text: infoRow.label
-            font.pointSize: Appearance.font.size.labelLarge
-            font.family: Appearance.font.family.mono
-            color: Colours.palette.m3primary
-            font.weight: Font.Medium
+        ColouredIcon {
+            source: SysInfo.osLogo
+            implicitSize: height
+            colour: Colours.palette.m3primary
+            layer.enabled: Config.lock.recolourLogo
         }
+    }
 
-        StyledText {
-            Layout.fillWidth: true
-            text: infoRow.value
-            font.pointSize: Appearance.font.size.labelLarge
-            font.family: Appearance.font.family.mono
-            color: Colours.palette.m3onSurfaceVariant
-            elide: Text.ElideRight
-        }
+    component WrappedLoader: Loader {
+        asynchronous: true
+        visible: active
+    }
+
+    component MonoText: StyledText {
+        font: root.width > Tokens.sizes.lock.largeFontWidth ? Tokens.font.mono.medium : Tokens.font.mono.small
     }
 }

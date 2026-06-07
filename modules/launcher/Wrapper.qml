@@ -1,57 +1,60 @@
-import qs.components
-import qs.config
-import Quickshell
+pragma ComponentBehavior: Bound
+
 import QtQuick
+import Quickshell
+import Caelestia.Config
+import qs.components
+import qs.modules.launcher.services
 
 Item {
     id: root
 
-    required property PersistentProperties visibilities
+    required property ShellScreen screen
+    required property DrawerVisibilities visibilities
     required property var panels
 
-    visible: height > 0
-    implicitHeight: 0
-    implicitWidth: content.implicitWidth
+    readonly property bool shouldBeActive: visibilities.launcher && Config.launcher.enabled
 
-    states: State {
-        name: "visible"
-        when: root.visibilities.launcher && Config.launcher.enabled
-
-        PropertyChanges {
-            root.implicitHeight: content.implicitHeight
-        }
+    readonly property real maxHeight: {
+        let max = screen.height - Config.border.thickness * 2 + Tokens.padding.extraLarge;
+        if (visibilities.dashboard)
+            max -= panels.dashboard.nonAnimHeight;
+        return max;
     }
 
-    transitions: [
-        Transition {
-            from: ""
-            to: "visible"
+    property real offsetScale: shouldBeActive ? 0 : 1
 
-            Anim {
-                target: root
-                property: "implicitHeight"
-                duration: Appearance.anim.durations.normal
-                easing.bezierCurve: Appearance.anim.curves.emphasizedDecel
-            }
-        },
-        Transition {
-            from: "visible"
-            to: ""
+    onShouldBeActiveChanged: {
+        if (shouldBeActive)
+            implicitHeight = Qt.binding(() => content.implicitHeight);
+        else
+            implicitHeight = implicitHeight; // Break binding during close anim
+    }
 
-            Anim {
-                target: root
-                property: "implicitHeight"
-                duration: Appearance.anim.durations.small
-                easing.bezierCurve: Appearance.anim.curves.emphasizedAccel
-            }
-        }
-    ]
+    visible: offsetScale < 1
+    anchors.bottomMargin: (-implicitHeight - 5) * offsetScale
+    implicitHeight: content.implicitHeight
+    implicitWidth: content.implicitWidth || 630 // Hard coded fallback for first open
+    opacity: 1 - offsetScale
 
-    Content {
+    Component.onCompleted: Qt.callLater(() => Apps) // Load apps on init
+
+    Behavior on offsetScale {
+        Anim {}
+    }
+
+    Loader {
         id: content
 
-        wrapper: root
-        visibilities: root.visibilities
-        panels: root.panels
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        active: root.shouldBeActive || root.visible
+
+        sourceComponent: Content {
+            visibilities: root.visibilities
+            panels: root.panels
+            maxHeight: root.maxHeight
+        }
     }
 }
