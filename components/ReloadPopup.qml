@@ -53,7 +53,7 @@ Scope {
 			Rectangle {
 				id: rect
 				anchors.centerIn: parent
-				color: failed ? Colours.palette.error : Colours.palette.successContainer
+				color: failed ? Colours.palette.m3error : Colours.palette.m3successContainer
 
 				implicitHeight: layout.implicitHeight + 30
 				implicitWidth: layout.implicitWidth + 30
@@ -87,7 +87,7 @@ Scope {
 						font.family: Appearance.font.family.sans
 						font.pointSize: 14
 						text: root.failed ? "Quickshell: Reload failed" : "Quickshell reloaded"
-						color: failed ? Colours.palette.onError : Colours.palette.onSuccessContainer
+						color: failed ? Colours.palette.m3onError : Colours.palette.m3onSuccessContainer
 					}
 
 					Text {
@@ -95,7 +95,7 @@ Scope {
 						font.family: Appearance.font.family.mono
 						font.pointSize: 11
 						text: root.errorString
-						color: failed ? Colours.palette.onError : Colours.palette.onSuccessContainer
+						color: failed ? Colours.palette.m3onError : Colours.palette.m3onSuccessContainer
 						// When visible is false, it also takes up no space.
 						visible: root.errorString != ""
 					}
@@ -106,7 +106,7 @@ Scope {
 				Rectangle {
 					z: 2
 					id: bar
-					color: failed ? Colours.palette.onError : Colours.palette.onSuccessContainer
+					color: failed ? Colours.palette.m3onError : Colours.palette.m3onSuccessContainer
 					anchors.bottom: parent.bottom
 					anchors.left: parent.left
 					anchors.margins: 10
@@ -132,7 +132,7 @@ Scope {
 				Rectangle {
 					z: 1
 					id: bar_bg
-					color: failed ? Qt.alpha(Colours.palette.onError, 0.3) : Qt.alpha(Colours.palette.onSuccessContainer, 0.3)
+					color: failed ? Qt.alpha(Colours.palette.m3onError, 0.3) : Qt.alpha(Colours.palette.m3onSuccessContainer, 0.3)
 					anchors.bottom: parent.bottom
 					anchors.left: parent.left
 					anchors.margins: 10

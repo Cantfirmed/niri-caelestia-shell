@@ -8,6 +8,10 @@ QtObject {
     readonly property var font: QtObject {
         readonly property string sans: Tokens.font.body.medium.family
         readonly property string mono: Tokens.font.mono.medium.family
+        readonly property var family: QtObject {
+            readonly property string sans: Tokens.font.body.medium.family
+            readonly property string mono: Tokens.font.mono.medium.family
+        }
         readonly property var size: QtObject {
             readonly property real bodySmall: Tokens.font.body.small.pointSize
             readonly property real bodyMedium: Tokens.font.body.medium.pointSize
@@ -21,6 +25,7 @@ QtObject {
             readonly property real headlineSmall: Tokens.font.headline.small.pointSize
             readonly property real headlineMedium: Tokens.font.headline.medium.pointSize
             readonly property real headlineLarge: Tokens.font.headline.large.pointSize
+            readonly property real large: Tokens.font.body.large.pointSize
         }
     }
     readonly property var padding: QtObject {
@@ -45,6 +50,7 @@ QtObject {
         readonly property int extraSmall: Tokens.rounding.extraSmall
         readonly property int small: Tokens.rounding.small
         readonly property int medium: Tokens.rounding.medium
+        readonly property int normal: Tokens.rounding.medium
         readonly property int large: Tokens.rounding.large
         readonly property int extraLarge: Tokens.rounding.extraLarge
     }
