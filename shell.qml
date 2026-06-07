@@ -67,7 +67,7 @@ ShellRoot {
         repeat: false
         onTriggered: {
             console.log("[DisplayWatcher] No physical screens detected. Automatically reverting to internal laptop screen.");
-            Quickshell.execDetached(["/home/patrick/.config/niri/niri-display.py", "internal"]);
+            Quickshell.execDetached([`${Quickshell.env("HOME")}/.config/niri/niri-display.py`, "internal"]);
         }
     }
 }

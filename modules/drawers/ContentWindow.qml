@@ -19,14 +19,14 @@ StyledWindow {
     readonly property alias bar: bar
     readonly property alias interactionWrapper: interactions
 
-    readonly property HyprlandMonitor monitor: Hypr.monitorFor(screen)
+    readonly property var monitor: (typeof Hypr !== "undefined") ? Hypr.monitorFor(screen) : null
     readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject.specialWorkspace?.name.length ?? 0) > 0
     readonly property bool hasFullscreen: {
         if (hasSpecialWorkspace) {
             const specialName = monitor?.lastIpcObject.specialWorkspace?.name;
             if (!specialName)
                 return false;
-            const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
+            const specialWs = (typeof Hypr !== "undefined") ? Hypr.workspaces.values.find(ws => ws.name === specialName) : null;
             return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
         }
         return monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;

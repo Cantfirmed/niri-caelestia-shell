@@ -400,7 +400,7 @@
     }
   },
   "paths": {
-    "wallpaperDir": "/home/patrick/Pictures/Wallpapers",
+    "wallpaperDir": "~/Pictures/Wallpapers",
     "wallpaper": "",
     "sessionGif": "root:/assets/teto_spin.gif",
     "mediaGif": "root:/assets/bongocat.gif"

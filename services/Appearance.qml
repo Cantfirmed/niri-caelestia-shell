@@ -4,7 +4,10 @@ import QtQuick
 import Caelestia.Config
 
 QtObject {
-    readonly property var anim: Tokens.anim
+    readonly property var anim: QtObject {
+        readonly property var durations: Tokens.anim.durations
+        readonly property var curves: TokenConfig.appearance.curves
+    }
     readonly property var font: QtObject {
         readonly property string sans: Tokens.font.body.medium.family
         readonly property string mono: Tokens.font.mono.medium.family
