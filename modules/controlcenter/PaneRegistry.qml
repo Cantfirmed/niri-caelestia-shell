@@ -38,6 +38,14 @@ QtObject {
             readonly property string category: "appearance"
         },
         QtObject {
+            readonly property string id: "display"
+            readonly property string label: "display"
+            readonly property string icon: "monitor"
+            readonly property string component: "display/DisplayPane.qml"
+            readonly property string category: "appearance"
+        },
+
+        QtObject {
             readonly property string id: "taskbar"
             readonly property string label: "taskbar"
             readonly property string icon: "task_alt"

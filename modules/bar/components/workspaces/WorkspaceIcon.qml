@@ -58,11 +58,12 @@ Item {
             }
         }
 
-        Loader {
+        SafeLoader {
+            id: nameLoader
             // anchors.verticalCenter: parent.verticalCenter
             // anchors.left: parent.right
             // anchors.leftMargin: Appearance.padding.xl
-            active: root.popupActive
+            activeState: root.popupActive
             sourceComponent: StyledText {
                 color: Config.bar.workspaces.occupiedBg || root.workspace.isOccupied || root.workspace.activeWsId === root.workspace.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
 
@@ -70,6 +71,7 @@ Item {
                 text: Niri.getWorkspaceNameByIndex(root.workspace.index) || "Workspace " + (root.workspace.index + 1)
             }
         }
+
         z: 1
     }
 

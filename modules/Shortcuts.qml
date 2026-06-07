@@ -12,6 +12,18 @@ Scope {
 
     property bool launcherInterrupted
 
+    readonly property bool hasExternalMonitor: {
+        const outputs = Niri.outputs;
+        if (!outputs) return false;
+        for (const connector in outputs) {
+            const lower = connector.toLowerCase();
+            if (!lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     Connections {
         target: Config
 
@@ -137,6 +149,58 @@ Scope {
             }
             const visibilities = Visibilities.getForActive()
             visibilities.novel = !visibilities.novel
+        }
+    }
+
+    IpcHandler {
+        target: "display"
+
+        function open(): void {
+            if (!root.hasExternalMonitor) {
+                Toaster.toast(qsTr("Display Switcher"), qsTr("No external display connected"), "desktop_windows", Toast.Warning);
+                return;
+            }
+            const visibilities = Visibilities.getForActive();
+            if (visibilities) {
+                visibilities.displaySelect = true;
+            }
+        }
+
+        function close(): void {
+            const visibilities = Visibilities.getForActive();
+            if (visibilities) {
+                visibilities.displaySelect = false;
+            }
+        }
+
+        function toggle(): void {
+            const visibilities = Visibilities.getForActive();
+            if (visibilities) {
+                if (!visibilities.displaySelect && !root.hasExternalMonitor) {
+                    Toaster.toast(qsTr("Display Switcher"), qsTr("No external display connected"), "desktop_windows", Toast.Warning);
+                    return;
+                }
+                visibilities.displaySelect = !visibilities.displaySelect;
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "soundPanel"
+
+        function open(): void {
+            const visibilities = Visibilities.getForActive();
+            if (visibilities) visibilities.soundPanel = true;
+        }
+
+        function close(): void {
+            const visibilities = Visibilities.getForActive();
+            if (visibilities) visibilities.soundPanel = false;
+        }
+
+        function toggle(): void {
+            const visibilities = Visibilities.getForActive();
+            if (visibilities) visibilities.soundPanel = !visibilities.soundPanel;
         }
     }
 }

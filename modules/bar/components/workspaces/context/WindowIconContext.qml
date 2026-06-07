@@ -74,14 +74,14 @@ Item {
         }
     }
 
-    Loader {
+    SafeLoader {
         id: contextLoader
 
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
-        active: root.popupActive && root.activated
-        // active: root.activated && !(Niri.wsContextType === "none") && root.popupActive
+        activeState: root.popupActive && root.activated
 
         sourceComponent: root.multiWindow ? multiComp : singleComp
     }
+
 }

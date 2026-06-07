@@ -2,6 +2,7 @@ pragma Singleton
 
 import qs.config
 import qs.utils
+import qs.services
 import Caelestia
 import Caelestia.Models
 import Quickshell
@@ -174,6 +175,14 @@ Searcher {
 
     IpcHandler {
         target: "wallpaper"
+
+        function open(): void {
+            const visibilities = Visibilities.getForActive()
+            if (visibilities) {
+                visibilities.wallpaperRequested = true
+                visibilities.launcher = true
+            }
+        }
 
         function get(): string {
             return root.actualCurrent;

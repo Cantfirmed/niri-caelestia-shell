@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import qs.components
 import qs.services
 import qs.config
+import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Effects
@@ -59,6 +60,12 @@ WlSessionLockSurface {
             }
             Anim {
                 target: centerPanel
+                property: "opacity"
+                to: 0
+                duration: Appearance.anim.durations.small
+            }
+            Anim {
+                target: powerButtons
                 property: "opacity"
                 to: 0
                 duration: Appearance.anim.durations.small
@@ -287,6 +294,7 @@ WlSessionLockSurface {
             target: initAnim
             function onFinished(): void {
                 extrasShowAnim.start();
+                powerButtonsShowAnim.start();
             }
         }
 
@@ -423,6 +431,74 @@ WlSessionLockSurface {
             lock: root
             opacity: 0
             scale: 0
+        }
+    }
+
+    Row {
+        id: powerButtons
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: Appearance.padding.xl
+        spacing: Appearance.spacing.lg
+        z: 6
+        opacity: 0
+
+        PowerButton {
+            icon: "dark_mode"
+            command: Config.session.commands.sleep
+        }
+
+        PowerButton {
+            icon: "logout"
+            command: Config.session.commands.logout
+        }
+
+        PowerButton {
+            icon: "power_settings_new"
+            command: Config.session.commands.shutdown
+        }
+    }
+
+    Anim {
+        id: powerButtonsShowAnim
+        target: powerButtons
+        property: "opacity"
+        to: 1
+        duration: Appearance.anim.durations.normal
+    }
+
+    component PowerButton: StyledRect {
+        id: button
+
+        required property string icon
+        required property list<string> command
+
+        implicitWidth: Math.round(52 * root.panelScale)
+        implicitHeight: Math.round(52 * root.panelScale)
+
+        radius: Appearance.rounding.large
+        color: button.activeFocus ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
+        opacity: Colours.transparency.enabled ? Colours.transparency.base : 1
+
+        Keys.onEnterPressed: Quickshell.execDetached(button.command)
+        Keys.onReturnPressed: Quickshell.execDetached(button.command)
+
+        StateLayer {
+            radius: parent.radius
+            color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+
+            function onClicked(): void {
+                Quickshell.execDetached(button.command);
+            }
+        }
+
+        MaterialIcon {
+            anchors.centerIn: parent
+
+            text: button.icon
+            color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+            font.pointSize: Appearance.font.size.headlineLarge
+            font.weight: 500
         }
     }
 }

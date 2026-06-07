@@ -51,16 +51,17 @@ Item {
         }
     }
 
-    Loader {
+    SafeLoader {
         id: contextLoader
         anchors.left: parent.left
         anchors.leftMargin: iconLoader.implicitWidth + Appearance.padding.xs
         anchors.verticalCenter: parent.verticalCenter
-        active: (Niri.wsContextType !== "none" && Config.bar.workspaces.windowRighClickContext)
+        activeState: (Niri.wsContextType !== "none" && Config.bar.workspaces.windowRighClickContext)
         sourceComponent: WindowIconContext {
             iconObj: iconItem
         }
     }
+
 
     Loader {
         id: iconLoader
@@ -80,8 +81,8 @@ Item {
         StyledRect {
             anchors.centerIn: parent
 
-            implicitHeight: Config.bar.workspaces.windowIconSize + Config.bar.workspaces.windowIconGap
-            implicitWidth: Config.bar.workspaces.windowIconSize
+            implicitHeight: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
+            implicitWidth: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
             color: "transparent"
             radius: Appearance.rounding.small / 2
 
@@ -89,7 +90,7 @@ Item {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                implicitSize: (iconItem.isFocused && iconItem.isWsFocused) ? Config.bar.workspaces.windowIconSize : Config.bar.workspaces.windowIconSize - Appearance.padding.xs
+                implicitSize: (iconItem.isFocused && iconItem.isWsFocused) ? (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) : (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs
                 source: Icons.getAppIcon(windowData.app_id ?? "", "image-missing")
                 Behavior on implicitSize {
                     Anim {
@@ -107,14 +108,14 @@ Item {
         StyledRect {
             anchors.centerIn: parent
 
-            implicitHeight: Config.bar.workspaces.windowIconSize + Config.bar.workspaces.windowIconGap
-            implicitWidth: Config.bar.workspaces.windowIconSize
+            implicitHeight: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
+            implicitWidth: (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2)
 
             MaterialIcon {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                font.pointSize: ((iconItem.isFocused && iconItem.isWsFocused)) ? Config.bar.workspaces.windowIconSize - Appearance.padding.xs : Config.bar.workspaces.windowIconSize - Appearance.padding.xs * 2
+                font.pointSize: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs : (Config.bar.sizes.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs * 2
                 grade: 0
                 text: Icons.getAppCategoryIcon(windowData.app_id, "help_center")
                 color: (iconItem.isWsFocused ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant)

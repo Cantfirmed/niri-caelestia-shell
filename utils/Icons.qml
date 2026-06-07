@@ -89,7 +89,34 @@ Singleton {
         return Quickshell.iconPath(icon);
     }
 
+    readonly property var explicitAppIcons: ({
+            "firefox": "public",
+            "chromium": "public",
+            "google-chrome": "public",
+            "brave": "public",
+            "code": "code",
+            "vscode": "code",
+            "kitty": "terminal",
+            "foot": "terminal",
+            "alacritty": "terminal",
+            "discord": "forum",
+            "webcord": "forum",
+            "vesktop": "forum",
+            "spotify": "headphones",
+            "mpv": "movie",
+            "vlc": "movie",
+            "obsidian": "edit_note",
+            "thunar": "folder",
+            "nautilus": "folder",
+            "dolphin": "folder",
+            "steam": "sports_esports"
+        })
+
     function getAppCategoryIcon(name: string, fallback: string): string {
+        const lowerName = String(name).toLowerCase();
+        if (explicitAppIcons.hasOwnProperty(lowerName))
+            return explicitAppIcons[lowerName];
+
         const categories = DesktopEntries.heuristicLookup(name)?.categories;
 
         if (categories)
