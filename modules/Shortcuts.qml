@@ -5,6 +5,7 @@ import Caelestia
 import qs.components.misc
 import qs.services
 import qs.modules.nexus
+import Caelestia.Config
 
 Scope {
     id: root

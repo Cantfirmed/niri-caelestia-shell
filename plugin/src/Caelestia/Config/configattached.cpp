@@ -1,6 +1,7 @@
 #include "configattached.hpp"
 #include "config.hpp"
 #include "monitorconfigmanager.hpp"
+#include "extraconfig.hpp"
 
 #include <qquickitem.h>
 
@@ -82,6 +83,7 @@ CONFIG_ATTACHED_GETTER(SidebarConfig, sidebar)
 CONFIG_ATTACHED_GETTER(UtilitiesConfig, utilities)
 CONFIG_ATTACHED_GETTER(WInfoConfig, winfo)
 CONFIG_ATTACHED_GETTER(UserPaths, paths)
+CONFIG_ATTACHED_GETTER(ExtraConfig, extra)
 
 #undef CONFIG_ATTACHED_GETTER
 
