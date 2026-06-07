@@ -12,13 +12,22 @@ Singleton {
     property bool hasPhysicalScreens: false
 
     function load(screen: ShellScreen, visibilities: var): void {
-        screens[Niri.focusedMonitorName] = visibilities;
+        const targetName = screen && screen.name ? screen.name : Niri.focusedMonitorName;
+        if (!targetName)
+            return;
+        screens[targetName] = visibilities;
     }
 
     function getForActive(): PersistentProperties {
         const targetName = Niri.focusedMonitorName;
-        if (!targetName) return null;
-        return screens[targetName] ?? null;
+        if (targetName && screens[targetName])
+            return screens[targetName];
+
+        const screenNames = Object.keys(screens);
+        if (screenNames.length > 0)
+            return screens[screenNames[0]];
+
+        return null;
     }
 
     function updateScreens() {
