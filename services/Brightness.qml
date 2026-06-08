@@ -5,7 +5,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia.Config
-import qs.components.misc
 
 Singleton {
     id: root
@@ -92,21 +91,7 @@ Singleton {
         }
     }
 
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "brightnessUp"
-        description: "Increase brightness"
-        onPressed: root.increaseBrightness()
-    }
 
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "brightnessDown"
-        description: "Decrease brightness"
-        onPressed: root.decreaseBrightness()
-    }
 
     IpcHandler {
         function get(): real {

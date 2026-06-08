@@ -51,7 +51,7 @@ CustomMouseArea {
         return y > height - Math.max(Config.border.minThickness, Config.border.thickness + panelHeight) - (isCorner ? Config.border.rounding : 0) && withinPanelWidth(panel, x, y);
     }
 
-    function onWheel(event: WheelEvent): void {
+function onWheel(event: WheelEvent): void {
         if (fullscreen)
             return;
         if (event.x < bar.implicitWidth) {
@@ -202,7 +202,7 @@ CustomMouseArea {
                 visibilities.dashboard = false;
         }
 
-        // Show utilities on hover
+// Show utilities on hover
         const showUtilities = inBottomPanel(panels.utilities, x, y, true);
 
         // Always update visibility based on hover if not in shortcut mode
@@ -231,7 +231,7 @@ CustomMouseArea {
                 root.osdShortcutActive = false;
                 root.utilitiesShortcutActive = false;
 
-                // Also hide dashboard and OSD if they're not being hovered
+                // Also hide panels if they're not being hovered
                 const inDashboardArea = root.inTopPanel(root.panels.dashboard, root.mouseX, root.mouseY);
                 const inOsdArea = root.inRightPanel(root.panels.osdWrapper, root.mouseX, root.mouseY);
 

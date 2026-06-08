@@ -4,7 +4,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
@@ -12,6 +11,7 @@ import qs.components
 import qs.components.containers
 import qs.services
 import qs.modules.bar
+import Caelestia.Internal
 
 StyledWindow {
     id: root
@@ -19,17 +19,21 @@ StyledWindow {
     readonly property alias bar: bar
     readonly property alias interactionWrapper: interactions
 
-    readonly property HyprlandMonitor monitor: Hypr.monitorFor(screen)
-    readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject.specialWorkspace?.name.length ?? 0) > 0
     readonly property bool hasFullscreen: {
-        if (hasSpecialWorkspace) {
-            const specialName = monitor?.lastIpcObject.specialWorkspace?.name;
-            if (!specialName)
-                return false;
-            const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
-            return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const wsId = NiriIpc.focusedWorkspaceId;
+            const screenW = screen?.geometry?.width ?? 0;
+            const screenH = screen?.geometry?.height ?? 0;
+            return NiriIpc.windows.some(w => {
+                if (w.workspace_id !== wsId)
+                    return false;
+                const size = w.layout?.window_size;
+                if (!size || size.length < 2)
+                    return false;
+                return Math.round(size[0]) === screenW && Math.round(size[1]) === screenH;
+            });
         }
-        return monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        return false;
     }
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
@@ -41,12 +45,24 @@ StyledWindow {
 
     property color surfaceColour: Colours.tPalette.m3surface
 
+    // dragMaskPadding controls the hover zone at screen edges.
+    // It's 0 when panels have keyboard focus, popouts are detached, or app windows exist
+    // on the active workspace. Otherwise it's the max dragThreshold of enabled panels.
+    //
+    // This is a reactive binding — QML re-evaluates it whenever any dependency
+    // (NiriIpc.available, NiriIpc.windows, NiriIpc.focusedWorkspaceId, visibilities,
+    // popouts.isDetached) changes. The set of tracked dependencies updates dynamically
+    // across evaluations (e.g. NiriIpc.windows is only tracked once NiriIpc.available
+    // becomes true).
     readonly property int dragMaskPadding: {
-        if (focusGrab.active || panels.popouts.isDetached)
+        if (root._needsKeyboardFocus || panels.popouts.isDetached)
             return 0;
 
-        if (monitor?.lastIpcObject.specialWorkspace?.name || monitor?.activeWorkspace.lastIpcObject.windows > 0)
-            return 0;
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const activeWsId = NiriIpc.focusedWorkspaceId;
+            if (activeWsId >= 0 && NiriIpc.windows.some(w => w.workspace_id === activeWsId))
+                return 0;
+        }
 
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
@@ -65,7 +81,14 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // Modal panels (launcher, session) MUST use Exclusive keyboard focus.
+    // OnDemand does not reliably trigger a Wayland focus request from
+    // forceActiveFocus() for layer-shell surfaces in Quickshell — the
+    // compositor won't switch keyboard focus to the shell window.
+    // Exclusive tells the compositor to automatically grant keyboard focus
+    // when the panel opens. See the Binding below for non-modal panels
+    // (sidebar, dashboard, popouts) which use OnDemand.
+    WlrLayershell.keyboardFocus: (visibilities.launcher || visibilities.session || visibilities.manga || visibilities.novel || visibilities.displaySelect || visibilities.soundPanel) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -81,6 +104,8 @@ StyledWindow {
     Behavior on surfaceColour {
         CAnim {}
     }
+
+    Component.onCompleted: { /* dragMaskPadding is a reactive binding — no manual init needed */ }
 
     Region {
         id: emptyRegion
@@ -106,19 +131,17 @@ StyledWindow {
         win: root
     }
 
-    HyprlandFocusGrab {
-        id: focusGrab
+    readonly property bool _needsKeyboardFocus: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
 
-        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
-        windows: [root]
-        onCleared: {
-            visibilities.launcher = false;
-            visibilities.session = false;
-            visibilities.sidebar = false;
-            visibilities.dashboard = false;
-            panels.popouts.hasCurrent = false;
-            bar.closeTray();
-        }
+    // Use Exclusive keyboard focus for modal panels (launcher, session) so the
+    // compositor automatically grants keyboard focus when they open. Use OnDemand
+    // for non-modal panels (sidebar, dashboard, popout tray menus) where Qt-level
+    // forceActiveFocus() suffices.
+    Binding {
+        target: QsWindow.window
+        property: "WlrLayershell.keyboardFocus"
+        value: WlrKeyboardFocus.OnDemand
+        when: root._needsKeyboardFocus && !visibilities.launcher && !visibilities.session
     }
 
     StyledRect {
@@ -239,6 +262,8 @@ StyledWindow {
         id: visibilities
 
         Component.onCompleted: Visibilities.load(root.screen, this)
+
+        // dragMaskPadding is a reactive binding — no manual updates needed
     }
 
     Interactions {

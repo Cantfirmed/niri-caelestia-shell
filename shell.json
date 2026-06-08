@@ -102,7 +102,7 @@
     }
   },
   "bar": {
-    "persistent": false,
+    "persistent": true,
     "showOnHover": true,
     "dragThreshold": 70,
     "scrollActions": {
@@ -334,6 +334,10 @@
       "reboot": [
         "systemctl",
         "reboot"
+      ],
+      "sleep": [
+        "systemctl",
+        "suspend"
       ]
     },
     "sizes": {
@@ -400,7 +404,7 @@
     }
   },
   "paths": {
-    "wallpaperDir": "/home/patrick/Pictures/Wallpapers",
+    "wallpaperDir": "~/Pictures/Wallpapers",
     "wallpaper": "",
     "sessionGif": "root:/assets/teto_spin.gif",
     "mediaGif": "root:/assets/bongocat.gif"

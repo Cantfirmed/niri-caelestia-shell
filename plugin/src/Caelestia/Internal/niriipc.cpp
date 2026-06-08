@@ -639,7 +639,7 @@ void NiriIpc::updateWorkspaceHasWindows() {
     const auto& wsList = m_workspacesModel->items();
     for (const auto& wsV : wsList) {
         const auto ws = wsV.toMap();
-        newState[QString::number(ws.value(QStringLiteral("idx")).toInt())] = false;
+        newState[QString::number(ws.value(QStringLiteral("idx")).toInt() + 1)] = false;
     }
 
     const auto& winList = m_windowsModel->items();
@@ -648,7 +648,7 @@ void NiriIpc::updateWorkspaceHasWindows() {
         const int wsId = win.value(QStringLiteral("workspace_id")).toInt();
         const int idx = getWorkspaceIdxById(wsId);
         if (idx >= 0) {
-            newState[QString::number(idx)] = true;
+            newState[QString::number(idx + 1)] = true;
         }
     }
 

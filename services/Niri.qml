@@ -21,7 +21,21 @@ Singleton {
     readonly property int focusedWorkspaceId: NiriIpc.focusedWorkspaceId
     readonly property var currentOutputWorkspaces: NiriIpc.currentOutputWorkspaces
     readonly property string focusedMonitorName: NiriIpc.focusedMonitorName
-    readonly property var workspaceHasWindows: NiriIpc.workspaceHasWindows
+    readonly property var workspaceHasWindows: {
+        let map = {};
+        const wins = root.windows;
+        console.log("NiriService: Updating workspaceHasWindows, total windows:", wins.length);
+        for (let i = 0; i < wins.length; i++) {
+            const win = wins[i];
+            const wsIdx = root.getWorkspaceIdxById(win.workspace_id);
+            console.log("Window:", win.id, "app_id:", win.app_id, "workspace_id:", win.workspace_id, "wsIdx:", wsIdx);
+            if (wsIdx >= 0) {
+                map[(wsIdx).toString()] = true;
+            }
+        }
+        console.log("Generated workspaceHasWindows map:", JSON.stringify(map));
+        return map;
+    }
 
     // UI context menu state
     property bool wsContextExpanded: false
@@ -386,7 +400,7 @@ Singleton {
         }
         
         _moveAfterFocusPendingId = windowId.toString();
-        _moveAfterFocusCb = function() {
+        _moveAfterFocusPendingCb = function() {
             NiriIpc.action("move-column-to-index", [index.toString()]);
         };
         

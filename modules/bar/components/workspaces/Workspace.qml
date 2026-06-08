@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import qs.components
-// import qs.components.effects
+import qs.services
 import Caelestia.Config
 import QtQuick
 import QtQuick.Layouts
@@ -20,8 +20,11 @@ ColumnLayout {
     readonly property bool isWorkspace: true // Flag for finding workspace children
     readonly property int size: isWorkspace ? implicitHeight + (hasWindows ? Appearance.padding.xs : 0) : 0
     readonly property int ws: groupOffset + index + 1
-    readonly property bool isOccupied: occupied[ws] ?? false
-    readonly property bool hasWindows: isOccupied && Config.bar.workspaces.showWindows
+    readonly property bool isOccupied: occupied[ws.toString()] ?? false
+    readonly property bool hasWindows: isOccupied && GlobalConfig.bar.workspaces.showWindows
+
+    onIsOccupiedChanged: console.log("Workspace.qml: ws:", ws, "isOccupied:", isOccupied, "occupied keys:", JSON.stringify(Object.keys(occupied || {})))
+    onHasWindowsChanged: console.log("Workspace.qml: ws:", ws, "hasWindows:", hasWindows, "showWindows:", GlobalConfig.bar.workspaces.showWindows)
 
     Behavior on scale {
         Anim {}
@@ -64,4 +67,6 @@ ColumnLayout {
             groupOffset: root.groupOffset
         }
     }
+
+    Component.onCompleted: console.log("Workspace.qml onCompleted: ws:", ws, "isOccupied:", isOccupied, "hasWindows:", hasWindows, "occupied keys:", JSON.stringify(Object.keys(occupied || {})))
 }

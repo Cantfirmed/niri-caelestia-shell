@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia
-import qs.components.misc
 import qs.services
 import qs.modules.nexus
 import Caelestia.Config
@@ -10,111 +9,19 @@ import Caelestia.Config
 Scope {
     id: root
 
-    property bool launcherInterrupted
     readonly property bool hasFullscreen: false
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "nexus"
-        description: "Open nexus"
-        onPressed: WindowFactory.create()
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "showall"
-        description: "Toggle launcher, dashboard and osd"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const v = Visibilities.getForActive();
-            v.launcher = v.dashboard = v.osd = v.utilities = !(v.launcher || v.dashboard || v.osd || v.utilities);
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "dashboard"
-        description: "Toggle dashboard"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            visibilities.dashboard = !visibilities.dashboard;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "session"
-        description: "Toggle session menu"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            visibilities.session = !visibilities.session;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "launcher"
-        description: "Toggle launcher"
-        onPressed: root.launcherInterrupted = false
-        onReleased: {
-            if (!root.launcherInterrupted && !root.hasFullscreen) {
-                const visibilities = Visibilities.getForActive();
-                visibilities.launcher = !visibilities.launcher;
-            }
-            root.launcherInterrupted = false;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "launcherInterrupt"
-        description: "Interrupt launcher keybind"
-        onPressed: root.launcherInterrupted = true
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "sidebar"
-        description: "Toggle sidebar"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            visibilities.sidebar = !visibilities.sidebar;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "utilities"
-        description: "Toggle utilities"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            visibilities.utilities = !visibilities.utilities;
-        }
-    }
 
     IpcHandler {
         function toggle(drawer: string): void {
-            if (list().split("\n").includes(drawer)) {
+            const visibilities = Visibilities.getForActive();
+            if (!visibilities) {
+                console.warn(lc, `No active drawer visibilities available for "${drawer}"`);
+                return;
+            }
+
+            if (Object.keys(visibilities).filter(k => typeof visibilities[k] === "boolean").includes(drawer)) {
                 if (root.hasFullscreen && ["launcher", "session", "dashboard"].includes(drawer))
                     return;
-                const visibilities = Visibilities.getForActive();
                 visibilities[drawer] = !visibilities[drawer];
             } else {
                 console.warn(lc, `Drawer "${drawer}" does not exist`);
@@ -123,6 +30,8 @@ Scope {
 
         function list(): string {
             const visibilities = Visibilities.getForActive();
+            if (!visibilities)
+                return "";
             return Object.keys(visibilities).filter(k => typeof visibilities[k] === "boolean").join("\n");
         }
 
@@ -162,22 +71,27 @@ Scope {
 
         function open(): void {
             const visibilities = Visibilities.getForActive()
-            visibilities.clipboardRequested = true
-            visibilities.launcher = true
+            if (visibilities) {
+                visibilities.clipboardRequested = true
+                visibilities.launcher = true
+            }
         }
 
         function close(): void {
             const visibilities = Visibilities.getForActive()
-            visibilities.launcher = false
+            if (visibilities)
+                visibilities.launcher = false
         }
 
         function toggle(): void {
             const visibilities = Visibilities.getForActive()
-            if (visibilities.launcher) {
-                visibilities.launcher = false
-            } else {
-                visibilities.clipboardRequested = true
-                visibilities.launcher = true
+            if (visibilities) {
+                if (visibilities.launcher) {
+                    visibilities.launcher = false
+                } else {
+                    visibilities.clipboardRequested = true
+                    visibilities.launcher = true
+                }
             }
         }
 
@@ -196,7 +110,8 @@ Scope {
                 return
             }
             const visibilities = Visibilities.getForActive()
-            visibilities.manga = !visibilities.manga
+            if (visibilities)
+                visibilities.manga = !visibilities.manga
         }
     }
 
@@ -208,7 +123,8 @@ Scope {
                 return
             }
             const visibilities = Visibilities.getForActive()
-            visibilities.novel = !visibilities.novel
+            if (visibilities)
+                visibilities.novel = !visibilities.novel
         }
     }
 

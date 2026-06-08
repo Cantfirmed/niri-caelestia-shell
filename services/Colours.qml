@@ -82,20 +82,20 @@ Singleton {
         Quickshell.execDetached(["caelestia", "scheme", "set", "--notify", "-m", mode]);
     }
 
-    function reloadHyprRules(): void {
-        // No-op on Niri
+    function reloadRules(): void {
+        // No-op — colour scheme reload not needed on Niri
     }
 
-    function requestReloadHyprRules(): void {
+    function requestReloadRules(): void {
         if (cooldownTimer.running) {
             root.cooldownPending = true;
         } else {
-            root.reloadHyprRules();
+            root.reloadRules();
             cooldownTimer.restart();
         }
     }
 
-    Component.onCompleted: root.requestReloadHyprRules()
+    Component.onCompleted: root.requestReloadRules()
 
 
     FileView {
@@ -118,7 +118,7 @@ Singleton {
         onTriggered: {
             if (root.cooldownPending) {
                 root.cooldownPending = false;
-                root.reloadHyprRules();
+                root.reloadRules();
                 restart();
             }
         }
@@ -128,7 +128,7 @@ Singleton {
         id: cAnimCompleteTimer
 
         interval: Tokens.anim.durations.expressiveSlowEffects
-        onTriggered: root.requestReloadHyprRules()
+        onTriggered: root.requestReloadRules()
     }
 
     component Transparency: QtObject {
@@ -138,13 +138,13 @@ Singleton {
 
         onEnabledChanged: {
             if (enabled)
-                root.requestReloadHyprRules();
+                root.requestReloadRules();
             else
                 cAnimCompleteTimer.start();
         }
         onBaseChanged: {
             if (root.lastBaseTransparency > base)
-                root.requestReloadHyprRules();
+                root.requestReloadRules();
             else
                 cAnimCompleteTimer.start();
             root.lastBaseTransparency = base;

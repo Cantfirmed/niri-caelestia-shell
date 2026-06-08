@@ -22,7 +22,7 @@ Item {
     visible: false
 
     readonly property var c: Colours.tPalette
-    readonly property string fontBody: Config.appearance.font.family.sans
+    readonly property string fontBody: Appearance.font.family.sans
 
     property int tabIndex: 0
 

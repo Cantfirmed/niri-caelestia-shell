@@ -10,4 +10,8 @@ PersistentProperties {
     property bool sidebar
     property bool displaySelect
     property bool soundPanel
+    property bool clipboardRequested
+    property bool wallpaperRequested
+    property bool manga
+    property bool novel
 }

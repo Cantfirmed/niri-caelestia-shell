@@ -11,8 +11,8 @@ Item {
     id: browseView
 
     readonly property var c: Colours.tPalette
-    readonly property string fontDisplay: Config.appearance.font.family.sans
-    readonly property string fontBody:    Config.appearance.font.family.sans
+    readonly property string fontDisplay: Appearance.font.family.sans
+    readonly property string fontBody:    Appearance.font.family.sans
 
     signal novelSelected(string novelId)
 
@@ -198,9 +198,8 @@ Item {
 
                     Menu {
                         id: providerMenu
-                        width: 160
-                        x: parent.width - width
-                        y: parent.height + Appearance.spacing.sm
+                        attachTo: parent
+                        marginY: Appearance.spacing.sm
                         
                         items: [
                             MenuItem {

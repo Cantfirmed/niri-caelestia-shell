@@ -20,8 +20,9 @@ Item {
     required property bool isWsFocused
     required property int curWindowIndex
 
-    property bool useImageIcon: Config.bar.workspaces.windowIconImage
-    property bool groupIconsByApp: Config.bar.workspaces.groupIconsByApp
+    property bool useImageIcon: GlobalConfig.bar.workspaces.windowIconImage ?? false
+    property bool groupIconsByApp: GlobalConfig.bar.workspaces.groupIconsByApp ?? false
+    readonly property int windowIconGap: GlobalConfig.bar.workspaces.windowIconGap ?? 5
 
     property int currentGroupIndex: 0
 
@@ -40,8 +41,10 @@ Item {
 
     anchors.left: parent.left
 
-    implicitWidth: iconLoader.implicitWidth + (popupActive ? Config.bar.workspaces.windowContextWidth : 0)
+    implicitWidth: iconLoader.implicitWidth + (popupActive ? (GlobalConfig.bar.workspaces.windowContextWidth ?? 250) : 0)
     implicitHeight: iconLoader.implicitHeight
+    width: implicitWidth
+    height: implicitHeight
 
     z: popupActive ? 90 : 0
 
@@ -56,7 +59,7 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: iconLoader.implicitWidth + Appearance.padding.xs
         anchors.verticalCenter: parent.verticalCenter
-        activeState: (Niri.wsContextType !== "none" && Config.bar.workspaces.windowRighClickContext)
+        activeState: (Niri.wsContextType !== "none" && (GlobalConfig.bar.workspaces.windowRighClickContext ?? true))
         sourceComponent: WindowIconContext {
             iconObj: iconItem
         }
@@ -68,6 +71,8 @@ Item {
 
         // anchors.centerIn: parent
         anchors.left: parent.left
+        width: implicitWidth
+        height: implicitHeight
 
         // anchors.horizontalCenter: parent.horizontalCenter
         sourceComponent: iconItem.useImageIcon ? imageIconComp : materialIconComp
@@ -80,8 +85,10 @@ Item {
         id: imageIconComp
         StyledRect {
             anchors.centerIn: parent
+            width: implicitWidth
+            height: implicitHeight
 
-            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
+            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + windowIconGap
             implicitWidth: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
             color: "transparent"
             radius: Appearance.rounding.small / 2
@@ -107,19 +114,21 @@ Item {
         id: materialIconComp
         StyledRect {
             anchors.centerIn: parent
+            width: implicitWidth
+            height: implicitHeight
 
-            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + Config.bar.workspaces.windowIconGap
+            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + windowIconGap
             implicitWidth: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
 
             MaterialIcon {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                font.pointSize: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs * 2
+                size: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - Appearance.padding.xs * 2
                 grade: 0
                 text: Icons.getAppCategoryIcon(windowData.app_id, "help_center")
                 color: (iconItem.isWsFocused ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant)
-                Behavior on font.pointSize {
+                Behavior on size {
                     Anim {
                         easing.bezierCurve: Appearance.anim.curves.emphasized
                     }
@@ -247,7 +256,7 @@ Item {
             if (iconItem.popupActive && Niri.wsContextType === "item")
                 return {
                     right: -Appearance.padding.xl,
-                    bottom: (iconLoader.implicitHeight - badgeLoader.height) / 2 - (!iconItem.isFocused ? Appearance.padding.xs / 2 : Config.bar.workspaces.windowIconGap),
+                    bottom: (iconLoader.implicitHeight - badgeLoader.height) / 2 - (!iconItem.isFocused ? Appearance.padding.xs / 2 : windowIconGap),
                     size: Appearance.padding.xl
                 };
             else if (iconItem.isFocused)

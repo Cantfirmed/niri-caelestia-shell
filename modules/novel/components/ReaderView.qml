@@ -11,8 +11,8 @@ Item {
     id: readerView
 
     readonly property var c: Colours.tPalette
-    readonly property string fontDisplay: Config.appearance.font.family.sans
-    readonly property string fontBody:    Config.appearance.font.family.sans
+    readonly property string fontDisplay: Appearance.font.family.sans
+    readonly property string fontBody:    Appearance.font.family.sans
 
     signal backRequested()
 

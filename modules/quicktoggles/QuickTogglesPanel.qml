@@ -12,17 +12,20 @@ Scope {
 
         function open(): void {
             const visibilities = Visibilities.getForActive()
-            visibilities.quicktoggles = true
+            if (visibilities)
+                visibilities.quicktoggles = true
         }
 
         function close(): void {
             const visibilities = Visibilities.getForActive()
-            visibilities.quicktoggles = false
+            if (visibilities)
+                visibilities.quicktoggles = false
         }
 
         function toggle(): void {
             const visibilities = Visibilities.getForActive()
-            visibilities.quicktoggles = !visibilities.quicktoggles
+            if (visibilities)
+                visibilities.quicktoggles = !visibilities.quicktoggles
         }
     }
 }

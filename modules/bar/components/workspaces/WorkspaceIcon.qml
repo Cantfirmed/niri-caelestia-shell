@@ -13,7 +13,8 @@ Item {
     property bool popupActive: (Niri.wsContextAnchor === root) || (Niri.wsContextAnchor === workspace) || (Niri.wsContextType === "workspaces")
 
     Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-    Layout.preferredHeight: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
+    implicitHeight: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
+    Layout.preferredHeight: implicitHeight
 
     implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2 + (popupActive ? Config.bar.workspaces.windowContextWidth : 0)
     Behavior on implicitWidth {
