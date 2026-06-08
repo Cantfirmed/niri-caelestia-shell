@@ -15,7 +15,7 @@ StyledRect {
 
     readonly property int activeWsId: Niri.focusedWorkspaceIndex + 1
     readonly property var occupied: Niri.workspaceHasWindows
-    readonly property int groupOffset: Math.floor((Niri.focusedWorkspaceIndex) / Config.bar.workspaces.shown) * Config.bar.workspaces.shown
+    readonly property int groupOffset: Math.floor((Niri.focusedWorkspaceIndex) / GlobalConfig.bar.workspaces.shown) * GlobalConfig.bar.workspaces.shown
 
     readonly property int focusedWindowId: Niri.focusedWindow?.id ?? -1
 
@@ -40,7 +40,7 @@ StyledRect {
     }
 
     Loader {
-        active: Config.bar.workspaces.occupiedBg
+        active: GlobalConfig.bar.workspaces.occupiedBg
         asynchronous: true
 
         anchors.fill: parent
@@ -77,14 +77,14 @@ StyledRect {
     Binding {
         target: contextBgLoader
         property: "active"
-        value: Config.bar.workspaces.windowRighClickContext && Niri.wsContextType !== "none"
+        value: (GlobalConfig.bar.workspaces.windowRighClickContext ?? true) && Niri.wsContextType !== "none"
         restoreMode: Binding.RestoreNone
         when: !root.dying
     }
 
     //TODO, For Niri, workspace context menu on right click.
     // Loader {
-    //     active: Config.bar.workspaces.windowRighClickContext && Niri.wsContextType !== "none"
+    //     active: GlobalConfig.bar.workspaces.windowRighClickContext && Niri.wsContextType !== "none"
     //     asynchronous: true
     //     z: Niri.wsContextType === "item" ? 10 : 1
 
@@ -111,7 +111,7 @@ StyledRect {
         Repeater {
             id: workspaces
 
-            model: Config.bar.workspaces.shown
+            model: GlobalConfig.bar.workspaces.shown
 
             Workspace {
                 activeWsId: root.activeWsId
@@ -127,7 +127,7 @@ StyledRect {
         z: 1
         anchors.left: parent.left
         anchors.right: parent.right
-        active: Config.bar.workspaces.activeIndicator
+        active: GlobalConfig.bar.workspaces.activeIndicator
         asynchronous: true
 
         sourceComponent: ActiveIndicator {
@@ -140,7 +140,7 @@ StyledRect {
 
     Loader {
         id: pager
-        active: Config.bar.workspaces.pagerActive
+        active: GlobalConfig.bar.workspaces.pagerActive ?? true
 
         anchors.top: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
@@ -150,4 +150,6 @@ StyledRect {
             groupOffset: root.groupOffset
         }
     }
+
+    Component.onCompleted: console.log("Workspaces.qml completed successfully! shown count:", GlobalConfig.bar.workspaces.shown)
 }

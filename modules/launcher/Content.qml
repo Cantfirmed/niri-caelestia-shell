@@ -128,25 +128,32 @@ Item {
                 }
             }
 
-            Component.onCompleted: forceActiveFocus()
+            function checkLauncherState(): void {
+                if (root.visibilities.launcher) {
+                    search.forceActiveFocus();
+                    if (root.visibilities.clipboardRequested) {
+                        search.text = GlobalConfig.launcher.actionPrefix + "clip ";
+                        root.visibilities.clipboardRequested = false;
+                    } else if (root.visibilities.wallpaperRequested) {
+                        search.text = GlobalConfig.launcher.actionPrefix + "wallpaper ";
+                        root.visibilities.wallpaperRequested = false;
+                    }
+                } else {
+                    search.text = "";
+                    const current = list.currentList;
+                    if (current)
+                        current.currentIndex = 0;
+                }
+            }
+
+            Component.onCompleted: {
+                forceActiveFocus();
+                checkLauncherState();
+            }
 
             Connections {
                 function onLauncherChanged(): void {
-                    if (root.visibilities.launcher) {
-                        search.forceActiveFocus();
-                        if (root.visibilities.clipboardRequested) {
-                            search.text = GlobalConfig.launcher.actionPrefix + "clip ";
-                            root.visibilities.clipboardRequested = false;
-                        } else if (root.visibilities.wallpaperRequested) {
-                            search.text = GlobalConfig.launcher.actionPrefix + "wallpaper ";
-                            root.visibilities.wallpaperRequested = false;
-                        }
-                    } else {
-                        search.text = "";
-                        const current = list.currentList;
-                        if (current)
-                            current.currentIndex = 0;
-                    }
+                    search.checkLauncherState();
                 }
 
                 function onSessionChanged(): void {

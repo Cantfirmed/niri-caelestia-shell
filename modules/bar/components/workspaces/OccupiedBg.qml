@@ -22,9 +22,10 @@ Item {
         let count = 0;
         const start = groupOffset;
         const end = start + Config.bar.workspaces.shown;
-        for (const [ws, occ] of Object.entries(occupied)) {
+        for (const [wsStr, occ] of Object.entries(occupied)) {
+            const ws = Number(wsStr);
             if (ws > start && ws <= end && occ) {
-                if (!occupied[ws - 1]) {
+                if (!occupied[(ws - 1).toString()]) {
                     if (pills[count])
                         pills[count].start = ws;
                     else
@@ -33,7 +34,7 @@ Item {
                         }));
                     count++;
                 }
-                if (!occupied[ws + 1])
+                if (!occupied[(ws + 1).toString()])
                     pills[count - 1].end = ws;
             }
         }

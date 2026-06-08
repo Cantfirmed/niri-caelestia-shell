@@ -30,30 +30,34 @@ Item {
 
     property bool isWsFocused: root.activeWsId === root.ws
 
+    property bool groupIconsByApp: GlobalConfig.bar.workspaces.groupIconsByApp ?? false
+    property bool groupingRespectsLayout: GlobalConfig.bar.workspaces.groupingRespectsLayout ?? true
+    property int windowIconGap: GlobalConfig.bar.workspaces.windowIconGap ?? 5
+
     property var wsWindows: {
-        const wsIndex = root.idx + root.groupOffset;
-        if (wsIndex < 0 || wsIndex >= Niri.currentOutputWorkspaces.length)
-            return [];
-        const niriWorkspace = Niri.currentOutputWorkspaces[wsIndex];
+        const wsIndex = root.idx + root.groupOffset + 1;
+        const niriWorkspace = Niri.currentOutputWorkspaces.find(w => w.idx === wsIndex);
         if (!niriWorkspace)
             return [];
         return Niri.getWindowsByWorkspaceId(niriWorkspace.id);
     }
 
     function updateGroupedWindowsModel() {
-        const wsIndex = root.idx + root.groupOffset;
-        if (wsIndex < 0 || wsIndex >= Niri.currentOutputWorkspaces.length)
+        const wsIndex = root.idx + root.groupOffset + 1;
+        console.log("DraggableWindowColumn (idx:", root.idx, "ws:", root.ws, ") - wsIndex:", wsIndex, "currentOutputWorkspaces.length:", Niri.currentOutputWorkspaces.length);
+        const niriWorkspace = Niri.currentOutputWorkspaces.find(w => w.idx === wsIndex);
+        if (!niriWorkspace) {
+            console.log("niriWorkspace is null for wsIndex:", wsIndex);
             return;
-        const niriWorkspace = Niri.currentOutputWorkspaces[wsIndex];
-        if (!niriWorkspace)
-            return;
+        }
 
         var wsWindows = Niri.getWindowsByWorkspaceId(niriWorkspace.id);
+        console.log("ws:", root.ws, "niriWorkspace.id:", niriWorkspace.id, "wsWindows.length:", wsWindows.length);
         var newGroups;
 
-        if (Config.bar.workspaces.groupIconsByApp && Config.bar.workspaces.groupingRespectsLayout) {
+        if (root.groupIconsByApp && root.groupingRespectsLayout) {
             newGroups = Niri.groupWindowsByLayoutAndId(wsWindows);
-        } else if (Config.bar.workspaces.groupIconsByApp) {
+        } else if (root.groupIconsByApp) {
             newGroups = Niri.groupWindowsByApp(wsWindows);
         } else {
             newGroups = wsWindows.map(w => ({
@@ -241,10 +245,10 @@ Item {
 
                 property var fullGroup: root.groupedWindowsArray[index]
 
-                windowData: Config.bar.workspaces.groupIconsByApp ? fullGroup.main : fullGroup
-                groupWindowData: Config.bar.workspaces.groupIconsByApp ? (fullGroup.windows || []) : [fullGroup]
-                windowCount: Config.bar.workspaces.groupIconsByApp ? fullGroup.count : 1
-                isFocused: Config.bar.workspaces.groupIconsByApp ? fullGroup.windows.some(w => w.id === root.focusedWindowId) : root.focusedWindowId === fullGroup.id
+                windowData: root.groupIconsByApp ? fullGroup.main : fullGroup
+                groupWindowData: root.groupIconsByApp ? (fullGroup.windows || []) : [fullGroup]
+                windowCount: root.groupIconsByApp ? fullGroup.count : 1
+                isFocused: root.groupIconsByApp ? fullGroup.windows.some(w => w.id === root.focusedWindowId) : root.focusedWindowId === fullGroup.id
                 isWsFocused: root.isWsFocused
                 curWindowIndex: index
                 wsWindowCount: root.model ? root.model.count : 0
@@ -313,7 +317,7 @@ Item {
             let childY = child.y + child.height / 2;
             if (globalY < childY) {
                 targetIndex = i;
-                targetY = child.y - Config.bar.workspaces.windowIconGap;
+                targetY = child.y - root.windowIconGap;
                 break;
             }
             targetIndex = i + 1;

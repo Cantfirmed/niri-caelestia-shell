@@ -12,6 +12,7 @@ import qs.components
 import qs.components.containers
 import qs.services
 import qs.modules.bar
+import Caelestia.Internal
 
 StyledWindow {
     id: root
@@ -22,14 +23,30 @@ StyledWindow {
     readonly property var monitor: (typeof Hypr !== "undefined") ? Hypr.monitorFor(screen) : null
     readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject.specialWorkspace?.name.length ?? 0) > 0
     readonly property bool hasFullscreen: {
-        if (hasSpecialWorkspace) {
-            const specialName = monitor?.lastIpcObject.specialWorkspace?.name;
-            if (!specialName)
-                return false;
-            const specialWs = (typeof Hypr !== "undefined") ? Hypr.workspaces.values.find(ws => ws.name === specialName) : null;
-            return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        if (typeof Hypr !== "undefined" && monitor) {
+            if (hasSpecialWorkspace) {
+                const specialName = monitor.lastIpcObject.specialWorkspace?.name;
+                if (!specialName)
+                    return false;
+                const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
+                return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+            }
+            return monitor.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
         }
-        return monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const wsId = NiriIpc.focusedWorkspaceId;
+            const screenW = screen?.geometry?.width ?? 0;
+            const screenH = screen?.geometry?.height ?? 0;
+            return NiriIpc.windows.some(w => {
+                if (w.workspace_id !== wsId)
+                    return false;
+                const size = w.layout?.window_size;
+                if (!size || size.length < 2)
+                    return false;
+                return Math.round(size[0]) === screenW && Math.round(size[1]) === screenH;
+            });
+        }
+        return false;
     }
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
@@ -45,8 +62,17 @@ StyledWindow {
         if (focusGrab.active || panels.popouts.isDetached)
             return 0;
 
-        if (monitor?.lastIpcObject.specialWorkspace?.name || monitor?.activeWorkspace.lastIpcObject.windows > 0)
-            return 0;
+        if (typeof Hypr !== "undefined" && monitor) {
+            if (monitor.lastIpcObject.specialWorkspace?.name || monitor.activeWorkspace?.lastIpcObject.windows > 0)
+                return 0;
+        }
+
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const activeWsId = NiriIpc.focusedWorkspaceId;
+            const hasWindows = NiriIpc.windows.some(w => w.workspace_id === activeWsId);
+            if (hasWindows)
+                return 0;
+        }
 
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
@@ -54,6 +80,8 @@ StyledWindow {
                 thresholds.push(contentItem.Config[panel].dragThreshold);
         return Math.max(...thresholds);
     }
+
+    onDragMaskPaddingChanged: console.log("ContentWindow dragMaskPadding changed to:", dragMaskPadding)
 
     onHasFullscreenChanged: {
         visibilities.launcher = false;
@@ -65,7 +93,7 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
-    WlrLayershell.keyboardFocus: visibilities.launcher || visibilities.session ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (visibilities.launcher || visibilities.session || visibilities.manga || visibilities.novel || visibilities.displaySelect || visibilities.soundPanel) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 

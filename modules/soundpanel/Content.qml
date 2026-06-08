@@ -200,7 +200,7 @@ Card {
                         Layout.fillWidth: true
                         implicitHeight: 24
                         value: streamItem.modelData.audio.volume
-                        onMoved: {
+                        onInteraction: value => {
                             Audio.setStreamVolume(streamItem.modelData, value);
                         }
                         Layout.alignment: Qt.AlignVCenter

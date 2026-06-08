@@ -102,7 +102,7 @@
     }
   },
   "bar": {
-    "persistent": false,
+    "persistent": true,
     "showOnHover": true,
     "dragThreshold": 70,
     "scrollActions": {
@@ -334,6 +334,10 @@
       "reboot": [
         "systemctl",
         "reboot"
+      ],
+      "sleep": [
+        "systemctl",
+        "suspend"
       ]
     },
     "sizes": {

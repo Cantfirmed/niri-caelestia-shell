@@ -38,6 +38,11 @@ Item {
     readonly property alias utilities: utilities
     readonly property alias toasts: toasts
     readonly property alias sidebar: sidebar
+    readonly property alias manga: manga
+    readonly property alias novel: novel
+    readonly property alias quicktoggles: quicktoggles
+    readonly property alias displayselect: displayselect
+    readonly property alias soundpanel: soundpanel
 
     anchors.fill: parent
     anchors.margins: borderThickness

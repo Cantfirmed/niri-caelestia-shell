@@ -71,6 +71,14 @@ Searcher {
             return root.list.map(w => w.path).join("\n");
         }
 
+        function open(): void {
+            const visibilities = Visibilities.getForActive()
+            if (visibilities) {
+                visibilities.wallpaperRequested = true
+                visibilities.launcher = true
+            }
+        }
+
         target: "wallpaper"
     }
 
