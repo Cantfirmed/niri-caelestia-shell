@@ -45,26 +45,84 @@ StyledWindow {
 
     property color surfaceColour: Colours.tPalette.m3surface
 
-    readonly property int dragMaskPadding: {
-        if (root._needsKeyboardFocus || panels.popouts.isDetached)
-            return 0;
+    // Cache of whether NiriIpc has detected app windows on the active workspace.
+    // We cache this because NiriIpc's event socket can disconnect/reconnect during
+    // initialisation (clearing and refetching window data), but we don't want
+    // the hover zone to flicker between 0 and 80 each time.
+    //
+    // The *_settled flag ensures we only transition window state when BOTH workspace
+    // and window data have been populated since the last reconnection.
+    property bool _niriHasWindows: false
+    property bool _niriDataSettled: false
 
-        // When there are app windows on the active workspace, collapse hover zones
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+    // dragMaskPadding controls the hover zone at screen edges.
+    // It's 0 when panels have keyboard focus, popouts are detached, or app windows exist
+    // on the active workspace. Otherwise it's the max dragThreshold of enabled panels.
+    property int dragMaskPadding: 80
+
+    // Ensure the initial dragMaskPadding gets computed once everything is set up
+
+    function updateNiriWindowState(): void {
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available && NiriIpc.focusedWorkspaceId >= 0) {
+            // During initial settling, we wait until BOTH workspace AND window data
+            // are populated before trusting the window state. This avoids flickering
+            // when async data arrives in stages.
+            if (!_niriDataSettled && NiriIpc.windows.length === 0)
+                return; // data incomplete — keep previous state
+
+            if (!_niriDataSettled)
+                _niriDataSettled = true;
+
             const activeWsId = NiriIpc.focusedWorkspaceId;
-            const hasWindows = NiriIpc.windows.some(w => w.workspace_id === activeWsId);
-            if (hasWindows)
-                return 0;
+            _niriHasWindows = NiriIpc.windows.some(w => w.workspace_id === activeWsId);
+        }
+        // If NiriIpc is disconnected or has no workspace data yet (reconnecting),
+        // keep the previous _niriHasWindows value — don't flicker.
+    }
+
+    function updateDragMaskPadding(): void {
+        if (root._needsKeyboardFocus || panels.popouts.isDetached) {
+            dragMaskPadding = 0;
+            return;
+        }
+
+        if (root._niriHasWindows) {
+            dragMaskPadding = 0;
+            return;
         }
 
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
             if (contentItem.Config[panel].enabled)
                 thresholds.push(contentItem.Config[panel].dragThreshold);
-        return Math.max(...thresholds);
+        dragMaskPadding = Math.max(...thresholds);
     }
 
     onDragMaskPaddingChanged: console.log("ContentWindow dragMaskPadding changed to:", dragMaskPadding)
+
+    Timer {
+        id: niriDebounce
+        interval: 500
+        repeat: false
+        onTriggered: {
+            root.updateNiriWindowState();
+            root.updateDragMaskPadding();
+        }
+    }
+
+    Connections {
+        target: typeof NiriIpc !== "undefined" ? NiriIpc : null
+        function onAvailableChanged() {
+            if (!NiriIpc.available) {
+                // NiriIpc disconnected — reset settled flag so we don't trust
+                // stale data during the reconnection cycle
+                root._niriDataSettled = false;
+            }
+            niriDebounce.restart();
+        }
+        function onWorkspaceHasWindowsChanged() { niriDebounce.restart(); }
+        function onWindowsChanged() { niriDebounce.restart(); }
+    }
 
     onHasFullscreenChanged: {
         visibilities.launcher = false;
@@ -92,6 +150,8 @@ StyledWindow {
     Behavior on surfaceColour {
         CAnim {}
     }
+
+    Component.onCompleted: updateDragMaskPadding()
 
     Region {
         id: emptyRegion
@@ -244,6 +304,12 @@ StyledWindow {
         id: visibilities
 
         Component.onCompleted: Visibilities.load(root.screen, this)
+
+        // Recompute dragMaskPadding when panel visibilities change
+        onDashboardChanged: root.updateDragMaskPadding()
+        onLauncherChanged: root.updateDragMaskPadding()
+        onSessionChanged: root.updateDragMaskPadding()
+        onSidebarChanged: root.updateDragMaskPadding()
     }
 
     Interactions {
