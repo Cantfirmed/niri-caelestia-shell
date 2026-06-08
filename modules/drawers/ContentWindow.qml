@@ -49,6 +49,14 @@ StyledWindow {
         if (root._needsKeyboardFocus || panels.popouts.isDetached)
             return 0;
 
+        // When there are app windows on the active workspace, collapse hover zones
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const activeWsId = NiriIpc.focusedWorkspaceId;
+            const hasWindows = NiriIpc.windows.some(w => w.workspace_id === activeWsId);
+            if (hasWindows)
+                return 0;
+        }
+
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
             if (contentItem.Config[panel].enabled)
