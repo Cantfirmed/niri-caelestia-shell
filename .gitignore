@@ -62,4 +62,5 @@ desktop.ini
 # Agent and Setup Metadata
 .dfm_setup_done
 AGENTS.md
-GEMINI.md.pi/
+GEMINI.md
+.pi/
