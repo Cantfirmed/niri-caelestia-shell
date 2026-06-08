@@ -178,7 +178,7 @@ Item {
         }
     }
 
-    // Toggle component matching Hyprland's utilities/cards/Toggles style
+    // Toggle component matching utilities/cards/Toggles style
     component Toggle: IconButton {
         Layout.fillWidth: true
         Layout.preferredWidth: implicitWidth + (stateLayer.pressed ? Appearance.padding.xl : internalChecked ? Appearance.padding.sm : 0)

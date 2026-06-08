@@ -12,7 +12,6 @@ import qs.modules.sidebar as Sidebar
 import qs.modules.utilities as Utilities
 import qs.modules.bar.popouts as BarPopouts
 import qs.modules.utilities.toasts as Toasts
-import qs.modules.quicktoggles as QuickToggles
 import qs.modules.manga as MangaModule
 import qs.modules.novel as NovelModule
 import qs.modules.displayselect as DisplaySelect
@@ -40,7 +39,6 @@ Item {
     readonly property alias sidebar: sidebar
     readonly property alias manga: manga
     readonly property alias novel: novel
-    readonly property alias quicktoggles: quicktoggles
     readonly property alias displayselect: displayselect
     readonly property alias soundpanel: soundpanel
 
@@ -177,13 +175,6 @@ Item {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-    }
-
-    QuickToggles.Wrapper {
-        id: quicktoggles
-        visibilities: root.visibilities
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
     }
 
     DisplaySelect.Wrapper {

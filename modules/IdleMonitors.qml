@@ -21,8 +21,6 @@ Scope {
             lock.lock.locked = true;
         else if (action === "unlock")
             lock.lock.locked = false;
-        else if (typeof action === "string")
-            Hypr.dispatch(action);
         else
             Quickshell.execDetached(action);
     }

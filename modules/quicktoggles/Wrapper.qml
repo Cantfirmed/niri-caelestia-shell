@@ -8,6 +8,9 @@ Item {
 
     required property PersistentProperties visibilities
 
+    // Load the IPC handler for Super+N (quicktoggles toggle/open/close)
+    QuickTogglesPanel {}
+
     visible: height > 0
     implicitHeight: 0
     implicitWidth: content.implicitWidth

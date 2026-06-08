@@ -79,13 +79,11 @@ ColumnLayout {
     function handleWheel(y: real, angleDelta: point): void {
         const ch = childAt(width / 2, y) as WrappedLoader;
         if (ch?.id === "workspaces" && Config.bar.scrollActions.workspaces) {
-            // Workspace scroll
-            const mon = (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor);
-            const specialWs = mon?.lastIpcObject.specialWorkspace.name;
-            if (specialWs?.length > 0)
-                Hypr.dispatch(`togglespecialworkspace ${specialWs.slice(8)}`);
-            else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
-                Hypr.dispatch(`workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
+            // Workspace scroll via Niri IPC
+            if (angleDelta.y < 0)
+                NiriIpc.action("focus-workspace-down");
+            else if (angleDelta.y > 0)
+                NiriIpc.action("focus-workspace-up");
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
             // Volume scroll on top half
             if (angleDelta.y > 0)

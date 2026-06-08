@@ -1,28 +1,12 @@
 ---
 
-## 🪦 Archived — I Moved On (and That's Okay!)
+**Niri fork** — this version is maintained exclusively for the [Niri](https://github.com/YaLTeR/niri) compositor.
+All Hyprland-specific code has been stripped out.
 
-Hey there, traveler! 👋
-
-This repo is now **archived** — meaning it's read-only, frozen in time like a really cool fossil. 🦕
-
-I had an absolute blast building this thing. It was my first time ever touching **Quickshell**, and honestly? I learned *so much* — from QML quirks to wrangling IPC commands at 2am. If you poked around the code and thought "what was he thinking here?", the answer is probably "I have no idea, but it worked!" 😅
-
-### So... what happened?
-
-I switched to **Hyprland** 🏃, and Hyprland has native scrolling support built right in — so a lot of what I was hacking around in Niri no longer needed a custom shell to solve. It made more sense to move my energy there.
-
-### Is this usable?
-
-Honestly? **It might still work for you!** The code is all here, the README has the full setup guide, and nothing is going anywhere. Fork it, adapt it, learn from it — that's exactly what I did from the projects that inspired me. 🙏
-
-### Shoutouts before I go
-
-This whole thing wouldn't exist without [jutraim](https://github.com/jutraim/niri-caelestia-shell), [Caelestia](https://github.com/caelestia-dots/shell), and [end-4](https://github.com/end-4/dots-hyprland) — absolute legends. 🌟
-
-Thanks for starring, filing issues, and being curious. It meant a lot.
-
-*— Ayush, now somewhere in Hyprland-land* 🚀
+Original work and massive thanks to:
+- [jutraim](https://github.com/jutraim/niri-caelestia-shell)
+- [Caelestia](https://github.com/caelestia-dots/shell)
+- [end-4](https://github.com/end-4/dots-hyprland)
 
 ---
 
@@ -45,7 +29,7 @@ https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
 ## Components
 
 -   Widgets: [`Quickshell`](https://quickshell.outfoxxed.me)
--   Window manager: [`Hyprland`](https://hyprland.org)
+-   Window manager: [`Niri`](https://github.com/YaLTeR/niri)
 -   Dots: [`caelestia`](https://github.com/caelestia-dots)
 
 ## Installation
@@ -164,16 +148,14 @@ sudo cmake --install build
 
 The shell can be started via the `caelestia shell -d` command or `qs -c caelestia`.
 If the entire caelestia dots are installed, the shell will be autostarted on login
-via an `exec-once` in the hyprland config.
+via `spawn-sh-at-startup "qs -c niri-caelestia-shell"` in the niri config.
 
 ### Shortcuts/IPC
 
-All keybinds are accessible via Hyprland [global shortcuts](https://wiki.hyprland.org/Configuring/Binds/#dbus-global-shortcuts).
-If using the entire caelestia dots, the keybinds are already configured for you.
-Otherwise, [this file](https://github.com/caelestia-dots/caelestia/blob/main/hypr/hyprland/keybinds.conf#L1-L39)
-contains an example on how to use global shortcuts.
+All keybinds are configured in the [niri config](niri/niri/caelestia.kdl) and use IPC calls
+to trigger shell actions.
 
-All IPC commands can be accessed via `caelestia shell ...`. For example
+All IPC commands can be accessed via `qs -c niri-caelestia-shell ipc call <target> <action>`. For example
 
 ```sh
 caelestia shell mpris getActive trackTitle
@@ -891,17 +873,11 @@ https://discord.gg/BGDCFCmMBk
 
 ### My screen is flickering, help pls!
 
-Try disabling VRR in the hyprland config. You can do this by adding the following to `~/.config/caelestia/hypr-user.conf`:
+Check your Niri compositor config for VRR/flickering related settings.
 
-```conf
-misc {
-    vrr = 0
-}
-```
+### I want to make my own changes to the compositor config!
 
-### I want to make my own changes to the hyprland config!
-
-You can add your custom hyprland configs to `~/.config/caelestia/hypr-user.conf`.
+Edit the Niri config at `~/.config/niri/config.kdl`.
 
 ### I want to make my own changes to other stuff!
 
@@ -931,14 +907,12 @@ the launcher only shows an odd number of wallpapers at one time. If you only hav
 
 ## Credits
 
-Thanks to the Hyprland discord community (especially the homies in #rice-discussion) for all the help and suggestions
-for improving these dots!
+Thanks to the original Caelestia community and all the contributors who helped make this shell what it is today!
 
 A special thanks to [@outfoxxed](https://github.com/outfoxxed) for making Quickshell and the effort put into fixing issues
 and implementing various feature requests.
 
-Another special thanks to [@end_4](https://github.com/end-4) for his [config](https://github.com/end-4/dots-hyprland)
-which helped me a lot with learning how to use Quickshell.
+Another special thanks to [@end_4](https://github.com/end-4) for his config which helped me a lot with learning how to use Quickshell.
 
 Finally another thank you to all the configs I took inspiration from (only one for now):
 

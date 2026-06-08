@@ -86,10 +86,6 @@ Region {
     }
 
     R {
-        panel: root.panels.quicktoggles
-    }
-
-    R {
         panel: root.panels.displayselect
         width: panel.visible ? panel.width : 0
         height: panel.visible ? panel.height : 0

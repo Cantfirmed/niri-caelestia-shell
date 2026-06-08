@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia
-import qs.components.misc
 import qs.services
 import qs.modules.nexus
 import Caelestia.Config
@@ -10,110 +9,7 @@ import Caelestia.Config
 Scope {
     id: root
 
-    property bool launcherInterrupted
     readonly property bool hasFullscreen: false
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "nexus"
-        description: "Open nexus"
-        onPressed: WindowFactory.create()
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "showall"
-        description: "Toggle launcher, dashboard and osd"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const v = Visibilities.getForActive();
-            if (v)
-                v.launcher = v.dashboard = v.osd = v.utilities = !(v.launcher || v.dashboard || v.osd || v.utilities);
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "dashboard"
-        description: "Toggle dashboard"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            if (visibilities)
-                visibilities.dashboard = !visibilities.dashboard;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "session"
-        description: "Toggle session menu"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            if (visibilities)
-                visibilities.session = !visibilities.session;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "launcher"
-        description: "Toggle launcher"
-        onPressed: root.launcherInterrupted = false
-        onReleased: {
-            if (!root.launcherInterrupted && !root.hasFullscreen) {
-                const visibilities = Visibilities.getForActive();
-                if (visibilities)
-                    visibilities.launcher = !visibilities.launcher;
-            }
-            root.launcherInterrupted = false;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "launcherInterrupt"
-        description: "Interrupt launcher keybind"
-        onPressed: root.launcherInterrupted = true
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "sidebar"
-        description: "Toggle sidebar"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            if (visibilities)
-                visibilities.sidebar = !visibilities.sidebar;
-        }
-    }
-
-    // qmllint disable unresolved-type
-    CustomShortcut {
-        // qmllint enable unresolved-type
-        name: "utilities"
-        description: "Toggle utilities"
-        onPressed: {
-            if (root.hasFullscreen)
-                return;
-            const visibilities = Visibilities.getForActive();
-            if (visibilities)
-                visibilities.utilities = !visibilities.utilities;
-        }
-    }
 
     IpcHandler {
         function toggle(drawer: string): void {

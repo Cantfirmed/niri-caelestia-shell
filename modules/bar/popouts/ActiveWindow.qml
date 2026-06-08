@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Wayland
 import Quickshell.Widgets
 import Caelestia.Config
+import Caelestia.Internal
 import qs.components
 import qs.services
 import qs.utils
@@ -12,7 +12,9 @@ Item {
 
     required property PopoutState popouts
 
-    implicitWidth: Hypr.activeToplevel ? child.implicitWidth : -Tokens.padding.extraLargeIncreased
+    readonly property bool hasActiveWindow: NiriIpc.focusedWindowId.length > 0
+
+    implicitWidth: hasActiveWindow ? child.implicitWidth : -Tokens.padding.extraLargeIncreased
     implicitHeight: child.implicitHeight
 
     Column {
@@ -34,7 +36,7 @@ Item {
                 asynchronous: true
                 Layout.alignment: Qt.AlignVCenter
                 implicitSize: details.implicitHeight
-                source: Icons.getAppIcon(Hypr.activeToplevel?.lastIpcObject.class ?? "", "image-missing")
+                source: Icons.getAppIcon(NiriIpc.focusedWindowClass, "image-missing")
             }
 
             ColumnLayout {
@@ -45,14 +47,14 @@ Item {
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: Hypr.activeToplevel?.title ?? ""
+                    text: NiriIpc.focusedWindowTitle
                     font: Tokens.font.body.medium
                     elide: Text.ElideRight
                 }
 
                 StyledText {
                     Layout.fillWidth: true
-                    text: Hypr.activeToplevel?.lastIpcObject.class ?? ""
+                    text: NiriIpc.focusedWindowClass
                     color: Colours.palette.m3onSurfaceVariant
                     elide: Text.ElideRight
                 }
@@ -66,7 +68,7 @@ Item {
 
                 StateLayer {
                     radius: Tokens.rounding.large
-                    onClicked: root.popouts.detachRequested("winfo")
+                    visible: false // window info panel removed for Niri
                 }
 
                 MaterialIcon {
@@ -76,24 +78,10 @@ Item {
                     anchors.horizontalCenterOffset: font.pointSize * 0.05
 
                     text: "chevron_right"
+                    visible: false
 
                     fontStyle: Tokens.font.icon.large
                 }
-            }
-        }
-
-        ClippingWrapperRectangle {
-            color: "transparent"
-            radius: Tokens.rounding.medium
-
-            ScreencopyView {
-                id: preview
-
-                captureSource: Hypr.activeToplevel?.wayland ?? null // qmllint disable unresolved-type
-                live: visible
-
-                constraintSize.width: Tokens.sizes.bar.windowPreviewSize
-                constraintSize.height: Tokens.sizes.bar.windowPreviewSize
             }
         }
     }

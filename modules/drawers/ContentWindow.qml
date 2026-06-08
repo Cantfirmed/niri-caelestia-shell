@@ -4,7 +4,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
@@ -20,19 +19,7 @@ StyledWindow {
     readonly property alias bar: bar
     readonly property alias interactionWrapper: interactions
 
-    readonly property var monitor: (typeof Hypr !== "undefined") ? Hypr.monitorFor(screen) : null
-    readonly property bool hasSpecialWorkspace: (monitor?.lastIpcObject.specialWorkspace?.name.length ?? 0) > 0
     readonly property bool hasFullscreen: {
-        if (typeof Hypr !== "undefined" && monitor) {
-            if (hasSpecialWorkspace) {
-                const specialName = monitor.lastIpcObject.specialWorkspace?.name;
-                if (!specialName)
-                    return false;
-                const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
-                return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-            }
-            return monitor.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-        }
         if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
             const wsId = NiriIpc.focusedWorkspaceId;
             const screenW = screen?.geometry?.width ?? 0;
@@ -59,20 +46,8 @@ StyledWindow {
     property color surfaceColour: Colours.tPalette.m3surface
 
     readonly property int dragMaskPadding: {
-        if (focusGrab.active || panels.popouts.isDetached)
+        if (root._needsKeyboardFocus || panels.popouts.isDetached)
             return 0;
-
-        if (typeof Hypr !== "undefined" && monitor) {
-            if (monitor.lastIpcObject.specialWorkspace?.name || monitor.activeWorkspace?.lastIpcObject.windows > 0)
-                return 0;
-        }
-
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            const activeWsId = NiriIpc.focusedWorkspaceId;
-            const hasWindows = NiriIpc.windows.some(w => w.workspace_id === activeWsId);
-            if (hasWindows)
-                return 0;
-        }
 
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
@@ -134,19 +109,13 @@ StyledWindow {
         win: root
     }
 
-    HyprlandFocusGrab {
-        id: focusGrab
+    readonly property bool _needsKeyboardFocus: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
 
-        active: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
-        windows: [root]
-        onCleared: {
-            visibilities.launcher = false;
-            visibilities.session = false;
-            visibilities.sidebar = false;
-            visibilities.dashboard = false;
-            panels.popouts.hasCurrent = false;
-            bar.closeTray();
-        }
+    Binding {
+        target: QsWindow.window
+        property: "WlrLayershell.keyboardFocus"
+        value: WlrKeyboardFocus.OnDemand
+        when: root._needsKeyboardFocus
     }
 
     StyledRect {
