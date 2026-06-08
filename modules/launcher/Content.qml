@@ -130,6 +130,13 @@ Item {
 
             function checkLauncherState(): void {
                 if (root.visibilities.launcher) {
+                    // Request window activation from the compositor, then set Qt focus
+                    // on the text field. The Exclusive keyboard focus policy ensures the
+                    // compositor grants focus to this window automatically.
+                    const win = root.window;
+                    if (win && win.requestActivate)
+                        win.requestActivate();
+                    root.forceActiveFocus();
                     search.forceActiveFocus();
                     if (root.visibilities.clipboardRequested) {
                         search.text = GlobalConfig.launcher.actionPrefix + "clip ";
@@ -147,7 +154,6 @@ Item {
             }
 
             Component.onCompleted: {
-                forceActiveFocus();
                 checkLauncherState();
             }
 
@@ -157,8 +163,13 @@ Item {
                 }
 
                 function onSessionChanged(): void {
-                    if (!root.visibilities.session)
+                    if (!root.visibilities.session) {
+                        const win = root.window;
+                        if (win && win.requestActivate)
+                            win.requestActivate();
+                        root.forceActiveFocus();
                         search.forceActiveFocus();
+                    }
                 }
 
                 target: root.visibilities

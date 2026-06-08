@@ -45,83 +45,30 @@ StyledWindow {
 
     property color surfaceColour: Colours.tPalette.m3surface
 
-    // Cache of whether NiriIpc has detected app windows on the active workspace.
-    // We cache this because NiriIpc's event socket can disconnect/reconnect during
-    // initialisation (clearing and refetching window data), but we don't want
-    // the hover zone to flicker between 0 and 80 each time.
-    //
-    // The *_settled flag ensures we only transition window state when BOTH workspace
-    // and window data have been populated since the last reconnection.
-    property bool _niriHasWindows: false
-    property bool _niriDataSettled: false
-
     // dragMaskPadding controls the hover zone at screen edges.
     // It's 0 when panels have keyboard focus, popouts are detached, or app windows exist
     // on the active workspace. Otherwise it's the max dragThreshold of enabled panels.
-    property int dragMaskPadding: 80
+    //
+    // This is a reactive binding — QML re-evaluates it whenever any dependency
+    // (NiriIpc.available, NiriIpc.windows, NiriIpc.focusedWorkspaceId, visibilities,
+    // popouts.isDetached) changes. The set of tracked dependencies updates dynamically
+    // across evaluations (e.g. NiriIpc.windows is only tracked once NiriIpc.available
+    // becomes true).
+    readonly property int dragMaskPadding: {
+        if (root._needsKeyboardFocus || panels.popouts.isDetached)
+            return 0;
 
-    // Ensure the initial dragMaskPadding gets computed once everything is set up
-
-    function updateNiriWindowState(): void {
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available && NiriIpc.focusedWorkspaceId >= 0) {
-            // During initial settling, we wait until BOTH workspace AND window data
-            // are populated before trusting the window state. This avoids flickering
-            // when async data arrives in stages.
-            if (!_niriDataSettled && NiriIpc.windows.length === 0)
-                return; // data incomplete — keep previous state
-
-            if (!_niriDataSettled)
-                _niriDataSettled = true;
-
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
             const activeWsId = NiriIpc.focusedWorkspaceId;
-            _niriHasWindows = NiriIpc.windows.some(w => w.workspace_id === activeWsId);
-        }
-        // If NiriIpc is disconnected or has no workspace data yet (reconnecting),
-        // keep the previous _niriHasWindows value — don't flicker.
-    }
-
-    function updateDragMaskPadding(): void {
-        if (root._needsKeyboardFocus || panels.popouts.isDetached) {
-            dragMaskPadding = 0;
-            return;
-        }
-
-        if (root._niriHasWindows) {
-            dragMaskPadding = 0;
-            return;
+            if (activeWsId >= 0 && NiriIpc.windows.some(w => w.workspace_id === activeWsId))
+                return 0;
         }
 
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
             if (contentItem.Config[panel].enabled)
                 thresholds.push(contentItem.Config[panel].dragThreshold);
-        dragMaskPadding = Math.max(...thresholds);
-    }
-
-    onDragMaskPaddingChanged: console.log("ContentWindow dragMaskPadding changed to:", dragMaskPadding)
-
-    Timer {
-        id: niriDebounce
-        interval: 500
-        repeat: false
-        onTriggered: {
-            root.updateNiriWindowState();
-            root.updateDragMaskPadding();
-        }
-    }
-
-    Connections {
-        target: typeof NiriIpc !== "undefined" ? NiriIpc : null
-        function onAvailableChanged() {
-            if (!NiriIpc.available) {
-                // NiriIpc disconnected — reset settled flag so we don't trust
-                // stale data during the reconnection cycle
-                root._niriDataSettled = false;
-            }
-            niriDebounce.restart();
-        }
-        function onWorkspaceHasWindowsChanged() { niriDebounce.restart(); }
-        function onWindowsChanged() { niriDebounce.restart(); }
+        return Math.max(...thresholds);
     }
 
     onHasFullscreenChanged: {
@@ -134,6 +81,13 @@ StyledWindow {
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
+    // Modal panels (launcher, session) MUST use Exclusive keyboard focus.
+    // OnDemand does not reliably trigger a Wayland focus request from
+    // forceActiveFocus() for layer-shell surfaces in Quickshell — the
+    // compositor won't switch keyboard focus to the shell window.
+    // Exclusive tells the compositor to automatically grant keyboard focus
+    // when the panel opens. See the Binding below for non-modal panels
+    // (sidebar, dashboard, popouts) which use OnDemand.
     WlrLayershell.keyboardFocus: (visibilities.launcher || visibilities.session || visibilities.manga || visibilities.novel || visibilities.displaySelect || visibilities.soundPanel) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
@@ -151,7 +105,7 @@ StyledWindow {
         CAnim {}
     }
 
-    Component.onCompleted: updateDragMaskPadding()
+    Component.onCompleted: { /* dragMaskPadding is a reactive binding — no manual init needed */ }
 
     Region {
         id: emptyRegion
@@ -179,11 +133,15 @@ StyledWindow {
 
     readonly property bool _needsKeyboardFocus: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
 
+    // Use Exclusive keyboard focus for modal panels (launcher, session) so the
+    // compositor automatically grants keyboard focus when they open. Use OnDemand
+    // for non-modal panels (sidebar, dashboard, popout tray menus) where Qt-level
+    // forceActiveFocus() suffices.
     Binding {
         target: QsWindow.window
         property: "WlrLayershell.keyboardFocus"
         value: WlrKeyboardFocus.OnDemand
-        when: root._needsKeyboardFocus
+        when: root._needsKeyboardFocus && !visibilities.launcher && !visibilities.session
     }
 
     StyledRect {
@@ -305,11 +263,7 @@ StyledWindow {
 
         Component.onCompleted: Visibilities.load(root.screen, this)
 
-        // Recompute dragMaskPadding when panel visibilities change
-        onDashboardChanged: root.updateDragMaskPadding()
-        onLauncherChanged: root.updateDragMaskPadding()
-        onSessionChanged: root.updateDragMaskPadding()
-        onSidebarChanged: root.updateDragMaskPadding()
+        // dragMaskPadding is a reactive binding — no manual updates needed
     }
 
     Interactions {

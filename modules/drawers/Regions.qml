@@ -97,6 +97,31 @@ Region {
         height: panel.visible ? panel.height : 0
     }
 
+    // Right-side corner preservation — always punch through the Xor'd region
+    // at the top-right and bottom-right corners so the SDF border's rounded
+    // corners remain visible even when maskBorderThickness is 0 (i.e. when
+    // app windows are present and the right-edge border strip is hidden).
+    // Child regions use parent-relative coordinates, so we offset to account
+    // for the parent XOR's position in window space.
+    readonly property real _cornerSize: root.win.contentItem.Config.border.rounding
+    // Inset the right side of each corner region by borderThickness so the
+    // mask does not expose the opaque 5px SDF frame strip (which would
+    // overlay app-window content). Only the transparent interior is shown.
+    Region {
+        x: root.width - _cornerSize
+        y: -root.y
+        width: _cornerSize - root.borderThickness
+        height: _cornerSize
+        intersection: Intersection.Subtract
+    }
+    Region {
+        x: root.width - _cornerSize
+        y: root.height - _cornerSize
+        width: _cornerSize - root.borderThickness
+        height: _cornerSize
+        intersection: Intersection.Subtract
+    }
+
     component R: Region {
         required property Item panel
 
