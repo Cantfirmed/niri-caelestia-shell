@@ -118,6 +118,7 @@ public:
 
     // ── Actions (Q_INVOKABLE for QML) ──
     Q_INVOKABLE bool action(const QString& actionName, const QVariantList& args = {});
+    Q_INVOKABLE void fetchOutputs();
 
     // ── Workspace Helpers ──
     Q_INVOKABLE int getWorkspaceIdxById(int workspaceId) const;

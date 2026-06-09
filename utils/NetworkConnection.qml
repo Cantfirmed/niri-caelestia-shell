@@ -67,32 +67,26 @@ QtObject {
         }
 
         if (network.isSecure) {
-            const hasSavedProfile = Nmcli.hasSavedProfile(network.ssid);
-
-            if (hasSavedProfile) {
-                Nmcli.connectToNetwork(network.ssid, "", network.bssid, null);
-            } else {
-                // Use password check with callback
-                Nmcli.connectToNetworkWithPasswordCheck(network.ssid, network.isSecure, result => {
-                    if (result.needsPassword) {
-                        // Clear pending connection if exists
-                        if (Nmcli.pendingConnection) {
-                            Nmcli.connectionCheckTimer.stop();
-                            Nmcli.immediateCheckTimer.stop();
-                            Nmcli.immediateCheckTimer.checkCount = 0;
-                            Nmcli.pendingConnection = null;
-                        }
-
-                        // Handle password dialog - use session if available, otherwise use callback
-                        if (session && session.network) {
-                            session.network.showPasswordDialog = true;
-                            session.network.pendingNetwork = network;
-                        } else if (onPasswordNeeded) {
-                            onPasswordNeeded(network);
-                        }
+            // Use password check with callback for all secure networks so we can prompt for a password if the saved one is invalid or missing
+            Nmcli.connectToNetworkWithPasswordCheck(network.ssid, network.isSecure, result => {
+                if (result.needsPassword) {
+                    // Clear pending connection if exists
+                    if (Nmcli.pendingConnection) {
+                        Nmcli.connectionCheckTimer.stop();
+                        Nmcli.immediateCheckTimer.stop();
+                        Nmcli.immediateCheckTimer.checkCount = 0;
+                        Nmcli.pendingConnection = null;
                     }
-                }, network.bssid);
-            }
+
+                    // Handle password dialog - use session if available, otherwise use callback
+                    if (session && session.network) {
+                        session.network.showPasswordDialog = true;
+                        session.network.pendingNetwork = network;
+                    } else if (onPasswordNeeded) {
+                        onPasswordNeeded(network);
+                    }
+                }
+            }, network.bssid);
         } else {
             Nmcli.connectToNetwork(network.ssid, "", network.bssid, null);
         }

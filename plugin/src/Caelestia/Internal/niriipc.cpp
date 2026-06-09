@@ -327,6 +327,9 @@ void NiriIpc::onEvent(const QJsonObject& event) {
         handleOverviewOpenedOrClosed(event.value(QStringLiteral("OverviewOpenedOrClosed")).toObject());
     } else if (event.contains(QStringLiteral("OutputsChanged"))) {
         handleOutputsChanged(event.value(QStringLiteral("OutputsChanged")).toObject());
+    } else if (event.contains(QStringLiteral("ConfigLoaded"))) {
+        qDebug() << "NiriIpc: ConfigLoaded event received";
+        fetchOutputs();
     }
 }
 
@@ -373,14 +376,7 @@ void NiriIpc::fetchInitialState() {
     });
 
     // Fetch outputs
-    m_requestSocket.request("\"Outputs\"", [this](bool ok, const QJsonObject& resp) {
-        if (!ok) return;
-        const auto result = resp.value(QStringLiteral("result")).toObject();
-        // result = {"Outputs": {"eDP-1": {...}}} -> unwrap to the map of outputs
-        const auto outputs = result.value(QStringLiteral("Outputs")).toObject();
-        m_outputs = outputs.toVariantMap();
-        emit outputsChanged();
-    });
+    fetchOutputs();
 
     // Fetch keyboard layouts
     m_requestSocket.request("\"KeyboardLayouts\"", [this](bool ok, const QJsonObject& resp) {
@@ -391,6 +387,22 @@ void NiriIpc::fetchInitialState() {
         QJsonObject data;
         data[QStringLiteral("keyboard_layouts")] = result.value(QStringLiteral("KeyboardLayouts"));
         handleKeyboardLayoutsChanged(data);
+    });
+}
+
+void NiriIpc::fetchOutputs() {
+    qDebug() << "NiriIpc: fetchOutputs() called";
+    m_requestSocket.request("\"Outputs\"", [this](bool ok, const QJsonObject& resp) {
+        if (!ok) {
+            qDebug() << "NiriIpc: fetchOutputs() request failed";
+            return;
+        }
+        const auto result = resp.value(QStringLiteral("result")).toObject();
+        // result = {"Outputs": {"eDP-1": {...}}} -> unwrap to the map of outputs
+        const auto outputs = result.value(QStringLiteral("Outputs")).toObject();
+        m_outputs = outputs.toVariantMap();
+        qDebug() << "NiriIpc: fetchOutputs() request succeeded, outputs count:" << m_outputs.size();
+        emit outputsChanged();
     });
 }
 

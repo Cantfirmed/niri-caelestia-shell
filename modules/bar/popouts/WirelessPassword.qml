@@ -98,7 +98,7 @@ ColumnLayout {
                 // Update network when popout becomes active
                 Qt.callLater(() => {
                     // Try to get network from parent Content's networkPopout
-                    const content = root.parent?.parent?.parent;
+                    const content = root.parent?.parent;
                     if (content) {
                         const networkPopout = content.children.find(c => c.name === "network");
                         if (networkPopout && networkPopout.item) {
@@ -120,6 +120,10 @@ ColumnLayout {
 
         interval: 150
         onTriggered: {
+            const win = root.window;
+            if (win && win.requestActivate) {
+                win.requestActivate();
+            }
             root.forceActiveFocus();
             passwordContainer.forceActiveFocus();
         }
@@ -215,7 +219,7 @@ ColumnLayout {
                 onTriggered: {
                     attempts++;
                     // Keep trying to get network from Network component
-                    const content = root.parent?.parent?.parent;
+                    const content = root.parent?.parent;
                     if (content) {
                         const networkPopout = content.children.find(c => c.name === "network");
                         if (networkPopout && networkPopout.item && networkPopout.item.passwordNetwork) {

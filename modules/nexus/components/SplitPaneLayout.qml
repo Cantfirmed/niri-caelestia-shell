@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import qs.components
-import qs.components.effects
 import qs.services
 import Quickshell.Widgets
 import QtQuick
@@ -15,8 +14,8 @@ RowLayout {
     property Component leftContent: null
     property Component rightContent: null
 
-    property real leftWidthRatio: 0.4
-    property int leftMinimumWidth: 420
+    property real leftWidthRatio: 0.3
+    property int leftMinimumWidth: 280
     property var leftLoaderProperties: ({})
     property var rightLoaderProperties: ({})
 
@@ -38,7 +37,7 @@ RowLayout {
             anchors.leftMargin: 0
             anchors.rightMargin: Appearance.padding.md / 2
 
-            radius: leftBorder.innerRadius
+            radius: 0
             color: "transparent"
 
             Loader {
@@ -59,12 +58,8 @@ RowLayout {
             }
         }
 
-        InnerBorder {
-            id: leftBorder
-
-            leftThickness: 0
-            rightThickness: Appearance.padding.md / 2
-        }
+        // Left pane's border removed — both panes were filling with grey
+        Item { id: leftBorder }
     }
 
     Item {
@@ -81,7 +76,7 @@ RowLayout {
             anchors.leftMargin: 0
             anchors.rightMargin: Appearance.padding.md / 2
 
-            radius: rightBorder.innerRadius
+            radius: 0
             color: "transparent"
 
             Loader {
@@ -100,10 +95,6 @@ RowLayout {
             }
         }
 
-        InnerBorder {
-            id: rightBorder
-
-            leftThickness: Appearance.padding.md / 2
-        }
+        // Right pane's border removed — the left pane's InnerBorder already provides the divider
     }
 }

@@ -13,9 +13,14 @@ Item {
     property bool readOnly: false
     property int horizontalAlignment: TextInput.AlignHCenter
     property alias placeholderText: inputField.placeholderText
+    property alias echoMode: inputField.echoMode
 
     // Expose activeFocus through alias to avoid FINAL property override
     readonly property alias hasFocus: inputField.activeFocus
+
+    function forceFocus(): void {
+        inputField.forceActiveFocus();
+    }
 
     signal textEdited(string text)
 

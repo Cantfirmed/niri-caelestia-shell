@@ -58,6 +58,8 @@ class BarWorkspaces : public ConfigObject {
             { u"regex"_s, u"steam(_app_(default|[0-9]+))?"_s },
             { u"icon"_s, u"sports_esports"_s },
         }) })
+    CONFIG_PROPERTY(qreal, windowIconScale, 0.6)
+    CONFIG_PROPERTY(qreal, workspaceIconScale, 1.0)
 
 public:
     explicit BarWorkspaces(QObject* parent = nullptr)

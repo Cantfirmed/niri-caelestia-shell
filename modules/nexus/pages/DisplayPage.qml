@@ -7,6 +7,7 @@ import qs.components.controls
 import qs.components.effects
 import qs.components.containers
 import qs.services
+import Caelestia.Config
 import Quickshell
 import Quickshell.Widgets
 import QtQuick
@@ -264,6 +265,7 @@ Item {
     }
 
     function updateOutputs() {
+        console.log("DisplayPane: updateOutputs called. Niri.outputs present:", !!Niri.outputs);
         const res = [];
         const outputs = Niri.outputs;
         if (!outputs) {
@@ -316,6 +318,7 @@ Item {
     Connections {
         target: Niri
         function onOutputsChanged() {
+            console.log("DisplayPane: Niri outputs changed signal received");
             root.updateOutputs();
         }
     }
@@ -326,6 +329,23 @@ Item {
     function runCmd(cmd) {
         console.log("DisplayPane: Running command:", cmd);
         Quickshell.execDetached(["bash", "-c", cmd]);
+        refreshTimer.count = 0;
+        refreshTimer.running = true;
+    }
+
+    Timer {
+        id: refreshTimer
+        interval: 150
+        repeat: true
+        property int count: 0
+        onTriggered: {
+            console.log("DisplayPane: refreshTimer triggered, calling fetchOutputs, iteration:", count);
+            NiriIpc.fetchOutputs();
+            count++;
+            if (count >= 3) {
+                running = false;
+            }
+        }
     }
 
     ColumnLayout {
@@ -354,9 +374,23 @@ Item {
         }
     }
 
-    SplitPaneLayout {
+    ColumnLayout {
         anchors.fill: parent
-        visible: outputsArray.length > 0
+        spacing: 0
+
+        StyledText {
+            text: qsTr("Display")
+            font.pointSize: Appearance.font.size.titleLarge
+            font.weight: 500
+            Layout.topMargin: Appearance.padding.xs
+            Layout.leftMargin: Appearance.padding.xl
+            Layout.bottomMargin: Appearance.padding.sm
+        }
+
+        SplitPaneLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: outputsArray.length > 0
 
         leftContent: Component {
             StyledFlickable {
@@ -373,17 +407,6 @@ Item {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     spacing: Appearance.spacing.lg
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Appearance.spacing.md
-
-                        StyledText {
-                            text: qsTr("Displays")
-                            font.pointSize: Appearance.font.size.titleMedium
-                            font.weight: 500
-                        }
-                    }
 
                     Repeater {
                         model: root.outputsArray
@@ -412,7 +435,7 @@ Item {
 
                                 MaterialIcon {
                                     text: "monitor"
-                                    font.pointSize: Appearance.font.size.titleMedium
+                                    font: Tokens.font.icon.medium
                                 }
 
                                 ColumnLayout {
@@ -456,11 +479,6 @@ Item {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     spacing: Appearance.spacing.xl
-
-                    SettingsHeader {
-                        icon: "monitor"
-                        title: root.selectedOutput ? root.selectedOutput.connector : qsTr("Display Settings")
-                    }
 
                     ColumnLayout {
                         visible: root.selectedOutput !== null
@@ -670,10 +688,11 @@ Item {
                                         delegate: TextButton {
                                             text: modelData.toFixed(1)
                                             Layout.fillWidth: true
-                                            isToggle: true
+                                            isToggle: false
                                             checked: root.selectedOutput ? Math.abs(root.selectedOutput.scale - modelData) < 0.05 : false
-                                            type: checked ? ButtonBase.Filled : ButtonBase.Tonal
+                                            type: checked ? TextButton.Filled : TextButton.Tonal
                                             onClicked: {
+                                                console.log("DisplayPane: scale button clicked for value:", modelData);
                                                 root.runCmd("niri msg output " + root.selectedOutput.connector + " scale " + modelData);
                                                 scaleInput.updateText();
                                             }
@@ -761,7 +780,7 @@ Item {
                                                 MaterialIcon { 
                                                     visible: modelData.is_preferred
                                                     text: "star"
-                                                    font.pointSize: 14
+                                                    font: Tokens.font.icon.small
                                                     color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3primary
                                                 }
                                             }
@@ -804,6 +823,7 @@ Item {
                     }
                 }
             }
+        }
         }
     }
 }

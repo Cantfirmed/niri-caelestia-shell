@@ -68,6 +68,7 @@ Item {
             sourceComponent: StyledText {
                 color: Config.bar.workspaces.occupiedBg || root.workspace.isOccupied || root.workspace.activeWsId === root.workspace.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
 
+                font.pointSize: Tokens.font.body.small.pointSize * (Config.bar.workspaces.workspaceIconScale ?? 1.0)
                 font.family: Appearance.font.family.mono
                 text: Niri.getWorkspaceNameByIndex(root.workspace.index) || "Workspace " + (root.workspace.index + 1)
             }

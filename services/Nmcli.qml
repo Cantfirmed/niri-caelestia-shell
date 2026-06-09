@@ -440,18 +440,11 @@ Singleton {
     }
 
     function checkAndDeleteConnection(ssid: string, callback: var): void {
-        executeCommand([root.nmcliCommandConnection, "show", ssid], result => {
-            if (result.success) {
-                executeCommand([root.nmcliCommandConnection, "delete", ssid], deleteResult => {
-                    Qt.callLater(() => {
-                        if (callback)
-                            callback();
-                    }, 300);
-                });
-            } else {
+        deleteConnectionsForSsid(ssid, () => {
+            Qt.callLater(() => {
                 if (callback)
                     callback();
-            }
+            }, 300);
         });
     }
 
@@ -570,6 +563,42 @@ Singleton {
         return hasConnectionName;
     }
 
+    function deleteConnectionsForSsid(ssid: string, callback: var): void {
+        if (!ssid || ssid.length === 0) {
+            if (callback) callback();
+            return;
+        }
+
+        const ssidLower = ssid.toLowerCase().trim();
+        const targets = root.savedConnections.filter(conn => {
+            if (!conn) return false;
+            const connLower = conn.toLowerCase().trim();
+            if (connLower === ssidLower) return true;
+            if (connLower.startsWith(ssidLower + " ")) {
+                const suffix = connLower.substring(ssidLower.length + 1).trim();
+                return /^\d+$/.test(suffix);
+            }
+            return false;
+        });
+
+        if (targets.length === 0) {
+            if (callback) callback();
+            return;
+        }
+
+        let remaining = targets.length;
+        const onDeleteDone = () => {
+            remaining--;
+            if (remaining === 0) {
+                if (callback) callback();
+            }
+        };
+
+        for (const target of targets) {
+            executeCommand([root.nmcliCommandConnection, "delete", target], onDeleteDone);
+        }
+    }
+
     function forgetNetwork(ssid: string, callback: var): void {
         if (!ssid || ssid.length === 0) {
             if (callback)
@@ -582,16 +611,18 @@ Singleton {
             return;
         }
 
-        const connectionName = root.savedConnections.find(conn => conn && conn.toLowerCase().trim() === ssid.toLowerCase().trim()) || ssid;
-
-        executeCommand([root.nmcliCommandConnection, "delete", connectionName], result => {
-            if (result.success) {
-                Qt.callLater(() => {
-                    loadSavedConnections(() => {});
-                }, 500);
-            }
-            if (callback)
-                callback(result);
+        deleteConnectionsForSsid(ssid, () => {
+            Qt.callLater(() => {
+                loadSavedConnections(() => {
+                    if (callback)
+                        callback({
+                            success: true,
+                            output: "Deleted connection profiles",
+                            error: "",
+                            exitCode: 0
+                        });
+                });
+            }, 500);
         });
     }
 
@@ -1115,7 +1146,7 @@ Singleton {
     Timer {
         id: connectionCheckTimer
 
-        interval: 4000
+        interval: 15000
         onTriggered: {
             if (root.pendingConnection) {
                 const connected = root.active && root.active.ssid === root.pendingConnection.ssid;

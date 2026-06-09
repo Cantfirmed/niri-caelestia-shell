@@ -17,6 +17,32 @@ PageBase {
 
     title: qsTr("Network")
 
+    property var passwordNetwork: null
+    property bool showPasswordDialog: false
+    property string passwordValue: ""
+    property string connectionError: ""
+    property bool connecting: false
+
+    function closePasswordDialog(): void {
+        showPasswordDialog = false;
+        passwordNetwork = null;
+        passwordValue = "";
+        connectionError = "";
+        connecting = false;
+    }
+
+    onShowPasswordDialogChanged: {
+        if (showPasswordDialog) {
+            const win = root.window;
+            if (win && win.requestActivate) {
+                win.requestActivate();
+            }
+            Qt.callLater(() => {
+                passwordInput.forceFocus();
+            });
+        }
+    }
+
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
@@ -92,7 +118,13 @@ PageBase {
 
                 onClicked: {
                     if (!modelData.active) {
-                        NetworkConnection.handleConnect(modelData);
+                        NetworkConnection.handleConnect(modelData, null, network => {
+                            root.passwordNetwork = network;
+                            root.showPasswordDialog = true;
+                            root.passwordValue = "";
+                            root.connectionError = "";
+                            root.connecting = false;
+                        });
                         currentSelected = true;
                         root.networkSelected(modelData);
                     }
@@ -228,6 +260,112 @@ PageBase {
                     text: qsTr("Add network")
                     font: Tokens.font.body.small
                     elide: Text.ElideRight
+                }
+            }
+        }
+    }
+
+    // Password dialog overlay
+    StyledRect {
+        id: passwordOverlay
+        anchors.fill: parent
+        color: Qt.alpha(Colours.palette.m3scrim, 0.4)
+        visible: root.showPasswordDialog
+        z: 100
+
+        // Intercept mouse/key events
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: {}
+        }
+
+        StyledRect {
+            id: passwordDialog
+            anchors.centerIn: parent
+            width: Math.min(parent.width - Tokens.padding.large * 2, 400)
+            implicitHeight: dialogLayout.implicitHeight + Tokens.padding.extraLarge * 2
+            radius: Tokens.rounding.large
+            color: Colours.tPalette.m3surfaceContainer
+
+            ColumnLayout {
+                id: dialogLayout
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.extraLarge
+                spacing: Tokens.spacing.medium
+
+                StyledText {
+                    text: qsTr("Enter password for %1").arg(root.passwordNetwork ? root.passwordNetwork.ssid : "")
+                    font: Tokens.font.body.medium
+                    font.weight: Font.Medium
+                    Layout.fillWidth: true
+                }
+
+                StyledInputField {
+                    id: passwordInput
+                    Layout.fillWidth: true
+                    placeholderText: qsTr("Password")
+                    echoMode: TextInput.Password
+                    text: root.passwordValue
+                    onTextEdited: text => {
+                        root.passwordValue = text;
+                        if (root.connectionError.length > 0) {
+                            root.connectionError = "";
+                        }
+                    }
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
+                            if (passwordInput.text.length > 0 && !root.connecting) {
+                                connectBtn.clicked();
+                            }
+                            event.accepted = true;
+                        } else if (event.key === Qt.Key_Escape) {
+                            root.closePasswordDialog();
+                            event.accepted = true;
+                        }
+                    }
+                }
+
+                StyledText {
+                    id: errorText
+                    visible: text.length > 0
+                    text: root.connectionError
+                    color: Colours.palette.m3error
+                    font: Tokens.font.body.small
+                    Layout.fillWidth: true
+                }
+
+                RowLayout {
+                    Layout.alignment: Qt.AlignRight
+                    spacing: Tokens.spacing.small
+
+                    TextButton {
+                        text: qsTr("Cancel")
+                        onClicked: root.closePasswordDialog()
+                    }
+
+                    TextButton {
+                        id: connectBtn
+                        text: root.connecting ? qsTr("Connecting...") : qsTr("Connect")
+                        disabled: passwordInput.text.length === 0 || root.connecting
+
+                        onClicked: {
+                            if (root.connecting) return;
+                            root.connecting = true;
+                            root.connectionError = "";
+
+                            const targetNetwork = root.passwordNetwork;
+                            NetworkConnection.connectWithPassword(targetNetwork, passwordInput.text, result => {
+                                if (result && result.success) {
+                                    root.closePasswordDialog();
+                                } else {
+                                    root.connecting = false;
+                                    root.connectionError = (result && result.error) ? result.error : qsTr("Connection failed");
+                                }
+                            });
+                        }
+                    }
                 }
             }
         }
