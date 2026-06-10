@@ -298,7 +298,6 @@ PageBase {
                 StyledText {
                     text: qsTr("Enter password for %1").arg(root.passwordNetwork ? root.passwordNetwork.ssid : "")
                     font: Tokens.font.body.medium
-                    font.weight: Font.Medium
                     Layout.fillWidth: true
                 }
 

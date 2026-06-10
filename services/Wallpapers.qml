@@ -29,12 +29,24 @@ Searcher {
     }
 
     function setRandom(): void {
-        Quickshell.execDetached(["caelestia", "wallpaper", "-r", ...smartArg]);
+        if (root.list.length > 0) {
+            const idx = Math.floor(Math.random() * root.list.length);
+            const path = root.list[idx].path;
+            setWallpaper(path);
+        }
     }
 
     function setWallpaper(path: string): void {
         actualCurrent = path;
-        Quickshell.execDetached(["caelestia", "wallpaper", "-f", path, ...smartArg]);
+        
+        stateFile.watchChanges = false;
+        stateFile.setText(path);
+        stateFile.watchChanges = true;
+
+        const mode = Colours.light ? "light" : "dark";
+        const schemeType = "scheme-" + Colours.variant;
+        matugenProcess.command = ["matugen", "image", path, "-m", mode, "-t", schemeType, "--source-color-index", "0"];
+        matugenProcess.running = true;
     }
 
     function preview(path: string): void {
@@ -83,6 +95,7 @@ Searcher {
     }
 
     FileView {
+        id: stateFile
         path: root.currentNamePath
         watchChanges: true
         printErrors: false
@@ -91,7 +104,7 @@ Searcher {
             let wall = text().trim();
             if (!wall) {
                 wall = root.fallback;
-                Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
+                root.setWallpaper(root.fallback);
             }
             root.actualCurrent = wall;
             root.previewColourLock = false;
@@ -99,7 +112,7 @@ Searcher {
         onLoadFailed: {
             root.actualCurrent = root.fallback;
             root.previewColourLock = false;
-            Quickshell.execDetached(["caelestia", "wallpaper", "-f", root.fallback, ...root.smartArg]);
+            root.setWallpaper(root.fallback);
         }
     }
 
@@ -112,9 +125,24 @@ Searcher {
     }
 
     Process {
+        id: matugenProcess
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                console.warn("Matugen exited with code:", exitCode);
+            }
+        }
+    }
+
+    Process {
         id: getPreviewColoursProc
 
-        command: ["caelestia", "wallpaper", "-p", root.previewPath, ...root.smartArg]
+        command: {
+            const scriptPath = Paths.toLocalFile(Qt.resolvedUrl("../scripts/preview.py"));
+            const mode = Colours.light ? "light" : "dark";
+            const schemeType = "scheme-" + Colours.variant;
+            return ["python3", scriptPath, root.previewPath, mode, schemeType];
+        }
         stdout: StdioCollector {
             onStreamFinished: {
                 Colours.load(text, true);

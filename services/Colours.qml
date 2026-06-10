@@ -15,6 +15,7 @@ Singleton {
     property bool showPreview
     property string scheme
     property string flavour
+    property string variant: "tonal-spot"
     readonly property bool light: showPreview ? previewLight : currentLight
     property bool currentLight
     property bool previewLight
@@ -67,6 +68,7 @@ Singleton {
             root.scheme = scheme.name;
             flavour = scheme.flavour;
             currentLight = scheme.mode === "light";
+            root.variant = scheme.variant || "tonal-spot";
         } else {
             previewLight = scheme.mode === "light";
         }
@@ -78,8 +80,21 @@ Singleton {
         }
     }
 
+    Process {
+        id: matugenProcess
+
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                console.warn("Matugen exited with code:", exitCode);
+            }
+        }
+    }
+
     function setMode(mode: string): void {
-        Quickshell.execDetached(["caelestia", "scheme", "set", "--notify", "-m", mode]);
+        const schemeType = "scheme-" + root.variant;
+        const wallpaperPath = Wallpapers.current;
+        matugenProcess.command = ["matugen", "image", wallpaperPath, "-m", mode, "-t", schemeType, "--source-color-index", "0"];
+        matugenProcess.running = true;
     }
 
     function reloadRules(): void {
