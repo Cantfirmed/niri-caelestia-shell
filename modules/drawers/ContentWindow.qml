@@ -154,6 +154,19 @@ StyledWindow {
                 type: Anim.SlowEffects
             }
         }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: panels.popouts.detachedMode !== "" || visibilities.session
+            onClicked: {
+                if (panels.popouts.detachedMode !== "") {
+                    panels.popouts.close();
+                }
+                if (visibilities.session) {
+                    visibilities.session = false;
+                }
+            }
+        }
     }
 
     Item {

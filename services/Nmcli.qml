@@ -823,6 +823,8 @@ Singleton {
                 }
             }
 
+            root.networksChanged();
+
             if (callback)
                 callback(root.networks);
             checkPendingConnection();

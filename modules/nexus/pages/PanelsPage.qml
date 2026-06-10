@@ -36,11 +36,32 @@ PageBase {
         }
 
         NavRow {
-            last: true
             icon: "dock_to_right"
             label: qsTr("Sidebar")
             status: Config.sidebar.enabled ? qsTr("Enabled") : qsTr("Disabled")
             onClicked: root.nState.openSubPage(4)
+        }
+
+        NavRow {
+            icon: "power_settings_new"
+            label: qsTr("Session")
+            status: Config.session.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            onClicked: root.nState.openSubPage(11)
+        }
+
+        NavRow {
+            icon: "handyman"
+            label: qsTr("Utilities")
+            status: Config.utilities.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            onClicked: root.nState.openSubPage(12)
+        }
+
+        NavRow {
+            last: true
+            icon: "desktop_windows"
+            label: qsTr("Desktop")
+            status: Config.background.desktopClock.enabled ? qsTr("Enabled") : qsTr("Disabled")
+            onClicked: root.nState.openSubPage(10)
         }
     }
 }

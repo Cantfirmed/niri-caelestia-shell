@@ -10,7 +10,7 @@ Singleton {
     id: root
 
     function _checkEnabled() {
-        if (!Config.extra.manga) {
+        if (!GlobalConfig.extra.manga) {
             Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning)
             return false
         }
@@ -174,7 +174,7 @@ Singleton {
         repeat: true
         running: true
         onTriggered: {
-            if (!Config.extra.manga) {
+            if (!GlobalConfig.extra.manga) {
                 if (serverProcess.running) {
                     console.log("[ServiceManga] Manga feature disabled, stopping backend...")
                     serverProcess.running = false
@@ -196,7 +196,7 @@ Singleton {
                         }
                     } else {
                         root.serverReady = false
-                        if (!serverProcess.running && Config.extra.manga) {
+                        if (!serverProcess.running && GlobalConfig.extra.manga) {
                             console.log("[ServiceManga] Backend not found, starting process...")
                             serverProcess.running = true
                         }
@@ -627,9 +627,9 @@ Singleton {
     }
 
     Connections {
-        target: Config.extra
+        target: GlobalConfig.extra
         function onMangaChanged() {
-            if (!Config.extra.manga && serverProcess.running) {
+            if (!GlobalConfig.extra.manga && serverProcess.running) {
                 console.log("[ServiceManga] [DEBUG] Manga feature disabled: stopping backend process immediately.")
                 serverProcess.running = false
                 root.serverReady = false

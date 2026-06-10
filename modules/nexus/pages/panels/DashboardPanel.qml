@@ -133,7 +133,6 @@ PageBase {
         StepperRow {
             Layout.fillWidth: true
             first: true
-            last: true
             label: qsTr("Drag threshold")
             subtext: qsTr("Pixels dragged before the dashboard opens")
             value: Config.dashboard.dragThreshold
@@ -141,6 +140,19 @@ PageBase {
             to: 200
             stepSize: 5
             onMoved: v => GlobalConfig.dashboard.dragThreshold = v
+        }
+
+        InputRow {
+            Layout.fillWidth: true
+            last: true
+            label: qsTr("Bongo Cat GIF")
+            subtext: qsTr("Path to the GIF shown in the Media section")
+            text: Config.paths.mediaGif
+            onEditingFinished: text => {
+                if (GlobalConfig.paths.mediaGif !== text) {
+                    GlobalConfig.paths.mediaGif = text;
+                }
+            }
         }
     }
 }

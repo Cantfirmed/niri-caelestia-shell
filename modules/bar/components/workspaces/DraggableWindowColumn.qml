@@ -48,6 +48,8 @@ Item {
         const niriWorkspace = Niri.currentOutputWorkspaces.find(w => w.idx === wsIndex);
         if (!niriWorkspace) {
             console.log("niriWorkspace is null for wsIndex:", wsIndex);
+            groupedWindowsModel.clear();
+            root.groupedWindowsArray = [];
             return;
         }
 

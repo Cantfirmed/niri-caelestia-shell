@@ -94,8 +94,8 @@
       }
     },
     "visualiser": {
-      "enabled": false,
-      "autoHide": true,
+      "enabled": true,
+      "autoHide": false,
       "blur": false,
       "rounding": 1,
       "spacing": 1

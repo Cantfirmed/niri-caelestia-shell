@@ -182,6 +182,7 @@ Singleton {
                 }));
             }
         }
+        root.networksChanged();
     }
 
     function hasSavedProfile(ssid: string): bool {

@@ -10,7 +10,7 @@ Singleton {
     id: root
 
     function _checkEnabled() {
-        if (!Config.extra.novel) {
+        if (!GlobalConfig.extra.novel) {
             Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning)
             return false
         }
@@ -192,7 +192,7 @@ Singleton {
         repeat: true
         running: true
         onTriggered: {
-            if (!Config.extra.novel) {
+            if (!GlobalConfig.extra.novel) {
                 if (serverProcess.running) {
                     console.log("[ServiceNovel] Novel feature disabled, stopping backend...")
                     serverProcess.running = false
@@ -224,7 +224,7 @@ Singleton {
                         }
                     } else {
                         root.serverReady = false
-                        if (!serverProcess.running && Config.extra.novel) {
+                        if (!serverProcess.running && GlobalConfig.extra.novel) {
                             console.log("[ServiceNovel] Backend not found, starting process...")
                             serverProcess.running = true
                         }
@@ -482,9 +482,9 @@ Singleton {
     }
 
     Connections {
-        target: Config.extra
+        target: GlobalConfig.extra
         function onNovelChanged() {
-            if (!Config.extra.novel && serverProcess.running) {
+            if (!GlobalConfig.extra.novel && serverProcess.running) {
                 console.log("[ServiceNovel] [DEBUG] Novel feature disabled: stopping backend process immediately.")
                 serverProcess.running = false
                 root.serverReady = false

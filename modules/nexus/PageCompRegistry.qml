@@ -123,6 +123,15 @@ QtObject {
                 Component {
                     BarClock {}
                 }
+                Component {
+                    DesktopPanel {}
+                }
+                Component {
+                    SessionPanel {}
+                }
+                Component {
+                    UtilitiesPanel {}
+                }
             }
         },
         Component {

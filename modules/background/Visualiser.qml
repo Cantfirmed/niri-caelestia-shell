@@ -50,7 +50,7 @@ Item {
 
             sourceComponent: Item {
                 ServiceRef {
-                    service: Cava.provider
+                    service: Audio.cava
                 }
 
                 Item {
@@ -99,7 +99,7 @@ Item {
             id: bar
 
             required property int modelData
-            property real value: Math.max(0, Math.min(1, Cava.values[side.isRight ? modelData : side.count - modelData - 1]))
+            property real value: Math.max(0, Math.min(1, Audio.cava.values[side.isRight ? modelData : side.count - modelData - 1]))
 
             clip: true
 

@@ -18,11 +18,12 @@ Region {
     readonly property real maskClampedThickness: win.dragMaskPadding > 0 ? clampedThickness : 0
 
     readonly property real topOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.dashboard && win.contentItem.Config.dashboard.enabled && win.contentItem.Config.dashboard.showOnHover) ? clampedThickness : 0)
-    readonly property real bottomOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.launcher && win.contentItem.Config.launcher.enabled && win.contentItem.Config.launcher.showOnHover) ? clampedThickness : 0)
+    readonly property real bottomOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.launcher && win.contentItem.Config.launcher.enabled && win.contentItem.Config.launcher.showOnHover) ? clampedThickness : 0, (win.contentItem.Config.utilities && win.contentItem.Config.utilities.enabled) ? clampedThickness : 0)
+    readonly property real rightOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.osd && win.contentItem.Config.osd.enabled) ? clampedThickness : 0)
 
     x: bar.clampedWidth + win.dragMaskPadding
     y: maskBorderThickness + topOffset
-    width: win.width - bar.clampedWidth - maskBorderThickness - win.dragMaskPadding * 2
+    width: win.width - bar.clampedWidth - maskBorderThickness - win.dragMaskPadding - rightOffset
     height: win.height - maskBorderThickness * 2 - topOffset - bottomOffset
     intersection: Intersection.Xor
 

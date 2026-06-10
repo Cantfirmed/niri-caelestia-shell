@@ -20,6 +20,28 @@ Item {
     implicitWidth: content.implicitWidth * (1 - offsetScale)
     implicitHeight: content.implicitHeight
 
+    width: implicitWidth
+    height: implicitHeight
+
+    onImplicitWidthChanged: {
+        console.log("[ClipWrapper] implicitWidth changed to:", implicitWidth, "content.implicitWidth:", content.implicitWidth, "offsetScale:", offsetScale);
+    }
+    onImplicitHeightChanged: {
+        console.log("[ClipWrapper] implicitHeight changed to:", implicitHeight, "content.implicitHeight:", content.implicitHeight);
+    }
+    onWidthChanged: {
+        console.log("[ClipWrapper] width changed to:", width);
+    }
+    onHeightChanged: {
+        console.log("[ClipWrapper] height changed to:", height);
+    }
+    onVisibleChanged: {
+        console.log("[ClipWrapper] visible changed to:", visible, "width:", width, "height:", height);
+    }
+    onOffsetScaleChanged: {
+        console.log("[ClipWrapper] offsetScale changed to:", offsetScale);
+    }
+
     x: content.isDetached ? (parent.width - content.nonAnimWidth) / 2 : 0
     y: {
         if (content.isDetached)

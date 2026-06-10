@@ -7,6 +7,7 @@ import Caelestia.Config
 import qs.components
 import qs.services
 import qs.modules.nexus
+import qs.modules.windowinfo
 
 Item {
     id: root
@@ -42,16 +43,34 @@ Item {
     }
 
     function detach(mode: string): void {
+        console.log("[Wrapper] detach requested for mode:", mode);
         setAnims(true);
         queuedMode = mode;
-        detachedMode = "any";
+        if (mode === "winfo") {
+            detachedMode = "winfo";
+        } else {
+            detachedMode = "any";
+        }
         setAnims(false);
         focus = true;
     }
 
     function close(): void {
+        console.log("[Wrapper] close requested");
         hasCurrent = false;
         detachedMode = "";
+    }
+
+    onDetachedModeChanged: {
+        console.log("[Wrapper] detachedMode changed to:", detachedMode);
+    }
+
+    onHasCurrentChanged: {
+        console.log("[Wrapper] hasCurrent changed to:", hasCurrent, "currentName:", currentName);
+    }
+
+    onCurrentNameChanged: {
+        console.log("[Wrapper] currentName changed to:", currentName);
     }
 
     implicitWidth: nonAnimWidth
@@ -121,6 +140,19 @@ Item {
                 nState.currentPageIdx: ["appearance", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
                 onClose: root.close()
             }
+        }
+    }
+
+    Comp {
+        id: winfo
+
+        shouldBeActive: root.detachedMode === "winfo"
+        anchors.centerIn: parent
+
+        sourceComponent: WindowInfo {
+            screen: root.screen
+            client: Niri.lastFocusedWindow
+            onClose: root.close()
         }
     }
 

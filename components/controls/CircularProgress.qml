@@ -30,7 +30,10 @@ Item {
     readonly property real arcRadius: (size - padding - strokeWidth * (1 + waveAmplitude * 2)) / 2
     property real clampedVal: Math.max(1 / 360, Math.min(1, isNaN(value) ? 0 : value)) // Not readonly for animations
     readonly property real gapAngle: ((spacing + strokeWidth) / (arcRadius || 1)) * (180 / Math.PI)
-    readonly property real dotAngleRad: (startAngle + sweepAngle - gapAngle * (sweepAngle < 360 ? 0 : 1)) * Math.PI / 180
+    readonly property real startShift: 0
+    readonly property real dotAngleRad: (startAngle + sweepAngle) * Math.PI / 180
+
+    Component.onCompleted: console.log("LOADED CUSTOM CIRCULAR PROGRESS: startShift =", startShift, "sweepAngle =", sweepAngle)
 
     readonly property real thickness: strokeWidth * (1 + waveAmplitude) * 2 // For consumers
     property real implicitSize
@@ -57,7 +60,7 @@ Item {
                 centerX: root.size / 2
                 centerY: root.size / 2
                 startAngle: root.startAngle + root.clampedVal * root.sweepAngle + root.gapAngle
-                sweepAngle: Math.max(1 / 360, root.sweepAngle * (1 - root.clampedVal) - root.gapAngle * (root.sweepAngle < 360 ? 1 : 2))
+                sweepAngle: Math.max(1 / 360, root.sweepAngle * (1 - root.clampedVal) - root.gapAngle)
             }
 
             Behavior on strokeColor {

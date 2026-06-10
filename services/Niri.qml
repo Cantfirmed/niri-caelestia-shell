@@ -22,6 +22,9 @@ Singleton {
     readonly property var currentOutputWorkspaces: NiriIpc.currentOutputWorkspaces
     readonly property string focusedMonitorName: NiriIpc.focusedMonitorName
     readonly property var workspaceHasWindows: {
+        // Establish dependency on workspaces changes so that this re-evaluates
+        // when workspaces are added, removed, or re-indexed.
+        const workspaces = root.allWorkspaces;
         let map = {};
         const wins = root.windows;
         console.log("NiriService: Updating workspaceHasWindows, total windows:", wins.length);

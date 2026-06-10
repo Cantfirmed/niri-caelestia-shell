@@ -48,17 +48,20 @@ Item {
             hoverEnabled: true
             onPositionChanged: {
                 const popouts = root.bar.popouts;
+                console.log("[ActiveWindowTaskbar] Position changed. popouts.hasCurrent:", popouts.hasCurrent, "popouts.currentName:", popouts.currentName);
                 if (popouts.hasCurrent && popouts.currentName !== "activewindow")
                     popouts.hasCurrent = false;
             }
             onClicked: {
                 const popouts = root.bar.popouts;
+                console.log("[ActiveWindowTaskbar] Clicked. popouts.hasCurrent:", popouts.hasCurrent, "popouts.currentName:", popouts.currentName);
                 if (popouts.hasCurrent) {
                     popouts.hasCurrent = false;
                 } else {
                     popouts.currentName = "activewindow";
                     popouts.currentCenter = root.mapToItem(root.bar, 0, root.implicitHeight / 2).y;
                     popouts.hasCurrent = true;
+                    console.log("[ActiveWindowTaskbar] set activewindow popout. Name:", popouts.currentName, "centerY:", popouts.currentCenter);
                 }
             }
         }

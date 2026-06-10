@@ -43,11 +43,16 @@ PageBase {
         }
     }
 
-    ColumnLayout {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        width: root.cappedWidth
-        spacing: Tokens.spacing.extraSmall / 2
+    Item {
+        width: parent ? parent.width : 0
+        implicitHeight: mainLayout.implicitHeight
+
+        ColumnLayout {
+            id: mainLayout
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            width: root.cappedWidth
+            spacing: Tokens.spacing.extraSmall / 2
 
         Timer {
             running: root.visible && Nmcli.wifiEnabled
@@ -101,38 +106,40 @@ PageBase {
                 }
             }
 
-            delegate: StateLayer {
+            delegate: StyledRect {
                 id: network
 
                 required property Nmcli.AccessPoint modelData
                 property bool currentSelected
                 property real textOpacity: disabled ? 0.5 : 1
-
-                disabled: currentSelected || Nmcli.connectingSsid() === modelData.ssid
+                readonly property bool disabled: currentSelected || Nmcli.connectingSsid() === modelData.ssid
 
                 anchors.left: networkList.list.contentItem.left
                 anchors.right: networkList.list.contentItem.right
                 implicitHeight: networkLayout.implicitHeight + networkLayout.anchors.margins * 2
                 radius: Tokens.rounding.extraSmall
-                anchors.fill: undefined
-
-                onClicked: {
-                    if (!modelData.active) {
-                        NetworkConnection.handleConnect(modelData, null, network => {
-                            root.passwordNetwork = network;
-                            root.showPasswordDialog = true;
-                            root.passwordValue = "";
-                            root.connectionError = "";
-                            root.connecting = false;
-                        });
-                        currentSelected = true;
-                        root.networkSelected(modelData);
-                    }
-                }
+                color: "transparent"
 
                 Behavior on textOpacity {
                     Anim {
                         type: Anim.DefaultEffects
+                    }
+                }
+
+                StateLayer {
+                    disabled: network.disabled
+                    onClicked: {
+                        if (!network.modelData.active) {
+                            NetworkConnection.handleConnect(network.modelData, null, ap => {
+                                root.passwordNetwork = ap;
+                                root.showPasswordDialog = true;
+                                root.passwordValue = "";
+                                root.connectionError = "";
+                                root.connecting = false;
+                            });
+                            network.currentSelected = true;
+                            root.networkSelected(network.modelData);
+                        }
                     }
                 }
 
@@ -356,6 +363,7 @@ PageBase {
 
                             const targetNetwork = root.passwordNetwork;
                             NetworkConnection.connectWithPassword(targetNetwork, passwordInput.text, result => {
+                                if (!root.connecting) return;
                                 if (result && result.success) {
                                     root.closePasswordDialog();
                                 } else {
@@ -368,5 +376,6 @@ PageBase {
                 }
             }
         }
+    }
     }
 }

@@ -521,9 +521,13 @@ ColumnLayout {
 
                         // Connect to network
                         NetworkConnection.connectWithPassword(root.network, password, result => {
-                            if (result && result.success)
-                            // Connection successful, monitor will handle the rest
-                            {} else if (result && result.needsPassword) {
+                            if (!connecting) {
+                                return;
+                            }
+
+                            if (result && result.success) {
+                                root.closeDialog();
+                            } else if (result && result.needsPassword) {
                                 // Shouldn't happen since we provided password
                                 connectionMonitor.stop();
                                 connecting = false;

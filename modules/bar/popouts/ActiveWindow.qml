@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
@@ -12,76 +14,81 @@ Item {
 
     required property PopoutState popouts
 
-    readonly property bool hasActiveWindow: NiriIpc.focusedWindowId.length > 0
+    readonly property var client: Niri.lastFocusedWindow
+    readonly property bool hasActiveWindow: !!client && client.id !== undefined && client.id !== null
 
-    implicitWidth: hasActiveWindow ? child.implicitWidth : -Tokens.padding.extraLargeIncreased
-    implicitHeight: child.implicitHeight
+    Component.onCompleted: {
+        console.log("[ActiveWindowPopout] Loaded. client id:", root.client?.id, "title:", root.client?.title, "app_id:", root.client?.app_id, "hasActiveWindow:", root.hasActiveWindow);
+    }
+    onClientChanged: {
+        console.log("[ActiveWindowPopout] client changed. id:", root.client?.id, "title:", root.client?.title, "app_id:", root.client?.app_id, "hasActiveWindow:", root.hasActiveWindow);
+    }
+    onHasActiveWindowChanged: {
+        console.log("[ActiveWindowPopout] hasActiveWindow changed:", root.hasActiveWindow);
+    }
 
-    Column {
-        id: child
+    implicitWidth: hasActiveWindow ? (detailsRow.implicitWidth + Tokens.padding.medium * 2) : -Tokens.padding.extraLargeIncreased
+    implicitHeight: detailsRow.implicitHeight + Tokens.padding.medium * 2
 
-        anchors.centerIn: parent
+    RowLayout {
+        id: detailsRow
+
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin: Tokens.padding.medium
         spacing: Tokens.spacing.medium
 
-        RowLayout {
-            id: detailsRow
+        IconImage {
+            id: icon
 
-            anchors.left: parent.left
-            anchors.right: parent.right
-            spacing: Tokens.spacing.medium
+            asynchronous: true
+            Layout.alignment: Qt.AlignVCenter
+            implicitSize: 40
+            source: Icons.getAppIcon(root.client?.app_id ?? "", "image-missing")
+        }
 
-            IconImage {
-                id: icon
+        ColumnLayout {
+            id: details
 
-                asynchronous: true
-                Layout.alignment: Qt.AlignVCenter
-                implicitSize: details.implicitHeight
-                source: Icons.getAppIcon(NiriIpc.focusedWindowClass, "image-missing")
-            }
+            spacing: 0
+            Layout.preferredWidth: 250
+            Layout.fillWidth: true
 
-            ColumnLayout {
-                id: details
-
-                spacing: 0
+            StyledText {
                 Layout.fillWidth: true
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: NiriIpc.focusedWindowTitle
-                    font: Tokens.font.body.medium
-                    elide: Text.ElideRight
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    text: NiriIpc.focusedWindowClass
-                    color: Colours.palette.m3onSurfaceVariant
-                    elide: Text.ElideRight
-                }
+                text: root.client?.title ?? ""
+                font: Tokens.font.body.medium
+                elide: Text.ElideRight
             }
 
-            Item {
-                implicitWidth: expandIcon.implicitHeight + Tokens.padding.small
-                implicitHeight: expandIcon.implicitHeight + Tokens.padding.small
+            StyledText {
+                Layout.fillWidth: true
+                text: root.client?.app_id ?? ""
+                color: Colours.palette.m3onSurfaceVariant
+                elide: Text.ElideRight
+            }
+        }
 
-                Layout.alignment: Qt.AlignVCenter
+        Item {
+            implicitWidth: expandIcon.implicitHeight + Tokens.padding.small
+            implicitHeight: expandIcon.implicitHeight + Tokens.padding.small
 
-                StateLayer {
-                    radius: Tokens.rounding.large
-                    visible: false // window info panel removed for Niri
-                }
+            Layout.alignment: Qt.AlignVCenter
 
-                MaterialIcon {
-                    id: expandIcon
+            StateLayer {
+                radius: Tokens.rounding.large
+                onClicked: root.popouts.detachRequested("winfo")
+            }
 
-                    anchors.centerIn: parent
-                    anchors.horizontalCenterOffset: font.pointSize * 0.05
+            MaterialIcon {
+                id: expandIcon
 
-                    text: "chevron_right"
-                    visible: false
+                anchors.centerIn: parent
+                anchors.horizontalCenterOffset: font.pointSize * 0.05
 
-                    fontStyle: Tokens.font.icon.large
-                }
+                text: "chevron_right"
+
+                fontStyle: Tokens.font.icon.large
             }
         }
     }

@@ -34,81 +34,109 @@ https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
 
 ## Installation
 
-> [!NOTE]
-> This repo is for the desktop shell of the caelestia dots. If you want installation instructions
-> for the entire dots, head to [the main repo](https://github.com/caelestia-dots/caelestia) instead.
+There are two primary ways to install and run the shell: **Nix (Recommended)** and **Manual Installation**.
 
-> [!TIP]
-> The default package does not have the CLI enabled by default, which is required for full funcionality.
-> To enable the CLI, use the `with-cli` package.
+---
 
-For home-manager, you can also use the Caelestia's home manager module (explained in [configuring](https://github.com/caelestia-dots/shell?tab=readme-ov-file#home-manager-module)) that installs and configures the shell and the CLI.
+### Method 1: Nix / NixOS (Recommended)
 
-### Manual installation
+Nix automatically builds the C++ QML plugins and libraries, resolves all fonts, packages dependencies, and handles startup configurations cleanly.
 
-Dependencies:
+#### 1. Via Home Manager (Declarative & Autostart)
 
--   [`caelestia-cli`](https://github.com/caelestia-dots/cli)
--   [`quickshell-git`](https://quickshell.outfoxxed.me) - this has to be the git version, not the latest tagged version
--   [`ddcutil`](https://github.com/rockowitz/ddcutil)
--   [`brightnessctl`](https://github.com/Hummer12007/brightnessctl)
--   [`app2unit`](https://github.com/Vladimir-csp/app2unit)
--   [`libcava`](https://github.com/LukashonakV/cava)
--   [`networkmanager`](https://networkmanager.dev)
--   [`lm-sensors`](https://github.com/lm-sensors/lm-sensors)
--   [`fish`](https://github.com/fish-shell/fish-shell)
--   [`aubio`](https://github.com/aubio/aubio)
--   [`libpipewire`](https://pipewire.org)
--   `glibc`
--   `qt6-declarative`
--   `gcc-libs`
--   [`material-symbols`](https://fonts.google.com/icons)
--   [`caskaydia-cove-nerd`](https://www.nerdfonts.com/font-downloads)
--   [`swappy`](https://github.com/jtheoof/swappy)
--   [`libqalculate`](https://github.com/Qalculate/libqalculate)
--   [`bash`](https://www.gnu.org/software/bash)
--   `qt6-base`
--   `qt6-declarative`
+Add this repository to your flake inputs:
 
-Build dependencies:
-
--   [`cmake`](https://cmake.org)
--   [`ninja`](https://github.com/ninja-build/ninja)
-
-To install the shell manually, install all dependencies and clone this repo to `$XDG_CONFIG_HOME/quickshell/caelestia`.
-Then simply build and install using `cmake`.
-
-```sh
-cd $XDG_CONFIG_HOME/quickshell
-git clone https://github.com/caelestia-dots/shell.git caelestia
-
-cd caelestia
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/
-cmake --build build
-sudo cmake --install build
+```nix
+inputs = {
+  niri-caelestia-shell.url = "github:caelestia-dots/shell"; # Replace with this repository's URL/branch
+};
 ```
 
-> [!TIP]
-> You can customise the installation location via the `cmake` flags `INSTALL_LIBDIR`, `INSTALL_QMLDIR` and
-> `INSTALL_QSCONFDIR` for the libraries (the beat detector), QML plugin and Quickshell config directories
-> respectively. If changing the library directory, remember to set the `CAELESTIA_LIB_DIR` environment
-> variable to the custom directory when launching the shell.
->
-> e.g. installing to `~/.config/quickshell/caelestia` for easy local changes:
->
-> ```sh
-> mkdir -p ~/.config/quickshell/caelestia
-> cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/ -DINSTALL_QSCONFDIR=~/.config/quickshell/caelestia
-> cmake --build build
-> sudo cmake --install build
-> sudo chown -R $USER ~/.config/quickshell/caelestia
-> ```
+Import the Home Manager module and enable the shell in your configuration:
+
+```nix
+{ inputs, pkgs, ... }: {
+  imports = [
+    inputs.niri-caelestia-shell.homeManagerModules.default
+  ];
+
+  programs.caelestia = {
+    enable = true;
+    systemd = {
+      enable = true;
+      target = "niri.service"; # Binds the shell's lifecycle to Niri starting
+    };
+    cli.enable = true; # Adds 'caelestia' CLI command to path
+  };
+}
+```
+
+When Niri starts, systemd will automatically start the Caelestia Shell service.
+
+#### 2. Via Nix Run (Ad-hoc)
+
+You can run the shell directly without adding it to your system packages:
+
+```sh
+nix run github:caelestia-dots/shell
+```
+
+---
+
+### Method 2: Manual Installation (Non-Nix)
+
+If you are on Arch Linux or another distribution without Nix, you can install the shell manually.
+
+#### 1. Install Dependencies
+
+You must install [`quickshell-git`](https://quickshell.outfoxxed.me) (must be built from `git` master, not the latest release tag) and the following dependencies:
+
+- **Core/CLI dependencies**: `caelestia-cli`, `gpu-screen-recorder`, `ddcutil`, `brightnessctl`, `app2unit`, `networkmanager`, `lm-sensors`, `wl-clipboard`, `libqalculate`, `swappy`, `fish`, `bash`
+- **Audio/Visualizer dependencies**: `libcava`, `aubio`, `libpipewire`, `fftw`
+- **Fonts**: `material-symbols` (Material Symbols Rounded), `rubik` (Rubik), `caskaydia-cove-nerd` (CaskaydiaCove NF)
+- **Build tools**: `cmake`, `ninja`, `pkg-config`, `gcc`, `qt6-base`, `qt6-declarative`, `qt6-shadertools`
+
+#### 2. Clone the Repository
+
+Clone this repository to your Quickshell configuration folder under the name `niri-caelestia-shell`:
+
+```sh
+mkdir -p ~/.config/quickshell
+git clone https://github.com/caelestia-dots/shell.git ~/.config/quickshell/niri-caelestia-shell
+cd ~/.config/quickshell/niri-caelestia-shell
+```
+
+#### 3. Build the C++ QML Plugin & Libraries
+
+Run CMake to build the compiled components locally:
+
+```sh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+---
 
 ## Usage
 
-The shell can be started via the `caelestia shell -d` command or `qs -c caelestia`.
-If the entire caelestia dots are installed, the shell will be autostarted on login
-via `spawn-sh-at-startup "qs -c niri-caelestia-shell"` in the niri config.
+### Launching the Shell Manually
+
+To run the shell, you must specify the environment variables pointing to the compiled QML plugin and libraries built in the previous step:
+
+```sh
+export CAELESTIA_LIB_DIR="$HOME/.config/quickshell/niri-caelestia-shell/build/lib"
+export QML2_IMPORT_PATH="$HOME/.config/quickshell/niri-caelestia-shell/build/qml:$QML2_IMPORT_PATH"
+
+qs -c niri-caelestia-shell
+```
+
+### Autostart with Niri
+
+Add the following to your Niri configuration (`~/.config/niri/config.kdl`) to launch the shell automatically on startup:
+
+```kdl
+spawn-at-startup "env" "CAELESTIA_LIB_DIR=/home/YOUR_USERNAME/.config/quickshell/niri-caelestia-shell/build/lib" "QML2_IMPORT_PATH=/home/YOUR_USERNAME/.config/quickshell/niri-caelestia-shell/build/qml" "qs" "-c" "niri-caelestia-shell"
+```
 
 ### Shortcuts/IPC
 
