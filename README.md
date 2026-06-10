@@ -16,9 +16,9 @@ Original work and massive thanks to:
 
 <div align=center>
 
-![GitHub last commit](https://img.shields.io/github/last-commit/caelestia-dots/shell?style=for-the-badge&labelColor=101418&color=9ccbfb)
-![GitHub Repo stars](https://img.shields.io/github/stars/caelestia-dots/shell?style=for-the-badge&labelColor=101418&color=b9c8da)
-![GitHub repo size](https://img.shields.io/github/repo-size/caelestia-dots/shell?style=for-the-badge&labelColor=101418&color=d3bfe6)
+![GitHub last commit](https://img.shields.io/github/last-commit/Cantfirmed/niri-caelestia-shell?style=for-the-badge&labelColor=101418&color=9ccbfb)
+![GitHub Repo stars](https://img.shields.io/github/stars/Cantfirmed/niri-caelestia-shell?style=for-the-badge&labelColor=101418&color=b9c8da)
+![GitHub repo size](https://img.shields.io/github/repo-size/Cantfirmed/niri-caelestia-shell?style=for-the-badge&labelColor=101418&color=d3bfe6)
 [![Ko-Fi donate](https://img.shields.io/badge/donate-kofi?style=for-the-badge&logo=ko-fi&logoColor=ffffff&label=ko-fi&labelColor=101418&color=f16061&link=https%3A%2F%2Fko-fi.com%2Fsoramane)](https://ko-fi.com/soramane)
 [![Discord invite](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscordapp.com%2Fapi%2Finvites%2FBGDCFCmMBk%3Fwith_counts%3Dtrue&query=approximate_member_count&style=for-the-badge&logo=discord&logoColor=ffffff&label=discord&labelColor=101418&color=96f1f1&link=https%3A%2F%2Fdiscord.gg%2FBGDCFCmMBk)](https://discord.gg/BGDCFCmMBk)
 
@@ -34,56 +34,7 @@ https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
 
 ## Installation
 
-There are two primary ways to install and run the shell: **Nix (Recommended)** and **Manual Installation**.
-
----
-
-### Method 1: Nix / NixOS (Recommended)
-
-Nix automatically builds the C++ QML plugins and libraries, resolves all fonts, packages dependencies, and handles startup configurations cleanly.
-
-#### 1. Via Home Manager (Declarative & Autostart)
-
-Add this repository to your flake inputs:
-
-```nix
-inputs = {
-  niri-caelestia-shell.url = "github:caelestia-dots/shell"; # Replace with this repository's URL/branch
-};
-```
-
-Import the Home Manager module and enable the shell in your configuration:
-
-```nix
-{ inputs, pkgs, ... }: {
-  imports = [
-    inputs.niri-caelestia-shell.homeManagerModules.default
-  ];
-
-  programs.caelestia = {
-    enable = true;
-    systemd = {
-      enable = true;
-      target = "niri.service"; # Binds the shell's lifecycle to Niri starting
-    };
-    cli.enable = true; # Adds 'caelestia' CLI command to path
-  };
-}
-```
-
-When Niri starts, systemd will automatically start the Caelestia Shell service.
-
-#### 2. Via Nix Run (Ad-hoc)
-
-You can run the shell directly without adding it to your system packages:
-
-```sh
-nix run github:caelestia-dots/shell
-```
-
----
-
-### Method 2: Manual Installation (Non-Nix)
+### Manual Installation
 
 If you are on Arch Linux or another distribution without Nix, you can install the shell manually.
 
@@ -102,7 +53,7 @@ Clone this repository to your Quickshell configuration folder under the name `ni
 
 ```sh
 mkdir -p ~/.config/quickshell
-git clone https://github.com/caelestia-dots/shell.git ~/.config/quickshell/niri-caelestia-shell
+git clone https://github.com/Cantfirmed/niri-caelestia-shell.git ~/.config/quickshell/niri-caelestia-shell
 cd ~/.config/quickshell/niri-caelestia-shell
 ```
 
@@ -193,12 +144,10 @@ the command.
 
 ## Updating
 
-If installed via the AUR package, simply update your system (e.g. using `yay`).
-
-If installed manually, you can update by running `git pull` in `$XDG_CONFIG_HOME/quickshell/caelestia`.
+If installed manually, you can update by running `git pull` in the repo directory:
 
 ```sh
-cd $XDG_CONFIG_HOME/quickshell/caelestia
+cd ~/.config/quickshell/niri-caelestia-shell
 git pull
 ```
 
@@ -819,9 +768,57 @@ token values to produce the final computed values.
 Per-monitor token overrides are also available at
 `~/.config/caelestia/monitors/<screen-name>/shell-tokens.json`.
 
-### Home Manager Module
 
-For NixOS users, a home manager module is also available.
+---
+
+## Nix / NixOS Installation
+
+> **⚠️ Disclaimer:** I don't use Nix myself, so I can't personally vouch for this method. These instructions are inherited from upstream and may need updating. If you run into issues, contributions via PR are very welcome — I'll happily merge fixes from folks who actually use Nix.
+
+Nix automatically builds the C++ QML plugins and libraries, resolves all fonts, packages dependencies, and handles startup configurations cleanly.
+
+### Via Home Manager (Declarative & Autostart)
+
+Add this repository to your flake inputs:
+
+```nix
+inputs = {
+  niri-caelestia-shell.url = "github:Cantfirmed/niri-caelestia-shell";
+};
+```
+
+Import the Home Manager module and enable the shell in your configuration:
+
+```nix
+{ inputs, pkgs, ... }: {
+  imports = [
+    inputs.niri-caelestia-shell.homeManagerModules.default
+  ];
+
+  programs.caelestia = {
+    enable = true;
+    systemd = {
+      enable = true;
+      target = "niri.service"; # Binds the shell's lifecycle to Niri starting
+    };
+    cli.enable = true; # Adds 'caelestia' CLI command to path
+  };
+}
+```
+
+When Niri starts, systemd will automatically start the Caelestia Shell service.
+
+### Via Nix Run (Ad-hoc)
+
+You can run the shell directly without adding it to your system packages:
+
+```sh
+nix run github:Cantfirmed/niri-caelestia-shell
+```
+
+### Home Manager Module Configuration
+
+For NixOS users, a home manager module is also available:
 
 <details><summary><code>home.nix</code></summary>
 
@@ -852,6 +849,8 @@ The module automatically adds Caelestia shell to the path with **full functional
 
 </details>
 
+---
+
 ## FAQ
 
 ### Need help or support?
@@ -869,12 +868,12 @@ Edit the Niri config at `~/.config/niri/config.kdl`.
 
 ### I want to make my own changes to other stuff!
 
-See the [manual installation](https://github.com/caelestia-dots/shell?tab=readme-ov-file#manual-installation) section
+See the [manual installation](https://github.com/Cantfirmed/niri-caelestia-shell?tab=readme-ov-file#manual-installation) section
 for the corresponding repo.
 
 ### I want to disable XXX feature!
 
-Please read the [configuring](https://github.com/caelestia-dots/shell?tab=readme-ov-file#configuring) section in the readme.
+Please read the [configuring](https://github.com/Cantfirmed/niri-caelestia-shell?tab=readme-ov-file#configuring) section in the readme.
 If there is no corresponding option, make feature request.
 
 ### How do I make my colour scheme change with my wallpaper?
@@ -908,10 +907,10 @@ Finally another thank you to all the configs I took inspiration from (only one f
 
 ## Stonks 📈
 
-<a href="https://www.star-history.com/#caelestia-dots/shell&Date">
+<a href="https://www.star-history.com/#Cantfirmed/niri-caelestia-shell&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=caelestia-dots/shell&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=caelestia-dots/shell&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=caelestia-dots/shell&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Cantfirmed/niri-caelestia-shell&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Cantfirmed/niri-caelestia-shell&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Cantfirmed/niri-caelestia-shell&type=Date" />
  </picture>
 </a>
