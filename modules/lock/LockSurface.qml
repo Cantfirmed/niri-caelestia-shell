@@ -18,7 +18,7 @@ WlSessionLockSurface {
     contentItem.Config.screen: screen.name
     contentItem.Tokens.screen: screen.name
 
-    color: "transparent"
+    color: "#111111"
 
     Connections {
         function onUnlock(): void {
@@ -171,6 +171,11 @@ WlSessionLockSurface {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        color: "#aa000000"
+    }
+
     Item {
         id: lockContent
 
@@ -188,7 +193,7 @@ WlSessionLockSurface {
             id: lockBg
 
             anchors.fill: parent
-            color: Colours.palette.m3surface
+            color: "#1c1b1f"
             radius: parent.radius
             opacity: Colours.transparency.enabled ? Colours.transparency.base : 1
 
@@ -205,6 +210,7 @@ WlSessionLockSurface {
 
             anchors.centerIn: parent
             text: "lock"
+            color: Colours.palette.m3primary
             fontStyle: Tokens.font.icon.builders.extraLarge.scale(4).weight(Font.Bold).build()
             rotation: 180
         }

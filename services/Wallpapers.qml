@@ -131,7 +131,15 @@ Searcher {
             if (exitCode !== 0) {
                 console.warn("Matugen exited with code:", exitCode);
             }
+            // Reload tmux config so the status bar picks up new matugen colours
+            tmuxReload.running = true;
         }
+    }
+
+    Process {
+        id: tmuxReload
+
+        command: ["tmux", "source-file", "/home/patrick/.config/tmux/tmux.conf"]
     }
 
     Process {

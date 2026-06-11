@@ -14,16 +14,6 @@ Original work and massive thanks to:
 
 <h1 align=center>🌌 Niri-Caelestia Shell</h1>
 
-<div align=center>
-
-![GitHub last commit](https://img.shields.io/github/last-commit/Cantfirmed/niri-caelestia-shell?style=for-the-badge&labelColor=101418&color=9ccbfb)
-![GitHub Repo stars](https://img.shields.io/github/stars/Cantfirmed/niri-caelestia-shell?style=for-the-badge&labelColor=101418&color=b9c8da)
-![GitHub repo size](https://img.shields.io/github/repo-size/Cantfirmed/niri-caelestia-shell?style=for-the-badge&labelColor=101418&color=d3bfe6)
-[![Ko-Fi donate](https://img.shields.io/badge/donate-kofi?style=for-the-badge&logo=ko-fi&logoColor=ffffff&label=ko-fi&labelColor=101418&color=f16061&link=https%3A%2F%2Fko-fi.com%2Fsoramane)](https://ko-fi.com/soramane)
-[![Discord invite](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscordapp.com%2Fapi%2Finvites%2FBGDCFCmMBk%3Fwith_counts%3Dtrue&query=approximate_member_count&style=for-the-badge&logo=discord&logoColor=ffffff&label=discord&labelColor=101418&color=96f1f1&link=https%3A%2F%2Fdiscord.gg%2FBGDCFCmMBk)](https://discord.gg/BGDCFCmMBk)
-
-</div>
-
 https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
 
 ## Components
@@ -861,6 +851,31 @@ https://discord.gg/BGDCFCmMBk
 ### My screen is flickering, help pls!
 
 Check your Niri compositor config for VRR/flickering related settings.
+
+### How do I set up themed tmux with caelestia?
+
+Caelestia includes a `tmux/chadmux.conf` status bar theme that reacts to wallpaper changes.
+
+1. Make sure matugen is generating the tmux colour template (included by default):
+
+   ```toml
+   # ~/.config/matugen/config.toml
+   [templates.tmux]
+   input_path = '~/.config/matugen/templates/tmux/tmux.conf'
+   output_path = '~/.config/tmux/matugen.conf'
+   ```
+
+2. Add these two lines to your `~/.config/tmux/tmux.conf`:
+
+   ```tmux
+   # Matugen-generated theme colours
+   if-shell "test -f ~/.config/tmux/matugen.conf" "source-file ~/.config/tmux/matugen.conf"
+   # Caelestia chadmux status bar
+   source-file ~/.config/quickshell/niri-caelestia-shell/tmux/chadmux.conf
+   ```
+
+3. Reload tmux — the status bar now follows your wallpaper colours. The shell also
+   automatically reloads tmux after every wallpaper change, so no manual steps needed.
 
 ### I want to make my own changes to the compositor config!
 
