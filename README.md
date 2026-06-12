@@ -71,29 +71,46 @@ export QML2_IMPORT_PATH="$HOME/.config/quickshell/niri-caelestia-shell/build/qml
 qs -c niri-caelestia-shell
 ```
 
-### Autostart with Niri
+### Niri Configuration
 
-Add the following to your Niri configuration (`~/.config/niri/config.kdl`) to launch the shell automatically on startup:
+This repo includes a complete Niri configuration in the [`niri/`](niri/) directory, including
+all the shell IPC keybindings, display switching scripts, and compositor settings.
 
-```kdl
-spawn-at-startup "env" "CAELESTIA_LIB_DIR=/home/YOUR_USERNAME/.config/quickshell/niri-caelestia-shell/build/lib" "QML2_IMPORT_PATH=/home/YOUR_USERNAME/.config/quickshell/niri-caelestia-shell/build/qml" "qs" "-c" "niri-caelestia-shell"
+**To use it**, symlink the `niri/` directory to `~/.config/niri/`:
+
+```sh
+ln -s ~/.config/quickshell/niri-caelestia-shell/niri ~/.config/niri
 ```
+
+This will set up the shell to launch automatically on startup, configure all the
+keybindings (launcher, dashboard, session, display switching, etc.), window rules,
+and display management.
+
+> If you already have an existing Niri config, you can cherry-pick the parts you want.
+> The key file is [`niri/caelestia.kdl`](niri/caelestia.kdl) — it contains the shell IPC
+> keybindings and layer rules. Add `include "caelestia.kdl"` to your existing config
+> to get the shell-specific binds.
 
 ### Shortcuts/IPC
 
-All keybinds are configured in the [niri config](niri/niri/caelestia.kdl) and use IPC calls
+All keybinds are configured in the [niri config](niri/caelestia.kdl) (included in this repo under `niri/`) and use IPC calls
 to trigger shell actions.
 
-All IPC commands can be accessed via `qs -c niri-caelestia-shell ipc call <target> <action>`. For example
+All IPC commands can be accessed via `qs -c niri-caelestia-shell ipc call <target> <action>`. For example:
 
 ```sh
-caelestia shell mpris getActive trackTitle
+qs -c niri-caelestia-shell ipc call mpris getActive trackTitle
 ```
 
-The list of IPC commands can be shown via `caelestia shell -s`:
+List available IPC targets and their functions:
+
+```sh
+qs -c niri-caelestia-shell ipc show
+```
+
+This outputs something like:
 
 ```
-$ caelestia shell -s
 target drawers
   function toggle(drawer: string): void
   function list(): string

@@ -1,0 +1,26 @@
+// ============================================================================
+// MAIN NIRI CONFIGURATION (Modular)
+// ============================================================================
+// Symlink this directory to ~/.config/niri/ to use the Caelestia shell
+// with Niri. The shell-specific keybindings and IPC calls are in
+// caelestia.kdl.
+// ============================================================================
+
+include "startup.kdl"
+include "general.kdl"
+include "environment.kdl"
+include "input.kdl"
+include "output.kdl"
+include "layout.kdl"
+include "animations.kdl"
+include "gestures.kdl"
+include "rules.kdl"
+include "binds.kdl"
+include "caelestia.kdl"
+include "blur.kdl"
+
+include "colors.kdl"
+
+layout {
+    gaps 13
+}

@@ -1,0 +1,67 @@
+animations {
+    // 1. Structural Movements: Critically damped for a snappy, zero-wobble feel
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    window-movement {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    window-resize {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    overview-open-close {
+        spring damping-ratio=1.0 stiffness=850 epsilon=0.0001
+    }
+
+    // 2. Window Open: Rise up from below and fade in
+    window-open {
+        duration-ms 300
+        curve "ease-out-cubic"
+        custom-shader r"
+            vec4 open_color(vec3 coords_geo, vec3 size_geo) {
+                float progress = niri_clamped_progress;
+                float opacity = clamp(progress * 1.5, 0.0, 1.0);
+                float slide_distance = 0.05;
+                float y_offset = (1.0 - progress) * slide_distance;
+                float scale = 0.95 + (0.05 * progress);
+                vec3 coords = vec3((coords_geo.xy - vec2(0.5, 1.0)) / scale + vec2(0.5, 1.0), 1.0);
+                coords.y -= y_offset;
+                vec3 coords_tex = niri_geo_to_tex * coords;
+                vec4 color = texture2D(niri_tex, coords_tex.st);
+                return color * opacity;
+            }
+        "
+    }
+
+    // 3. Window Close: Sink down below and dissolve
+    window-close {
+        duration-ms 200
+        curve "ease-out-quad"
+        custom-shader r"
+            vec4 close_color(vec3 coords_geo, vec3 size_geo) {
+                float progress = 1.0 - niri_clamped_progress;
+                float opacity = progress;
+                float slide_distance = 0.05;
+                float y_offset = (1.0 - progress) * slide_distance;
+                float scale = 0.95 + (0.05 * progress);
+                vec3 coords = vec3((coords_geo.xy - vec2(0.5, 1.0)) / scale + vec2(0.5, 1.0), 1.0);
+                coords.y -= y_offset;
+                vec3 coords_tex = niri_geo_to_tex * coords;
+                vec4 color = texture2D(niri_tex, coords_tex.st);
+                return color * opacity;
+            }
+        "
+    }
+
+    // 4. UI Overlays: Fast, simple transitions
+    config-notification-open-close {
+        spring damping-ratio=0.95 stiffness=900 epsilon=0.001
+    }
+    screenshot-ui-open {
+        duration-ms 200
+        curve "ease-out-quad"
+    }
+}
