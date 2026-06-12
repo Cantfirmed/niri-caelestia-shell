@@ -24,36 +24,44 @@ https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
 
 ## Installation
 
-### Manual Installation
+### Arch Linux (Easy Way)
 
-If you are on Arch Linux or another distribution without Nix, you can install the shell manually.
-
-#### 1. Install Dependencies
-
-You must install [`quickshell-git`](https://quickshell.outfoxxed.me) (must be built from `git` master, not the latest release tag) and the following dependencies:
-
-- **Core/CLI dependencies**: `caelestia-cli`, `gpu-screen-recorder`, `ddcutil`, `brightnessctl`, `app2unit`, `networkmanager`, `lm-sensors`, `wl-clipboard`, `libqalculate`, `swappy`, `fish`, `bash`
-- **Audio/Visualizer dependencies**: `libcava`, `aubio`, `libpipewire`, `fftw`
-- **Fonts**: `material-symbols` (Material Symbols Rounded), `rubik` (Rubik), `caskaydia-cove-nerd` (CaskaydiaCove NF)
-- **Build tools**: `cmake`, `ninja`, `pkg-config`, `gcc`, `qt6-base`, `qt6-declarative`, `qt6-shadertools`
-
-#### 2. Clone the Repository
-
-Clone this repository to your Quickshell configuration folder under the name `niri-caelestia-shell`:
+Run the install script — it handles everything: dependencies, cloning, building, and
+Niri config setup.
 
 ```sh
-mkdir -p ~/.config/quickshell
-git clone https://github.com/Cantfirmed/niri-caelestia-shell.git ~/.config/quickshell/niri-caelestia-shell
-cd ~/.config/quickshell/niri-caelestia-shell
+bash <(curl -sL https://raw.githubusercontent.com/Cantfirmed/niri-caelestia-shell/main/scripts/install-arch.sh)
 ```
 
-#### 3. Build the C++ QML Plugin & Libraries
-
-Run CMake to build the compiled components locally:
+Or if you'd rather clone first:
 
 ```sh
+git clone --depth=1 https://github.com/Cantfirmed/niri-caelestia-shell.git ~/.config/quickshell/niri-caelestia-shell
+~/.config/quickshell/niri-caelestia-shell/scripts/install-arch.sh
+```
+
+That's it. Restart Niri and you're off.
+
+### Other Distributions
+
+Install the dependencies manually:
+
+| Category | Packages |
+|----------|----------|
+| **Shell** | [`quickshell-git`](https://quickshell.outfoxxed.me) (must be git master, not latest tag) |
+| **Build** | `cmake`, `ninja`, `pkg-config`, `gcc`, `qt6-base`, `qt6-declarative`, `qt6-shadertools` |
+| **Core** | `wl-clipboard`, `cliphist`, `brightnessctl`, `ddcutil`, `gpu-screen-recorder`, `networkmanager`, `lm-sensors`, `libqalculate`, `swappy`, `python`, `jq` |
+| **Audio** | `pipewire`, `wireplumber`, `libcava`, `aubio`, `fftw` |
+| **Fonts** | Material Symbols Rounded, Rubik, CaskaydiaCove Nerd Font |
+
+Then clone and build:
+
+```sh
+git clone --depth=1 https://github.com/Cantfirmed/niri-caelestia-shell.git ~/.config/quickshell/niri-caelestia-shell
+cd ~/.config/quickshell/niri-caelestia-shell
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
+ln -s ~/.config/quickshell/niri-caelestia-shell/niri ~/.config/niri
 ```
 
 ---
