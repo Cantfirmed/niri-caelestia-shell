@@ -329,21 +329,69 @@ Item {
     function runCmd(cmd) {
         console.log("DisplayPane: Running command:", cmd);
         Quickshell.execDetached(["bash", "-c", cmd]);
-        refreshTimer.count = 0;
-        refreshTimer.running = true;
+        // Fetch outputs after a brief delay to let niri process the change
+        refreshTimer.restart();
+    }
+
+    // ── Scale confirmation / auto-revert ──
+    property bool scaleChangePending: false
+    property real originalScale: 1.0
+    property real pendingScale: 1.0
+    property int scaleConfirmRemaining: 15
+
+    function beginScaleConfirm(connector: string, newScale: real): void {
+        if (!root.scaleChangePending) {
+            // First change — save the original
+            if (root.selectedOutput) {
+                root.originalScale = root.selectedOutput.scale;
+            }
+        }
+        root.pendingScale = newScale;
+        root.scaleChangePending = true;
+        root.scaleConfirmRemaining = 15;
+        scaleConfirmTimer.restart();
+        scaleInput.updateText();
+    }
+
+    function acceptScaleChange(): void {
+        root.scaleChangePending = false;
+        scaleConfirmTimer.stop();
+        // Do nothing — the current scale stays as is
+    }
+
+    function discardScaleChange(): void {
+        root.scaleChangePending = false;
+        scaleConfirmTimer.stop();
+        if (root.selectedOutput) {
+            root.runCmd("niri msg output " + root.selectedOutput.connector + " scale " + root.originalScale);
+        }
+    }
+
+    Timer {
+        id: scaleConfirmTimer
+        interval: 1000
+        repeat: true
+        onTriggered: {
+            root.scaleConfirmRemaining--;
+            if (root.scaleConfirmRemaining <= 0) {
+                // Timer expired — accept the change
+                root.acceptScaleChange();
+            }
+        }
     }
 
     Timer {
         id: refreshTimer
-        interval: 150
+        interval: 500
         repeat: true
         property int count: 0
         onTriggered: {
             console.log("DisplayPane: refreshTimer triggered, calling fetchOutputs, iteration:", count);
             NiriIpc.fetchOutputs();
             count++;
-            if (count >= 3) {
+            if (count >= 5) {
                 running = false;
+                count = 0;
             }
         }
     }
@@ -683,18 +731,80 @@ Item {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: Appearance.spacing.sm
-                                    Repeater {
-                                        model: [0.5, 1.0, 1.5, 2.0]
-                                        delegate: TextButton {
-                                            text: modelData.toFixed(1)
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: Appearance.spacing.sm
+
+                                        TextButton {
+                                            id: scaleBtn1
+                                            text: "0.5"
                                             Layout.fillWidth: true
                                             isToggle: false
-                                            checked: root.selectedOutput ? Math.abs(root.selectedOutput.scale - modelData) < 0.05 : false
+                                            checked: root.selectedOutput ? Math.abs(root.selectedOutput.scale - 0.5) < 0.05 : false
                                             type: checked ? TextButton.Filled : TextButton.Tonal
-                                            onClicked: {
-                                                console.log("DisplayPane: scale button clicked for value:", modelData);
-                                                root.runCmd("niri msg output " + root.selectedOutput.connector + " scale " + modelData);
-                                                scaleInput.updateText();
+                                            onPressedChanged: {
+                                                if (pressed) {
+                                                    console.log("DisplayPane: scale button 0.5 pressed");
+                                                    if (root.selectedOutput) {
+                                                        root.runCmd("niri msg output " + root.selectedOutput.connector + " scale 0.5");
+                                                        root.beginScaleConfirm(root.selectedOutput.connector, 0.5);
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        TextButton {
+                                            id: scaleBtn2
+                                            text: "1.0"
+                                            Layout.fillWidth: true
+                                            isToggle: false
+                                            checked: root.selectedOutput ? Math.abs(root.selectedOutput.scale - 1.0) < 0.05 : false
+                                            type: checked ? TextButton.Filled : TextButton.Tonal
+                                            onPressedChanged: {
+                                                if (pressed) {
+                                                    console.log("DisplayPane: scale button 1.0 pressed");
+                                                    if (root.selectedOutput) {
+                                                        root.runCmd("niri msg output " + root.selectedOutput.connector + " scale 1.0");
+                                                        root.beginScaleConfirm(root.selectedOutput.connector, 1.0);
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        TextButton {
+                                            id: scaleBtn3
+                                            text: "1.5"
+                                            Layout.fillWidth: true
+                                            isToggle: false
+                                            checked: root.selectedOutput ? Math.abs(root.selectedOutput.scale - 1.5) < 0.05 : false
+                                            type: checked ? TextButton.Filled : TextButton.Tonal
+                                            onPressedChanged: {
+                                                if (pressed) {
+                                                    console.log("DisplayPane: scale button 1.5 pressed");
+                                                    if (root.selectedOutput) {
+                                                        root.runCmd("niri msg output " + root.selectedOutput.connector + " scale 1.5");
+                                                        root.beginScaleConfirm(root.selectedOutput.connector, 1.5);
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        TextButton {
+                                            id: scaleBtn4
+                                            text: "2.0"
+                                            Layout.fillWidth: true
+                                            isToggle: false
+                                            checked: root.selectedOutput ? Math.abs(root.selectedOutput.scale - 2.0) < 0.05 : false
+                                            type: checked ? TextButton.Filled : TextButton.Tonal
+                                            onPressedChanged: {
+                                                if (pressed) {
+                                                    console.log("DisplayPane: scale button 2.0 pressed");
+                                                    if (root.selectedOutput) {
+                                                        root.runCmd("niri msg output " + root.selectedOutput.connector + " scale 2.0");
+                                                        root.beginScaleConfirm(root.selectedOutput.connector, 2.0);
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -721,9 +831,11 @@ Item {
                                         Component.onCompleted: updateText()
 
                                         onEditingFinished: {
+                                            if (!root.selectedOutput) return;
                                             const val = parseFloat(text);
                                             if (!isNaN(val) && val >= 0.1 && val <= 10.0) {
                                                 root.runCmd("niri msg output " + root.selectedOutput.connector + " scale " + val);
+                                                root.beginScaleConfirm(root.selectedOutput.connector, val);
                                             }
                                         }
                                     }
@@ -739,6 +851,46 @@ Item {
                                             if (!scaleInput.hasFocus) {
                                                 scaleInput.updateText();
                                             }
+                                        }
+                                    }
+                                }
+
+                                // ── Scale confirmation banner ──
+                                StyledRect {
+                                    Layout.fillWidth: true
+                                    visible: root.scaleChangePending
+                                    height: 48
+                                    radius: Appearance.rounding.normal
+                                    color: Colours.layer(Colours.palette.m3surfaceContainer, 2)
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: Appearance.padding.md
+                                        spacing: Appearance.spacing.md
+
+                                        MaterialIcon {
+                                            text: "restart_alt"
+                                            font: Tokens.font.icon.small
+                                            color: Colours.palette.m3onSurfaceVariant
+                                        }
+
+                                        StyledText {
+                                            text: qsTr("Reverting to previous scale in %1s").arg(root.scaleConfirmRemaining)
+                                            color: Colours.palette.m3onSurfaceVariant
+                                            font.pointSize: Appearance.font.size.bodySmall
+                                            Layout.fillWidth: true
+                                        }
+
+                                        TextButton {
+                                            text: qsTr("Keep")
+                                            type: TextButton.Filled
+                                            onClicked: root.acceptScaleChange()
+                                        }
+
+                                        TextButton {
+                                            text: qsTr("Discard")
+                                            type: TextButton.Tonal
+                                            onClicked: root.discardScaleChange()
                                         }
                                     }
                                 }
@@ -763,6 +915,7 @@ Item {
                                             
                                             StateLayer {
                                                 onClicked: {
+                                                    if (!root.selectedOutput) return;
                                                     const modeStr = modelData.width + "x" + modelData.height + "@" + modelData.refresh_rate.toFixed(3);
                                                     root.runCmd("niri msg output " + root.selectedOutput.connector + " mode \"" + modeStr + "\"");
                                                 }

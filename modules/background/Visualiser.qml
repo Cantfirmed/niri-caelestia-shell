@@ -15,7 +15,7 @@ Item {
     required property ShellScreen screen
     required property Item wallpaper
 
-    readonly property bool shouldBeActive: Config.background.visualiser.enabled && (!Config.background.visualiser.autoHide || Niri.getActiveWorkspaceWindows().length === 0)
+    readonly property bool shouldBeActive: Config.background.visualiser.enabled && !GameMode.enabled && (!Config.background.visualiser.autoHide || Niri.getActiveWorkspaceWindows().length === 0)
     property real offset: shouldBeActive ? 0 : (screen ? screen.height * 0.2 : 0)
 
     opacity: shouldBeActive ? 1 : 0

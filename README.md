@@ -761,6 +761,12 @@ Per-monitor token overrides are also available at
 
 ---
 
+## Plugins
+
+The shell ships with a couple of optional reader plugins — **Manga** and **Novel** — that can be
+enabled or disabled in the Control Center settings under **System → Plugins**. When disabled,
+the backend processes are stopped and keyboard shortcuts won't open them.
+
 ## Nix / NixOS Installation
 
 > **⚠️ Disclaimer:** I don't use Nix myself, so I can't personally vouch for this method. These instructions are inherited from upstream and may need updating. If you run into issues, contributions via PR are very welcome — I'll happily merge fixes from folks who actually use Nix.

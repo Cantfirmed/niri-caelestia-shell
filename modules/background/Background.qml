@@ -62,7 +62,7 @@ Loader {
 
             Loader {
                 id: clockLoader
-                active: Config.background.desktopClock.enabled && behindClock.isFocusedScreen
+                active: Config.background.desktopClock.enabled && behindClock.isFocusedScreen && !GameMode.enabled
 
                 anchors.margins: Appearance.padding.xl * 2
                 anchors.leftMargin: Appearance.padding.xl * 2 + Tokens.sizes.bar.innerWidth + Math.max(Appearance.padding.sm, Config.border.thickness)

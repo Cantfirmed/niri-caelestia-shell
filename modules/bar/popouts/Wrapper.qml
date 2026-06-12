@@ -137,7 +137,7 @@ Item {
 
                 anchors.fill: parent
                 nState.screen: root.screen
-                nState.currentPageIdx: ["appearance", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
+                nState.currentPageIdx: ["appearance", "", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
                 onClose: root.close()
             }
         }
