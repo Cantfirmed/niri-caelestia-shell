@@ -24,22 +24,15 @@ StyledWindow {
     readonly property bool hasFullscreen: {
         if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
             const wsId = NiriIpc.focusedWorkspaceId;
-            const screenW = screen?.geometry?.width ?? 0;
-            const screenH = screen?.geometry?.height ?? 0;
-            return NiriIpc.windows.some(w => {
-                if (w.workspace_id !== wsId)
-                    return false;
-                const size = w.layout?.window_size;
-                if (!size || size.length < 2)
-                    return false;
-                return Math.round(size[0]) === screenW && Math.round(size[1]) === screenH;
-            });
+            return NiriIpc.windows.some(w => w.workspace_id === wsId && (w.is_fullscreen === true || w.fullscreen === true));
         }
         if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
             return Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
         }
         return false;
     }
+
+    readonly property bool hasOpenPanels: screenState ? (screenState.launcher || screenState.dashboard || screenState.session || screenState.sidebar || screenState.utilities || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.osd) : false
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
@@ -64,7 +57,7 @@ StyledWindow {
     }
 
     onHasFullscreenChanged: {
-        if (screenState) {
+        if (screenState && hasFullscreen) {
             screenState.launcher = false;
             screenState.session = false;
             screenState.dashboard = false;
@@ -78,7 +71,7 @@ StyledWindow {
     // Modal panels (launcher, session) MUST use Exclusive keyboard focus on Wayland.
     WlrLayershell.keyboardFocus: (screenState && (screenState.launcher || screenState.session || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel)) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    mask: hasFullscreen ? emptyRegion : regions
+    mask: (hasFullscreen && !hasOpenPanels) ? emptyRegion : regions
 
     anchors.top: true
     anchors.bottom: true
