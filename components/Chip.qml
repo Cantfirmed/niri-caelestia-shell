@@ -14,9 +14,9 @@ StyledRect {
     signal clicked()
     signal closeClicked()
 
-    radius: Appearance.rounding.small
-    implicitWidth: row.implicitWidth + Appearance.padding.md * 2
-    implicitHeight: row.implicitHeight + Appearance.padding.xs * 2
+    radius: Tokens.rounding.small
+    implicitWidth: row.implicitWidth + Tokens.padding.medium * 2
+    implicitHeight: row.implicitHeight + Tokens.padding.extraSmall * 2
 
     color: selected ? Colours.palette.m3secondaryContainer : "transparent"
     border.width: selected ? 0 : 1
@@ -36,25 +36,25 @@ StyledRect {
             verticalCenter: parent ? parent.verticalCenter : undefined
             horizontalCenter: parent ? parent.horizontalCenter : undefined
         }
-        spacing: Appearance.spacing.xs
+        spacing: Tokens.spacing.extraSmall
 
         MaterialIcon {
             visible: root.icon.length > 0
             text: root.icon
-            size: Appearance.font.size.labelLarge
+            fontStyle: Tokens.font.icon.small
             color: selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
         }
 
         StyledText {
             text: root.text
-            font.pointSize: Appearance.font.size.labelLarge
+            font: Tokens.font.label.large
             color: selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
         }
 
         MaterialIcon {
             visible: root.closable
             text: "close"
-            size: Appearance.font.size.labelLarge
+            fontStyle: Tokens.font.icon.small
             color: selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
 
             MouseArea {
@@ -65,3 +65,4 @@ StyledRect {
         }
     }
 }
+

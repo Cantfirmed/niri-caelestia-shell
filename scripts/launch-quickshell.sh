@@ -5,7 +5,11 @@
 
 while true; do
     echo "[quickshell-wrapper] Starting Quickshell..." >&2
-    /usr/bin/quickshell --path /home/patrick/.config/quickshell/niri-caelestia-shell/shell.qml
+    if [ -x "$HOME/.local/bin/quickshell" ]; then
+        "$HOME/.local/bin/quickshell" --path /home/patrick/.config/quickshell/niri-caelestia-shell/shell.qml
+    else
+        quickshell --path /home/patrick/.config/quickshell/niri-caelestia-shell/shell.qml
+    fi
     EXIT_CODE=$?
     
     echo "[quickshell-wrapper] Quickshell exited with code $EXIT_CODE" >&2
