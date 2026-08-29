@@ -1,8 +1,8 @@
 pragma Singleton
 
+import QtQuick
 import Quickshell
 import Caelestia.Config
-import QtQuick
 
 Singleton {
     id: root
@@ -44,3 +44,4 @@ Singleton {
         return screen && screen.name ? !GlobalConfig.forScreen(screen.name).enabled : true;
     }
 }
+

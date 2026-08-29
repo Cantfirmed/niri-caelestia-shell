@@ -98,7 +98,7 @@ ColumnLayout {
                 // Update network when popout becomes active
                 Qt.callLater(() => {
                     // Try to get network from parent Content's networkPopout
-                    const content = root.parent?.parent;
+                    const content = root.parent?.parent?.parent || root.parent?.parent;
                     if (content) {
                         const networkPopout = content.children.find(c => c.name === "network");
                         if (networkPopout && networkPopout.item) {
@@ -219,7 +219,7 @@ ColumnLayout {
                 onTriggered: {
                     attempts++;
                     // Keep trying to get network from Network component
-                    const content = root.parent?.parent;
+                    const content = root.parent?.parent?.parent || root.parent?.parent;
                     if (content) {
                         const networkPopout = content.children.find(c => c.name === "network");
                         if (networkPopout && networkPopout.item && networkPopout.item.passwordNetwork) {
@@ -628,3 +628,4 @@ ColumnLayout {
         target: Nmcli
     }
 }
+

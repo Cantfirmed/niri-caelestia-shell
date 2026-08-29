@@ -2,38 +2,149 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia
+import Caelestia.Config
 import Caelestia.Internal
+import qs.components.misc
 import qs.services
 import qs.modules.nexus
-import Caelestia.Config
 
 Scope {
     id: root
 
-    readonly property bool hasFullscreen: false
+    property bool launcherInterrupted
+    readonly property bool hasFullscreen: {
+        if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
+            return Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        }
+        return false;
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "nexus"
+        description: "Open nexus"
+        onPressed: WindowFactory.create()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "showall"
+        description: "Toggle launcher, dashboard and osd"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const v = ShellState.forActive();
+            if (!v) return;
+            v.launcher = v.dashboard = v.osd = v.utilities = !(v.launcher || v.dashboard || v.osd || v.utilities);
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "dashboard"
+        description: "Toggle dashboard"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.dashboard = !screenState.dashboard;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "session"
+        description: "Toggle session menu"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.session = !screenState.session;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "launcher"
+        description: "Toggle launcher"
+        onPressed: root.launcherInterrupted = false
+        onReleased: {
+            if (!root.launcherInterrupted && !root.hasFullscreen) {
+                const screenState = ShellState.forActive();
+                if (screenState)
+                    screenState.launcher = !screenState.launcher;
+            }
+            root.launcherInterrupted = false;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "launcherInterrupt"
+        description: "Interrupt launcher keybind"
+        onPressed: root.launcherInterrupted = true
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "sidebar"
+        description: "Toggle sidebar"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.sidebar = !screenState.sidebar;
+        }
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "utilities"
+        description: "Toggle utilities"
+        onPressed: {
+            if (root.hasFullscreen)
+                return;
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.utilities = !screenState.utilities;
+        }
+    }
 
     IpcHandler {
         function toggle(drawer: string): void {
-            const visibilities = Visibilities.getForActive();
-            if (!visibilities) {
-                console.warn(lc, `No active drawer visibilities available for "${drawer}"`);
-                return;
-            }
-
-            if (Object.keys(visibilities).filter(k => typeof visibilities[k] === "boolean").includes(drawer)) {
+            if (list().split("\n").includes(drawer)) {
                 if (root.hasFullscreen && ["launcher", "session", "dashboard"].includes(drawer))
                     return;
-                visibilities[drawer] = !visibilities[drawer];
+                const screenState = ShellState.forActive();
+                if (screenState)
+                    screenState[drawer] = !screenState[drawer];
             } else {
                 console.warn(lc, `Drawer "${drawer}" does not exist`);
             }
         }
 
         function list(): string {
-            const visibilities = Visibilities.getForActive();
-            if (!visibilities)
-                return "";
-            return Object.keys(visibilities).filter(k => typeof visibilities[k] === "boolean").join("\n");
+            const screenState = ShellState.forActive();
+            if (!screenState) return "";
+            return Object.keys(screenState).filter(k => typeof screenState[k] === "boolean").join("\n");
+        }
+
+        function isOpen(drawer: string): string {
+            const screenState = ShellState.forActive();
+            if (!screenState || typeof screenState[drawer] !== "boolean")
+                return "unknown";
+            return screenState[drawer] ? "1" : "0";
         }
 
         target: "drawers"
@@ -71,27 +182,27 @@ Scope {
         target: "clipboard"
 
         function open(): void {
-            const visibilities = Visibilities.getForActive()
-            if (visibilities) {
-                visibilities.clipboardRequested = true
-                visibilities.launcher = true
+            const screenState = ShellState.forActive();
+            if (screenState) {
+                screenState.clipboardRequested = true;
+                screenState.launcher = true;
             }
         }
 
         function close(): void {
-            const visibilities = Visibilities.getForActive()
-            if (visibilities)
-                visibilities.launcher = false
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.launcher = false;
         }
 
         function toggle(): void {
-            const visibilities = Visibilities.getForActive()
-            if (visibilities) {
-                if (visibilities.launcher) {
-                    visibilities.launcher = false
+            const screenState = ShellState.forActive();
+            if (screenState) {
+                if (screenState.launcher) {
+                    screenState.launcher = false;
                 } else {
-                    visibilities.clipboardRequested = true
-                    visibilities.launcher = true
+                    screenState.clipboardRequested = true;
+                    screenState.launcher = true;
                 }
             }
         }
@@ -107,12 +218,12 @@ Scope {
         target: "mangaReader"
         function toggle(): void {
             if (!GlobalConfig.extra.manga) {
-                Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning)
-                return
+                Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning);
+                return;
             }
-            const visibilities = Visibilities.getForActive()
-            if (visibilities)
-                visibilities.manga = !visibilities.manga
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.manga = !screenState.manga;
         }
     }
 
@@ -120,12 +231,12 @@ Scope {
         target: "novelReader"
         function toggle(): void {
             if (!GlobalConfig.extra.novel) {
-                Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning)
-                return
+                Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning);
+                return;
             }
-            const visibilities = Visibilities.getForActive()
-            if (visibilities)
-                visibilities.novel = !visibilities.novel
+            const screenState = ShellState.forActive();
+            if (screenState)
+                screenState.novel = !screenState.novel;
         }
     }
 
@@ -133,27 +244,27 @@ Scope {
         target: "display"
 
         function open(): void {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities) {
+            const screenState = ShellState.forActive();
+            if (screenState) {
                 NiriIpc.fetchOutputs(); // Refresh outputs on opening
-                visibilities.displaySelect = true;
+                screenState.displaySelect = true;
             }
         }
 
         function close(): void {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities) {
-                visibilities.displaySelect = false;
+            const screenState = ShellState.forActive();
+            if (screenState) {
+                screenState.displaySelect = false;
             }
         }
 
         function toggle(): void {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities) {
-                if (!visibilities.displaySelect) {
+            const screenState = ShellState.forActive();
+            if (screenState) {
+                if (!screenState.displaySelect) {
                     NiriIpc.fetchOutputs(); // Refresh outputs on opening
                 }
-                visibilities.displaySelect = !visibilities.displaySelect;
+                screenState.displaySelect = !screenState.displaySelect;
             }
         }
     }
@@ -162,35 +273,31 @@ Scope {
         target: "soundPanel"
 
         function open(): void {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities) visibilities.soundPanel = true;
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.soundPanel = true;
         }
 
         function close(): void {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities) visibilities.soundPanel = false;
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.soundPanel = false;
         }
 
         function toggle(): void {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities) visibilities.soundPanel = !visibilities.soundPanel;
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.soundPanel = !screenState.soundPanel;
         }
     }
 
     // Helper property to check for external monitors
     readonly property bool hasExternalMonitor: {
         const outputs = Niri.outputs;
-        console.log("Shortcuts.qml: hasExternalMonitor eval. outputs keys:", outputs ? Object.keys(outputs) : "null");
         if (!outputs) return false;
         for (const connector in outputs) {
             const lower = connector.toLowerCase();
-            console.log("Shortcuts.qml: checking connector:", connector, "lower:", lower);
             if (!lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi")) {
-                console.log("Shortcuts.qml: detected external monitor:", connector);
                 return true;
             }
         }
-        console.log("Shortcuts.qml: no external monitor detected.");
         return false;
     }
 
@@ -217,3 +324,4 @@ Scope {
         defaultLogLevel: LoggingCategory.Info
     }
 }
+

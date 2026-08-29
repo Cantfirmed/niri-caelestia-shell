@@ -5,6 +5,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia.Config
+import qs.components.misc
+
 
 Singleton {
     id: root
@@ -25,7 +27,16 @@ Singleton {
 
     function getMonitor(query: string): var {
         if (query === "active") {
-            return monitors.find(m => m.modelData.name === Niri.focusedMonitorName); // qmllint disable missing-property
+            const focusedName = typeof Niri !== "undefined" ? Niri.focusedMonitorName : "";
+            if (focusedName) {
+                const found = monitors.find(m => m.modelData && m.modelData.name === focusedName);
+                if (found) return found;
+            }
+            if (typeof Hypr !== "undefined") {
+                const found = monitors.find(m => Hypr.monitorFor(m.modelData)?.focused);
+                if (found) return found;
+            }
+            return monitors.length > 0 ? monitors[0] : null;
         }
 
         if (query.startsWith("model:")) {
@@ -45,6 +56,7 @@ Singleton {
 
         return monitors.find(m => m.modelData.name === query); // qmllint disable missing-property
     }
+
 
     function increaseBrightness(): void {
         const monitor = getMonitor("active");
@@ -91,6 +103,21 @@ Singleton {
         }
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "brightnessUp"
+        description: "Increase brightness"
+        onPressed: root.increaseBrightness()
+    }
+
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "brightnessDown"
+        description: "Decrease brightness"
+        onPressed: root.decreaseBrightness()
+    }
 
 
     IpcHandler {

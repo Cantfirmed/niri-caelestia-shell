@@ -6,8 +6,10 @@ import Quickshell
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
+import Caelestia.Images
 import qs.services
 import qs.utils
+
 
 Singleton {
     id: root
@@ -98,7 +100,7 @@ Singleton {
     }
 
     function reloadRules(): void {
-        // No-op — colour scheme reload not needed on Niri
+        // No-op on Niri
     }
 
     function requestReloadRules(): void {
@@ -111,7 +113,6 @@ Singleton {
     }
 
     Component.onCompleted: root.requestReloadRules()
-
 
     FileView {
         path: `${Paths.state}/scheme.json`
@@ -149,7 +150,7 @@ Singleton {
     component Transparency: QtObject {
         readonly property bool enabled: Tokens.transparency.enabled
         readonly property real base: Math.max(0, Math.min(1, Tokens.transparency.base - (root.light ? 0.1 : 0)))
-        readonly property real layers: Tokens.transparency.layers
+        readonly property real layers: Math.max(0, Math.min(1, Tokens.transparency.layers))
 
         onEnabledChanged: {
             if (enabled)
@@ -165,6 +166,7 @@ Singleton {
             root.lastBaseTransparency = base;
         }
     }
+
 
     component M3TPalette: QtObject {
         readonly property color m3primary_paletteKeyColor: root.layer(root.palette.m3primary_paletteKeyColor)

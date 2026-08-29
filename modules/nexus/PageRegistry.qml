@@ -15,16 +15,17 @@ QtObject {
         },
 
         // Connectivity
-        {
-            label: qsTr("Display"),
-            icon: "monitor",
-            description: qsTr("Output configuration"),
-            category: "connectivity"
-        },
+        // TODO
+        // {
+        //     label: qsTr("Display"),
+        //     icon: "monitor",
+        //     description: qsTr("Output configuration"),
+        //     category: "connectivity"
+        // },
         {
             label: qsTr("Network"),
             icon: "wifi",
-            description: qsTr("Wi-Fi, ethernet"),
+            description: qsTr("Wi-Fi, ethernet, VPN"),
             category: "connectivity"
         },
         {
@@ -60,6 +61,12 @@ QtObject {
             label: qsTr("Panels"),
             icon: "dock_to_bottom",
             description: qsTr("Dashboard, taskbar, launcher, sidebar"),
+            category: "shell"
+        },
+        {
+            label: qsTr("Apps"),
+            icon: "apps",
+            description: qsTr("Default apps, favourites, hidden apps"),
             category: "shell"
         },
         {

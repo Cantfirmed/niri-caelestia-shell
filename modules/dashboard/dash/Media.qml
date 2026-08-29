@@ -24,9 +24,6 @@ Item {
     anchors.bottom: parent.bottom
     implicitWidth: Tokens.sizes.dashboard.mediaWidth
 
-    property DrawerVisibilities visibilities
-    readonly property bool isDashVisible: (visibilities?.dashboard ?? false) && !GameMode.enabled
-
     Behavior on playerProgress {
         Anim {
             type: Anim.StandardLarge
@@ -34,18 +31,15 @@ Item {
     }
 
     Timer {
-        running: (Players.active?.isPlaying ?? false) && root.isDashVisible
+        running: Players.active?.isPlaying ?? false
         interval: GlobalConfig.dashboard.mediaUpdateInterval
         triggeredOnStart: true
         repeat: true
         onTriggered: Players.active?.positionChanged()
     }
 
-    Loader {
-        active: root.isDashVisible
-        sourceComponent: ServiceRef {
-            service: Audio.beatTracker
-        }
+    ServiceRef {
+        service: Audio.beatTracker
     }
 
     CircularProgress {
@@ -63,7 +57,7 @@ Item {
         wavy: true
         waveFrequency: 8
         waveDuration: 2000
-        wavePaused: !Players.active?.isPlaying || !root.isDashVisible
+        wavePaused: !Players.active?.isPlaying
     }
 
     CoverArt {
@@ -177,7 +171,7 @@ Item {
         anchors.bottomMargin: Tokens.padding.large
         anchors.margins: Tokens.padding.extraLargeIncreased
 
-        playing: (Players.active?.isPlaying ?? false) && root.isDashVisible
+        playing: Players.active?.isPlaying ?? false
         speed: Audio.beatTracker.bpm / Config.general.mediaGifSpeedAdjustment // qmllint disable unresolved-type
         source: Paths.absolutePath(Config.paths.mediaGif)
         asynchronous: true

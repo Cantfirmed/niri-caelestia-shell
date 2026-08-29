@@ -5,6 +5,7 @@ import QtQuick.Effects
 import Quickshell.Wayland
 import Caelestia.Config
 import qs.components
+import qs.components.images
 import qs.services
 
 WlSessionLockSurface {
@@ -18,7 +19,7 @@ WlSessionLockSurface {
     contentItem.Config.screen: screen.name
     contentItem.Tokens.screen: screen.name
 
-    color: "#111111"
+    color: "transparent"
 
     Connections {
         function onUnlock(): void {
@@ -154,11 +155,10 @@ WlSessionLockSurface {
         }
     }
 
-    ScreencopyView {
+    Item {
         id: background
 
         anchors.fill: parent
-        captureSource: root.screen
         opacity: 0
 
         layer.enabled: true
@@ -169,11 +169,27 @@ WlSessionLockSurface {
             blurMax: 64
             blurMultiplier: 1
         }
+
+        Loader {
+            anchors.fill: parent
+            sourceComponent: Config.lock.useWallpaper ? wallpaperBackground : screencopyBackground
+        }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: "#aa000000"
+    Component {
+        id: screencopyBackground
+
+        ScreencopyView {
+            captureSource: root.screen
+        }
+    }
+
+    Component {
+        id: wallpaperBackground
+
+        CachingImage {
+            path: Wallpapers.current
+        }
     }
 
     Item {
@@ -186,6 +202,7 @@ WlSessionLockSurface {
         implicitWidth: size
         implicitHeight: size
 
+        visible: Config.lock.enabled
         rotation: 180
         scale: 0
 
@@ -193,7 +210,7 @@ WlSessionLockSurface {
             id: lockBg
 
             anchors.fill: parent
-            color: "#1c1b1f"
+            color: Colours.palette.m3surface
             radius: parent.radius
             opacity: Colours.transparency.enabled ? Colours.transparency.base : 1
 
@@ -210,7 +227,6 @@ WlSessionLockSurface {
 
             anchors.centerIn: parent
             text: "lock"
-            color: Colours.palette.m3primary
             fontStyle: Tokens.font.icon.builders.extraLarge.scale(4).weight(Font.Bold).build()
             rotation: 180
         }

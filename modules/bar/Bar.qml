@@ -14,34 +14,31 @@ import qs.services
 ColumnLayout {
     id: root
 
-
     function getClockY(): real {
-        const count = repeater.count;
-        for (let i = 0; i < count; i++) {
-            const item = repeater.itemAt(i);
-            if (item?.id === "clock" && item.enabled)
+        for (let i = 0; i < repeater.count; i++) {
+            const item = repeater.itemAt(i) as EntryWrapper;
+            if (item?.entryId === "clock")
                 return item.y;
         }
-        return vPadding; // fallback
+        return vPadding;
     }
 
     function getClockHeight(): real {
-        const count = repeater.count;
-        for (let i = 0; i < count; i++) {
-            const item = repeater.itemAt(i);
-            if (item?.id === "clock" && item.enabled && item.item)
-                return item.item.implicitHeight;
+        for (let i = 0; i < repeater.count; i++) {
+            const item = repeater.itemAt(i) as EntryWrapper;
+            if (item?.entryId === "clock")
+                return item.implicitHeight;
         }
-        return 100; // fallback
+        return 100;
     }
 
-    // Checks if the mouse Y is directly over the clock item (not just within range)
     function isClockAtY(y: real): bool {
-        const ch = childAt(width / 2, y) as WrappedLoader;
-        return ch?.enabled && ch?.id === "clock";
+        const ch = childAt(width / 2, y) as EntryWrapper;
+        return ch?.entryId === "clock";
     }
+
     required property ShellScreen screen
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
     required property BarPopouts.Wrapper popouts
     required property bool fullscreen
     readonly property int vPadding: Tokens.padding.large
@@ -51,17 +48,16 @@ ColumnLayout {
             return;
 
         for (let i = 0; i < repeater.count; i++) {
-            const loader = repeater.itemAt(i) as WrappedLoader;
-            if (loader?.enabled && loader.id === "tray") {
-                (loader.item as Tray).expanded = false;
-            }
+            const tray = (repeater.itemAt(i) as EntryWrapper).item as Tray;
+            if (tray)
+                tray.expanded = false;
         }
     }
 
     function checkPopout(y: real): void {
-        const ch = childAt(width / 2, y) as WrappedLoader;
+        const ch = childAt(width / 2, y) as EntryWrapper;
 
-        if (ch?.id !== "tray")
+        if (ch?.entryId !== "tray")
             closeTray();
 
         if (!ch) {
@@ -69,7 +65,7 @@ ColumnLayout {
             return;
         }
 
-        const id = ch.id;
+        const id = ch.entryId;
         const top = ch.y;
 
         if (id === "statusIcons" && Config.bar.popouts.statusIcons) {
@@ -104,13 +100,21 @@ ColumnLayout {
     }
 
     function handleWheel(y: real, angleDelta: point): void {
-        const ch = childAt(width / 2, y) as WrappedLoader;
-        if (ch?.id === "workspaces" && Config.bar.scrollActions.workspaces) {
-            // Workspace scroll via Niri IPC
-            if (angleDelta.y < 0)
-                NiriIpc.action("focus-workspace-down");
-            else if (angleDelta.y > 0)
-                NiriIpc.action("focus-workspace-up");
+        const ch = childAt(width / 2, y) as EntryWrapper;
+        if (ch?.entryId === "workspaces" && Config.bar.scrollActions.workspaces) {
+            if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+                if (angleDelta.y < 0)
+                    NiriIpc.action("focus-workspace-down");
+                else if (angleDelta.y > 0)
+                    NiriIpc.action("focus-workspace-up");
+            } else if (typeof Hypr !== "undefined") {
+                const mon = (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor);
+                const specialWs = mon?.lastIpcObject.specialWorkspace.name;
+                if (specialWs?.length > 0)
+                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${specialWs.slice(8)}")` : `togglespecialworkspace ${specialWs.slice(8)}`);
+                else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
+                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
+            }
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
             // Volume scroll on top half
             if (angleDelta.y > 0)
@@ -132,37 +136,41 @@ ColumnLayout {
     Repeater {
         id: repeater
 
-        model: Config.bar.entries
+        model: ScriptModel {
+            values: root.Config.bar.entries.values.filter(e => e.enabled)
+        }
 
         DelegateChooser {
             role: "id"
 
             DelegateChoice {
                 roleValue: "spacer"
-                delegate: WrappedLoader {
-                    Layout.fillHeight: enabled
+                delegate: EntryWrapper {
+                    Layout.fillHeight: true
                 }
             }
             DelegateChoice {
                 roleValue: "logo"
-                delegate: WrappedLoader {
-                    sourceComponent: OsIcon {}
+                delegate: EntryWrapper {
+                    OsIcon {
+                        objectName: "taskbarLogo"
+                    }
                 }
             }
             DelegateChoice {
                 roleValue: "workspaces"
-                delegate: WrappedLoader {
-                    sourceComponent: Workspaces {
+                delegate: EntryWrapper {
+                    Workspaces {
+                        objectName: "taskbarWorkspaces"
                         outputName: root.screen.name
                     }
                 }
             }
             DelegateChoice {
                 roleValue: "activeWindow"
-                delegate: WrappedLoader {
-                    Layout.fillWidth: true
-                    visible: !root.fullscreen
-                    sourceComponent: ActiveWindow {
+                delegate: EntryWrapper {
+                    ActiveWindow {
+                        objectName: "taskbarActiveWindow"
                         bar: root
                         monitor: Brightness.getMonitorForScreen(root.screen)
                     }
@@ -170,68 +178,54 @@ ColumnLayout {
             }
             DelegateChoice {
                 roleValue: "tray"
-                delegate: WrappedLoader {
-                    visible: !root.fullscreen
-                    sourceComponent: Tray {}
+                delegate: EntryWrapper {
+                    Tray {
+                        objectName: "taskbarTray"
+                    }
                 }
             }
             DelegateChoice {
                 roleValue: "clock"
-                delegate: WrappedLoader {
-                    visible: !root.fullscreen
-                    sourceComponent: Clock {}
+                delegate: EntryWrapper {
+                    Clock {
+                        objectName: "taskbarClock"
+                    }
                 }
             }
             DelegateChoice {
                 roleValue: "statusIcons"
-                delegate: WrappedLoader {
-                    visible: !root.fullscreen
-                    sourceComponent: StatusIcons {}
+                delegate: EntryWrapper {
+                    StatusIcons {
+                        objectName: "taskbarStatusIcons"
+                    }
                 }
             }
             DelegateChoice {
                 roleValue: "power"
-                delegate: WrappedLoader {
-                    sourceComponent: Power {
-                        visibilities: root.visibilities
+                delegate: EntryWrapper {
+                    Power {
+                        objectName: "taskbarPowerButton"
+                        screenState: root.screenState
                     }
                 }
             }
         }
     }
 
-    component WrappedLoader: Loader {
-        required enabled
-        required property string id
+    component EntryWrapper: Item {
+        required property var modelData
         required property int index
+        default property Item item
+        readonly property string entryId: modelData.id
 
-        function findFirstEnabled(): Item {
-            const count = repeater.count;
-            for (let i = 0; i < count; i++) {
-                const item = repeater.itemAt(i);
-                if (item?.enabled)
-                    return item;
-            }
-            return null;
-        }
-
-        function findLastEnabled(): Item {
-            for (let i = repeater.count - 1; i >= 0; i--) {
-                const item = repeater.itemAt(i);
-                if (item?.enabled)
-                    return item;
-            }
-            return null;
-        }
-
-        asynchronous: true
+        Layout.topMargin: index === 0 ? root.vPadding : 0
+        Layout.bottomMargin: index === repeater.count - 1 ? root.vPadding : 0
         Layout.alignment: Qt.AlignHCenter
 
-        // Cursed ahh thing to add padding to first and last enabled components
-        Layout.topMargin: findFirstEnabled() === this ? root.vPadding : 0
-        Layout.bottomMargin: findLastEnabled() === this ? root.vPadding : 0
+        implicitWidth: item?.implicitWidth ?? 0
+        implicitHeight: item?.implicitHeight ?? 0
 
-        visible: enabled
-        active: enabled
+        children: item
     }
 }
+

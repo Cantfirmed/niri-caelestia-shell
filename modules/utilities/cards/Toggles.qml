@@ -3,7 +3,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Bluetooth
-import Quickshell.Io
 import Caelestia.Components
 import Caelestia.Config
 import qs.components
@@ -15,14 +14,14 @@ import qs.modules.bar.popouts as BarPopouts
 StyledRect {
     id: root
 
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
     required property BarPopouts.Wrapper popouts
 
     readonly property var quickToggles: {
         const seenIds = new Set();
 
-        return Config.utilities.quickToggles.filter(item => {
-            if (!(item.enabled ?? true))
+        return Config.utilities.quickToggles.values.filter(item => {
+            if (!item.enabled)
                 return false;
 
             if (seenIds.has(item.id)) {
@@ -30,7 +29,7 @@ StyledRect {
             }
 
             if (item.id === "vpn") {
-                return GlobalConfig.utilities.vpn.provider.some(p => typeof p === "object" ? (p.enabled === true) : false);
+                return GlobalConfig.utilities.vpn.selectedProvider.length > 0;
             }
 
             seenIds.add(item.id);
@@ -40,7 +39,6 @@ StyledRect {
     readonly property int splitIndex: Math.ceil(quickToggles.length / 2)
     readonly property bool needExtraRow: quickToggles.length > 6
 
-    Layout.fillWidth: true
     implicitHeight: layout.implicitHeight + Tokens.padding.extraLargeIncreased
 
     radius: Tokens.rounding.large
@@ -94,9 +92,9 @@ StyledRect {
                         icon: "bluetooth"
                         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
                         onClicked: {
-                            const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["rfkill", "toggle", "bluetooth"] }', root);
-                            proc.exited.connect(() => proc.destroy());
-                            proc.running = true;
+                            const adapter = Bluetooth.defaultAdapter; // qmllint disable unresolved-type
+                            if (adapter)
+                                adapter.enabled = !adapter.enabled;
                         }
                     }
                 }
@@ -119,7 +117,7 @@ StyledRect {
                         inactiveOnColour: Colours.palette.m3onSurfaceVariant
                         isToggle: false
                         onClicked: {
-                            root.visibilities.utilities = false;
+                            root.screenState.utilities = false;
                             WindowFactory.create();
                         }
                     }
@@ -145,7 +143,7 @@ StyledRect {
                     delegate: Toggle {
                         icon: "vpn_key"
                         checked: VPN.connected && VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
-                        enabled: !VPN.connecting
+                        enabled: !VPN.connecting && !VPN.disconnecting
                         isToggle: VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
                         inactiveOnColour: Colours.palette.m3onSurfaceVariant
                         onClicked: VPN.toggle()

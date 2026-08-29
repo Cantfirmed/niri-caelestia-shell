@@ -1,11 +1,8 @@
 import "center"
-import Quickshell
-import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
 import qs.components
-import qs.components.controls
 import qs.services
 
 ColumnLayout {
@@ -21,16 +18,9 @@ ColumnLayout {
 
     spacing: Tokens.spacing.largeIncreased
 
-    // Top flex spacer to push the content down and center it vertically
-    Item {
-        Layout.fillHeight: true
-        Layout.preferredHeight: 1
-    }
-
     Clock {
         Layout.alignment: Qt.AlignHCenter
         Layout.topMargin: Tokens.padding.large
-        Layout.bottomMargin: Tokens.spacing.medium
         centerScale: root.centerScale
     }
 
@@ -51,6 +41,7 @@ ColumnLayout {
 
     PasswordInput {
         Layout.alignment: Qt.AlignHCenter
+        centerScale: Math.max(0.8, root.centerScale)
         centerWidth: root.centerWidth
         lock: root.lock
     }
@@ -58,46 +49,5 @@ ColumnLayout {
     StateMessage {
         Layout.fillWidth: true
         pam: root.lock.pam
-    }
-
-    // ── Session controls ───────────────────────────────────────────────────────
-    RowLayout {
-        Layout.alignment: Qt.AlignHCenter
-        Layout.topMargin: Tokens.spacing.medium
-        Layout.bottomMargin: Tokens.spacing.medium
-        spacing: Tokens.spacing.extraExtraLarge
-
-        component SessionBtn: IconButton {
-            id: sBtn
-            required property var command
-
-            implicitWidth: 48 * root.centerScale
-            implicitHeight: 48 * root.centerScale
-            radius: Tokens.rounding.full
-            inactiveColour: "transparent"
-            inactiveOnColour: Colours.palette.m3onSurfaceVariant
-            font: Tokens.font.icon.builders.large.scale(1.3 * root.centerScale).build()
-
-            onClicked: Quickshell.execDetached(sBtn.command)
-        }
-
-        SessionBtn {
-            icon: Config.session.icons.logout
-            command: Config.session.commands.logout
-        }
-        SessionBtn {
-            icon: Config.session.icons.sleep
-            command: Config.session.commands.sleep
-        }
-        SessionBtn {
-            icon: Config.session.icons.shutdown
-            command: Config.session.commands.shutdown
-        }
-    }
-
-    // Bottom flex spacer
-    Item {
-        Layout.fillHeight: true
-        Layout.preferredHeight: 1
     }
 }

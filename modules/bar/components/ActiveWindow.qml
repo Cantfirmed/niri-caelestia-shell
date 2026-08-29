@@ -14,7 +14,7 @@ Item {
     property color colour: Colours.palette.m3primary
 
     readonly property string windowTitle: {
-        const title = Niri.focusedWindowTitle;
+        const title = (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.focusedWindowTitle : (typeof Hypr !== "undefined" ? Hypr.activeToplevel?.title : "");
         if (!title)
             return qsTr("Desktop");
         if (Config.bar.activeWindow.compact) {
@@ -27,8 +27,8 @@ Item {
     }
 
     readonly property int maxHeight: {
-        const otherModules = bar.children.filter(c => c.id && c.item !== this && c.id !== "spacer");
-        const otherHeight = otherModules.reduce((acc, curr) => acc + (curr.item.nonAnimHeight ?? curr.height), 0);
+        const otherModules = bar.children.filter(c => c.entryId && c.item !== this && c.entryId !== "spacer");
+        const otherHeight = otherModules.reduce((acc, curr) => acc + (curr.item?.nonAnimHeight ?? curr.height), 0);
         // Length - 2 cause repeater counts as a child
         return bar.height - otherHeight - bar.spacing * (bar.children.length - 1) - bar.vPadding * 2;
     }
@@ -36,7 +36,7 @@ Item {
 
     clip: true
     implicitWidth: Math.max(icon.implicitWidth, current.implicitHeight)
-    implicitHeight: icon.implicitHeight + current.implicitWidth + Tokens.spacing.small
+    implicitHeight: icon.implicitHeight + current.implicitWidth + current.anchors.topMargin
 
     Loader {
         asynchronous: true
@@ -48,20 +48,17 @@ Item {
             hoverEnabled: true
             onPositionChanged: {
                 const popouts = root.bar.popouts;
-                console.log("[ActiveWindowTaskbar] Position changed. popouts.hasCurrent:", popouts.hasCurrent, "popouts.currentName:", popouts.currentName);
                 if (popouts.hasCurrent && popouts.currentName !== "activewindow")
                     popouts.hasCurrent = false;
             }
             onClicked: {
                 const popouts = root.bar.popouts;
-                console.log("[ActiveWindowTaskbar] Clicked. popouts.hasCurrent:", popouts.hasCurrent, "popouts.currentName:", popouts.currentName);
                 if (popouts.hasCurrent) {
                     popouts.hasCurrent = false;
                 } else {
                     popouts.currentName = "activewindow";
                     popouts.currentCenter = root.mapToItem(root.bar, 0, root.implicitHeight / 2).y;
                     popouts.hasCurrent = true;
-                    console.log("[ActiveWindowTaskbar] set activewindow popout. Name:", popouts.currentName, "centerY:", popouts.currentCenter);
                 }
             }
         }
@@ -73,7 +70,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
 
         animate: true
-        text: Icons.getAppCategoryIcon(Niri.focusedWindowClass, "desktop_windows")
+        text: Icons.getAppCategoryIcon((typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.focusedWindowClass : (typeof Hypr !== "undefined" ? Hypr.activeToplevel?.lastIpcObject.class : ""), "desktop_windows")
         color: root.colour
     }
 
@@ -115,6 +112,7 @@ Item {
         font: metrics.font
         color: root.colour
         opacity: root.current === this ? 1 : 0
+        horizontalAlignment: Text.AlignLeft
 
         transform: [
             Translate {
@@ -137,3 +135,4 @@ Item {
         }
     }
 }
+

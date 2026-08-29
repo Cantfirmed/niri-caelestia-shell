@@ -7,8 +7,8 @@ import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.components.images
-import qs.modules.nexus.common
 import qs.services
+import qs.modules.nexus.common
 
 PageBase {
     id: root
@@ -50,7 +50,7 @@ PageBase {
                         Layout.alignment: Qt.AlignHCenter
                         text: "hide_image"
                         color: Colours.palette.m3onSurfaceVariant
-                        font: Tokens.font.icon.extraLarge
+                        fontStyle: Tokens.font.icon.extraLarge
                     }
 
                     StyledText {
@@ -171,8 +171,6 @@ PageBase {
         }
 
         ToggleRow {
-            Layout.fillWidth: true
-
             first: true
             text: qsTr("Display wallpaper")
             checked: Config.background.wallpaperEnabled
@@ -181,7 +179,6 @@ PageBase {
 
         ToggleRow {
             Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
-            Layout.fillWidth: true
 
             text: qsTr("Transparency")
             subtext: qsTr("Base %1, layers %2").arg(Colours.transparency.base).arg(Colours.transparency.layers)
@@ -191,36 +188,11 @@ PageBase {
 
         ToggleRow {
             Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
-            Layout.fillWidth: true
 
+            last: true
             text: qsTr("Dark theme")
             checked: !Colours.light
             onToggled: Colours.setMode(checked ? "dark" : "light")
-        }
-
-        // Border
-        SectionHeader {
-            text: qsTr("Border")
-        }
-
-        SliderRow {
-            Layout.fillWidth: true
-            first: true
-            icon: "border_outer"
-            label: qsTr("Thickness")
-            valueLabel: Config.border.thickness + "px"
-            value: Config.border.thickness / 20
-            onMoved: v => GlobalConfig.border.thickness = Math.max(0, Math.round(v * 20))
-        }
-
-        SliderRow {
-            Layout.fillWidth: true
-            last: true
-            icon: "rounded_corner"
-            label: qsTr("Corner rounding")
-            valueLabel: Config.border.rounding + "px"
-            value: Config.border.rounding / 50
-            onMoved: v => GlobalConfig.border.rounding = Math.max(0, Math.round(v * 50))
         }
     }
 }

@@ -7,17 +7,19 @@ import Quickshell
 import Quickshell.Wayland
 import Caelestia.Blobs
 import Caelestia.Config
+import Caelestia.Internal
 import qs.components
 import qs.components.containers
 import qs.services
 import qs.modules.bar
-import Caelestia.Internal
 
 StyledWindow {
     id: root
 
     readonly property alias bar: bar
     readonly property alias interactionWrapper: interactions
+
+    readonly property ScreenState screenState: ShellState.forScreen(screen)
 
     readonly property bool hasFullscreen: {
         if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
@@ -33,6 +35,9 @@ StyledWindow {
                 return Math.round(size[0]) === screenW && Math.round(size[1]) === screenH;
             });
         }
+        if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
+            return Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        }
         return false;
     }
 
@@ -46,23 +51,10 @@ StyledWindow {
     property color surfaceColour: Colours.tPalette.m3surface
 
     // dragMaskPadding controls the hover zone at screen edges.
-    // It's 0 when panels have keyboard focus, popouts are detached, or app windows exist
-    // on the active workspace. Otherwise it's the max dragThreshold of enabled panels.
-    //
-    // This is a reactive binding — QML re-evaluates it whenever any dependency
-    // (NiriIpc.available, NiriIpc.windows, NiriIpc.focusedWorkspaceId, visibilities,
-    // popouts.isDetached) changes. The set of tracked dependencies updates dynamically
-    // across evaluations (e.g. NiriIpc.windows is only tracked once NiriIpc.available
-    // becomes true).
+    // Must remain non-zero across all workspaces so edge hover detection works reliably.
     readonly property int dragMaskPadding: {
-        if (root._needsKeyboardFocus || panels.popouts.isDetached)
+        if (panels.popouts.isDetached)
             return 0;
-
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            const activeWsId = NiriIpc.focusedWorkspaceId;
-            if (activeWsId >= 0 && NiriIpc.windows.some(w => w.workspace_id === activeWsId))
-                return 0;
-        }
 
         const thresholds = [];
         for (const panel of ["dashboard", "launcher", "session", "sidebar"])
@@ -71,25 +63,20 @@ StyledWindow {
         return Math.max(...thresholds);
     }
 
-
     onHasFullscreenChanged: {
-        visibilities.launcher = false;
-        visibilities.session = false;
-        visibilities.dashboard = false;
+        if (screenState) {
+            screenState.launcher = false;
+            screenState.session = false;
+            screenState.dashboard = false;
+        }
         panels.popouts.close();
     }
 
     name: "drawers"
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
-    // Modal panels (launcher, session) MUST use Exclusive keyboard focus.
-    // OnDemand does not reliably trigger a Wayland focus request from
-    // forceActiveFocus() for layer-shell surfaces in Quickshell — the
-    // compositor won't switch keyboard focus to the shell window.
-    // Exclusive tells the compositor to automatically grant keyboard focus
-    // when the panel opens. See the Binding below for non-modal panels
-    // (sidebar, dashboard, popouts) which use OnDemand.
-    WlrLayershell.keyboardFocus: (visibilities.launcher || visibilities.session || visibilities.manga || visibilities.novel || visibilities.displaySelect || visibilities.soundPanel) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    // Modal panels (launcher, session) MUST use Exclusive keyboard focus on Wayland.
+    WlrLayershell.keyboardFocus: (screenState && (screenState.launcher || screenState.session || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel)) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     mask: hasFullscreen ? emptyRegion : regions
 
@@ -105,8 +92,6 @@ StyledWindow {
     Behavior on surfaceColour {
         CAnim {}
     }
-
-    Component.onCompleted: { /* dragMaskPadding is a reactive binding — no manual init needed */ }
 
     Region {
         id: emptyRegion
@@ -132,22 +117,18 @@ StyledWindow {
         win: root
     }
 
-    readonly property bool _needsKeyboardFocus: (visibilities.launcher && root.contentItem.Config.launcher.enabled) || (visibilities.session && root.contentItem.Config.session.enabled) || (visibilities.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && visibilities.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1)
+    readonly property bool _needsKeyboardFocus: screenState && ((screenState.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && screenState.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1))
 
-    // Use Exclusive keyboard focus for modal panels (launcher, session) so the
-    // compositor automatically grants keyboard focus when they open. Use OnDemand
-    // for non-modal panels (sidebar, dashboard, popout tray menus) where Qt-level
-    // forceActiveFocus() suffices.
     Binding {
         target: QsWindow.window
         property: "WlrLayershell.keyboardFocus"
         value: WlrKeyboardFocus.OnDemand
-        when: root._needsKeyboardFocus && !visibilities.launcher && !visibilities.session
+        when: root._needsKeyboardFocus && !screenState.launcher && !screenState.session
     }
 
     StyledRect {
         anchors.fill: parent
-        opacity: (visibilities.session && Config.session.enabled) || panels.popouts.detachedMode !== "" ? 0.5 : 0
+        opacity: (root.screenState && root.screenState.session && Config.session.enabled) || panels.popouts.detachedMode !== "" ? 0.5 : 0
         color: Colours.palette.m3scrim
 
         Behavior on opacity {
@@ -158,13 +139,13 @@ StyledWindow {
 
         MouseArea {
             anchors.fill: parent
-            enabled: panels.popouts.detachedMode !== "" || visibilities.session
+            enabled: panels.popouts.detachedMode !== "" || (root.screenState && root.screenState.session)
             onClicked: {
                 if (panels.popouts.detachedMode !== "") {
                     panels.popouts.close();
                 }
-                if (visibilities.session) {
-                    visibilities.session = false;
+                if (root.screenState && root.screenState.session) {
+                    root.screenState.session = false;
                 }
             }
         }
@@ -279,20 +260,12 @@ StyledWindow {
         }
     }
 
-    DrawerVisibilities {
-        id: visibilities
-
-        Component.onCompleted: Visibilities.load(root.screen, this)
-
-        // dragMaskPadding is a reactive binding — no manual updates needed
-    }
-
     Interactions {
         id: interactions
 
         screen: root.screen
         popouts: panels.popouts
-        visibilities: visibilities
+        screenState: root.screenState
         panels: panels
         bar: bar
         borderThickness: root.borderLayoutThickness
@@ -302,7 +275,7 @@ StyledWindow {
             id: panels
 
             screen: root.screen
-            visibilities: visibilities
+            screenState: root.screenState
             bar: bar
             borderThickness: root.borderThickness
 
@@ -345,13 +318,35 @@ StyledWindow {
             anchors.bottom: parent.bottom
 
             screen: root.screen
-            visibilities: visibilities
+            screenState: root.screenState
             popouts: panels.popouts
 
             fullscreen: root.hasFullscreen
-
-            Component.onCompleted: Visibilities.bars.set(root.screen, this)
         }
+    }
+
+    ShellState.ComponentRef {
+        screen: root.screen
+        slot: "rootWindow"
+        component: root
+    }
+
+    ShellState.ComponentRef {
+        screen: root.screen
+        slot: "interactionWrapper"
+        component: interactions
+    }
+
+    ShellState.ComponentRef {
+        screen: root.screen
+        slot: "bar"
+        component: bar
+    }
+
+    ShellState.ComponentRef {
+        screen: root.screen
+        slot: "panels"
+        component: panels
     }
 
     component PanelBg: BlobRect {
@@ -367,3 +362,4 @@ StyledWindow {
         deformScale: (deformAmount * Config.appearance.deformScale) / 10000
     }
 }
+

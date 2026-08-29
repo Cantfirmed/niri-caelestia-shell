@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import Caelestia.Config
 import qs.components
 import qs.services
@@ -13,10 +12,10 @@ StyledRect {
     required property NotifData modelData
     required property Props props
     required property bool expanded
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
     readonly property StyledText body: (expandedContent.item as ExpandedBody)?.body ?? null
-    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + Tokens.spacing.extraSmall + Tokens.padding.medium * 2 : summaryHeightMetrics.height
+    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + expandedContent.anchors.topMargin + Tokens.padding.medium * 2 : summaryHeightMetrics.height
 
     implicitHeight: nonAnimHeight
 
@@ -141,8 +140,8 @@ StyledRect {
             wrapMode: Text.WordWrap
 
             onLinkActivated: link => {
-                Quickshell.execDetached(["app2unit", "-O", "--", link]);
-                root.visibilities.sidebar = false;
+                Qt.openUrlExternally(link);
+                root.screenState.sidebar = false;
             }
         }
 

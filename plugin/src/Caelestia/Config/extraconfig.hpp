@@ -1,19 +1,15 @@
 #pragma once
 
-#include "configobject.hpp"
+#include "settings/objectnode.hpp"
 
 namespace caelestia::config {
 
-class ExtraConfig : public ConfigObject {
-    Q_OBJECT
-    QML_ANONYMOUS
+class ExtraConfig : public settings::ObjectNode {
+    CONFIG_NODE(ExtraConfig, settings::ObjectNode)
 
     CONFIG_PROPERTY(bool, manga, true)
     CONFIG_PROPERTY(bool, novel, true)
-
-public:
-    explicit ExtraConfig(QObject* parent = nullptr)
-        : ConfigObject(parent) {}
 };
+
 
 } // namespace caelestia::config

@@ -22,16 +22,23 @@ Singleton {
     property bool loaded
 
     function hasFullscreen(): bool {
+        if (typeof Hypr !== "undefined" && Hypr.monitors) {
+            for (const monitor of Hypr.monitors.values) {
+                if (monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1))
+                    return true;
+            }
+        }
         return false;
     }
 
     function shouldShowPopup(): bool {
-        if (props.dnd || [...Visibilities.screens.values()].some(v => v.sidebar))
+        if (props.dnd || ShellState.anySidebarOpen())
             return false;
-        if (GlobalConfig.notifs.fullscreen === "off" && hasFullscreen())
+        if (GlobalConfig.notifs.fullscreen === NotifsFullscreen.Off && hasFullscreen())
             return false;
         return true;
     }
+
 
     onDndChanged: {
         if (!GlobalConfig.utilities.toasts.dndChanged)
@@ -105,8 +112,16 @@ Singleton {
         path: `${Paths.state}/notifs.json`
         onLoaded: {
             const data = JSON.parse(text());
-            for (const notif of data)
-                root.list.push(notifComp.createObject(root, notif));
+            for (const notif of data) {
+                const properties = Object.assign({}, notif);
+
+                // Backwards compatibility for old notifications
+                if (properties.notificationId === undefined && properties.id !== undefined)
+                    properties.notificationId = properties.id;
+
+                delete properties.id;
+                root.list.push(notifComp.createObject(root, properties));
+            }
             root.list.sort((a, b) => b.time - a.time);
             root.loaded = true;
         }
@@ -118,6 +133,16 @@ Singleton {
         }
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "clearNotifs"
+        description: "Clear all notifications"
+        onPressed: {
+            for (const notif of root.list.slice())
+                notif.close();
+        }
+    }
 
 
     IpcHandler {

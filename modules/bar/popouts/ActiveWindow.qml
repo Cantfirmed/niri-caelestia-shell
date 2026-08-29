@@ -2,9 +2,9 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Wayland
 import Quickshell.Widgets
 import Caelestia.Config
-import Caelestia.Internal
 import qs.components
 import qs.services
 import qs.utils
@@ -14,82 +14,100 @@ Item {
 
     required property PopoutState popouts
 
-    readonly property var client: Niri.lastFocusedWindow
-    readonly property bool hasActiveWindow: !!client && client.id !== undefined && client.id !== null
+    readonly property var niriClient: (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.lastFocusedWindow : null
+    readonly property bool hasActiveWindow: (typeof Niri !== "undefined" && Niri.niriAvailable) ? (!!niriClient && niriClient.id !== undefined && niriClient.id !== null) : (typeof Hypr !== "undefined" && !!Hypr.activeToplevel)
 
-    Component.onCompleted: {
-        console.log("[ActiveWindowPopout] Loaded. client id:", root.client?.id, "title:", root.client?.title, "app_id:", root.client?.app_id, "hasActiveWindow:", root.hasActiveWindow);
-    }
-    onClientChanged: {
-        console.log("[ActiveWindowPopout] client changed. id:", root.client?.id, "title:", root.client?.title, "app_id:", root.client?.app_id, "hasActiveWindow:", root.hasActiveWindow);
-    }
-    onHasActiveWindowChanged: {
-        console.log("[ActiveWindowPopout] hasActiveWindow changed:", root.hasActiveWindow);
-    }
+    readonly property string title: (typeof Niri !== "undefined" && Niri.niriAvailable) ? (niriClient?.title ?? "") : (typeof Hypr !== "undefined" ? (Hypr.activeToplevel?.title ?? "") : "")
+    readonly property string appClass: (typeof Niri !== "undefined" && Niri.niriAvailable) ? (niriClient?.app_id ?? "") : (typeof Hypr !== "undefined" ? (Hypr.activeToplevel?.lastIpcObject.class ?? "") : "")
 
-    implicitWidth: hasActiveWindow ? (detailsRow.implicitWidth + Tokens.padding.medium * 2) : -Tokens.padding.extraLargeIncreased
-    implicitHeight: detailsRow.implicitHeight + Tokens.padding.medium * 2
+    implicitWidth: hasActiveWindow ? child.implicitWidth : -Tokens.padding.extraLargeIncreased
+    implicitHeight: child.implicitHeight
 
-    RowLayout {
-        id: detailsRow
+    Column {
+        id: child
 
-        anchors.left: parent.left
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: Tokens.padding.medium
+        anchors.centerIn: parent
         spacing: Tokens.spacing.medium
 
-        IconImage {
-            id: icon
+        RowLayout {
+            id: detailsRow
 
-            asynchronous: true
-            Layout.alignment: Qt.AlignVCenter
-            implicitSize: 40
-            source: Icons.getAppIcon(root.client?.app_id ?? "", "image-missing")
+            anchors.left: parent.left
+            anchors.right: parent.right
+            spacing: Tokens.spacing.medium
+
+            IconImage {
+                id: icon
+
+                asynchronous: true
+                Layout.alignment: Qt.AlignVCenter
+                implicitSize: details.implicitHeight
+                source: Icons.getAppIcon(root.appClass, "image-missing")
+            }
+
+            ColumnLayout {
+                id: details
+
+                spacing: 0
+                Layout.preferredWidth: 250
+                Layout.fillWidth: true
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.title
+                    font: Tokens.font.body.medium
+                    elide: Text.ElideRight
+                }
+
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.appClass
+                    color: Colours.palette.m3onSurfaceVariant
+                    elide: Text.ElideRight
+                }
+            }
+
+            Item {
+                implicitWidth: expandIcon.implicitHeight + Tokens.padding.small
+                implicitHeight: expandIcon.implicitHeight + Tokens.padding.small
+
+                Layout.alignment: Qt.AlignVCenter
+
+                StateLayer {
+                    radius: Tokens.rounding.large
+                    onClicked: root.popouts.detachRequested("winfo")
+                }
+
+                MaterialIcon {
+                    id: expandIcon
+
+                    anchors.centerIn: parent
+                    anchors.horizontalCenterOffset: font.pointSize * 0.05
+
+                    text: "chevron_right"
+
+                    fontStyle: Tokens.font.icon.large
+                }
+            }
         }
 
-        ColumnLayout {
-            id: details
+        Loader {
+            active: typeof Hypr !== "undefined" && !!Hypr.activeToplevel
+            sourceComponent: ClippingWrapperRectangle {
+                color: "transparent"
+                radius: Tokens.rounding.medium
 
-            spacing: 0
-            Layout.preferredWidth: 250
-            Layout.fillWidth: true
+                ScreencopyView {
+                    id: preview
 
-            StyledText {
-                Layout.fillWidth: true
-                text: root.client?.title ?? ""
-                font: Tokens.font.body.medium
-                elide: Text.ElideRight
-            }
+                    captureSource: typeof Hypr !== "undefined" ? (Hypr.activeToplevel?.wayland ?? null) : null // qmllint disable unresolved-type
+                    live: visible
 
-            StyledText {
-                Layout.fillWidth: true
-                text: root.client?.app_id ?? ""
-                color: Colours.palette.m3onSurfaceVariant
-                elide: Text.ElideRight
-            }
-        }
-
-        Item {
-            implicitWidth: expandIcon.implicitHeight + Tokens.padding.small
-            implicitHeight: expandIcon.implicitHeight + Tokens.padding.small
-
-            Layout.alignment: Qt.AlignVCenter
-
-            StateLayer {
-                radius: Tokens.rounding.large
-                onClicked: root.popouts.detachRequested("winfo")
-            }
-
-            MaterialIcon {
-                id: expandIcon
-
-                anchors.centerIn: parent
-                anchors.horizontalCenterOffset: font.pointSize * 0.05
-
-                text: "chevron_right"
-
-                fontStyle: Tokens.font.icon.large
+                    constraintSize.width: Tokens.sizes.bar.windowPreviewSize
+                    constraintSize.height: Tokens.sizes.bar.windowPreviewSize
+                }
             }
         }
     }
 }
+

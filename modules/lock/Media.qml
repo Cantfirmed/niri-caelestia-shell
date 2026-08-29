@@ -13,7 +13,7 @@ StyledClippingRect {
 
     required property var lock
 
-    implicitHeight: layout.implicitHeight + Tokens.padding.extraLarge * 2
+    implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
     radius: Tokens.rounding.extraLarge
     color: Colours.tPalette.m3surfaceContainer
 

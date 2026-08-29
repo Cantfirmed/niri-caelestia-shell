@@ -79,311 +79,311 @@ PageBase {
             width: root.cappedWidth
             spacing: Tokens.spacing.small
 
-        ButtonRow {
-            Layout.bottomMargin: Tokens.spacing.medium
-            Layout.alignment: Qt.AlignHCenter
-            spacing: Tokens.spacing.small
+            ButtonRow {
+                Layout.bottomMargin: Tokens.spacing.medium
+                Layout.alignment: Qt.AlignHCenter
+                spacing: Tokens.spacing.small
 
-            IconTextButton {
-                icon: "photo_library"
-                text: qsTr("Browse")
-                font: Tokens.font.body.large
-                isRound: true
-                shapeMorph: true
-                horizontalPadding: Tokens.padding.extraLarge
-                verticalPadding: Tokens.padding.medium
-                onClicked: browseDialog.open()
+                IconTextButton {
+                    icon: "photo_library"
+                    text: qsTr("Browse")
+                    font: Tokens.font.body.large
+                    isRound: true
+                    shapeMorph: true
+                    horizontalPadding: Tokens.padding.extraLarge
+                    verticalPadding: Tokens.padding.medium
+                    onClicked: browseDialog.open()
 
-                FileDialog {
-                    id: browseDialog
+                    FileDialog {
+                        id: browseDialog
 
-                    title: qsTr("Select an image")
-                    filterLabel: qsTr("Image files")
-                    filters: Images.validImageExtensions
-                    onAccepted: path => {
-                        Wallpapers.setWallpaper(path);
+                        title: qsTr("Select an image")
+                        filterLabel: qsTr("Image files")
+                        filters: Images.validImageExtensions
+                        onAccepted: path => {
+                            Wallpapers.setWallpaper(path);
+                            root.nState.closeSubPage();
+                        }
+                    }
+                }
+
+                IconTextButton {
+                    icon: "travel_explore"
+                    text: qsTr("Search Online")
+                    font: Tokens.font.body.large
+                    isRound: true
+                    shapeMorph: true
+                    horizontalPadding: Tokens.padding.extraLarge
+                    verticalPadding: Tokens.padding.medium
+                    type: IconTextButton.Tonal
+                    onClicked: {
+                        root.nState.openSubPage(4);
+                    }
+                }
+
+                IconTextButton {
+                    icon: "shuffle"
+                    text: qsTr("Random")
+                    font: Tokens.font.body.large
+                    isRound: true
+                    shapeMorph: true
+                    horizontalPadding: Tokens.padding.extraLarge
+                    verticalPadding: Tokens.padding.medium
+                    type: IconTextButton.Tonal
+                    onClicked: {
+                        Wallpapers.setRandom();
                         root.nState.closeSubPage();
                     }
                 }
             }
 
-            IconTextButton {
-                icon: "travel_explore"
-                text: qsTr("Search Online")
-                font: Tokens.font.body.large
-                isRound: true
-                shapeMorph: true
-                horizontalPadding: Tokens.padding.extraLarge
-                verticalPadding: Tokens.padding.medium
-                type: IconTextButton.Tonal
+            WallItem {
+                imgHeight: Math.round(width * 0.3)
+                radius: Tokens.rounding.extraLarge
+                source: Quickshell.shellPath("assets/wallpaper.webp")
+                text: qsTr("Featured wallpaper")
+                fillLabel: false
                 onClicked: {
-                    root.nState.openSubPage(4);
-                }
-            }
-
-            IconTextButton {
-                icon: "shuffle"
-                text: qsTr("Random")
-                font: Tokens.font.body.large
-                isRound: true
-                shapeMorph: true
-                horizontalPadding: Tokens.padding.extraLarge
-                verticalPadding: Tokens.padding.medium
-                type: IconTextButton.Tonal
-                onClicked: {
-                    Wallpapers.setRandom();
+                    Wallpapers.setWallpaper(Quickshell.shellPath("assets/wallpaper.webp"));
                     root.nState.closeSubPage();
                 }
             }
-        }
 
-        WallItem {
-            imgHeight: Math.round(width * 0.3)
-            radius: Tokens.rounding.extraLarge
-            source: Quickshell.shellPath("assets/wallpaper.webp")
-            text: qsTr("Featured wallpaper")
-            fillLabel: false
-            onClicked: {
-                Wallpapers.setWallpaper(Quickshell.shellPath("assets/wallpaper.webp"));
-                root.nState.closeSubPage();
+            StyledText {
+                Layout.topMargin: Tokens.spacing.large
+                text: qsTr("Local wallpapers")
+                font: Tokens.font.title.small
             }
-        }
 
-        StyledText {
-            Layout.topMargin: Tokens.spacing.large
-            text: qsTr("Local wallpapers")
-            font: Tokens.font.title.small
-        }
+            GridLayout {
+                Layout.fillWidth: true
+                visible: localWalls.count > 0
 
-        GridLayout {
-            Layout.fillWidth: true
-            visible: localWalls.count > 0
+                columns: Config.nexus.wallpapersPerRow
+                rowSpacing: Tokens.spacing.medium
+                columnSpacing: Tokens.spacing.large
 
-            columns: Config.nexus.wallpapersPerRow
-            rowSpacing: Tokens.spacing.medium
-            columnSpacing: Tokens.spacing.large
+                Repeater {
+                    id: localWalls
 
-            Repeater {
-                id: localWalls
-
-                model: {
-                    const walls = Wallpapers.list;
-                    const baseDir = Paths.wallsdir;
-                    const categories = {};
-                    const list = [];
-                    for (const w of walls) {
-                        if (w.parentDir !== baseDir) {
-                            const category = Wallpapers.getCategoryFor(w);
-                            if (category && (!(category in categories) || categories[category].name.localeCompare(w.name) > 0))
-                                categories[category] = w;
-                        } else {
-                            list.push(w);
-                        }
-                    }
-                    list.push(...Object.values(categories));
-                    list.sort((a, b) => ((a.parentDir === baseDir) - (b.parentDir === baseDir)) || a.name.localeCompare(b.name));
-                    while (list.length < Config.nexus.wallpapersPerRow)
-                        list.push(null);
-                    return list;
-                }
-
-                delegate: ColumnLayout {
-                    id: delegateRoot
-
-                    required property FileSystemEntry modelData
-                    readonly property bool isLocal: delegateRoot.modelData ? delegateRoot.modelData.parentDir === Paths.wallsdir : false
-
-                    // Empty placeholders for sizing
-                    opacity: modelData ? 1 : 0
-                    enabled: modelData
-
-                    spacing: Tokens.spacing.small
-
-                    // 1. Widescreen Thumbnail Container
-                    StyledClippingRect {
-                        id: imageContainer
-
-                        Layout.fillWidth: true
-                        implicitHeight: Math.round(width * 0.56)
-                        radius: Tokens.rounding.large
-                        color: Colours.tPalette.m3surfaceContainer
-
-                        Loader {
-                            anchors.centerIn: parent
-                            opacity: thumbImage.status === Image.Ready ? 0 : 1
-                            active: opacity > 0
-
-                            sourceComponent: StyledRect {
-                                implicitWidth: loadingIndicator.implicitSize + Tokens.padding.large * 2
-                                implicitHeight: loadingIndicator.implicitSize + Tokens.padding.large * 2
-                                color: Colours.palette.m3primaryContainer
-                                radius: Tokens.rounding.full
-
-                                LoadingIndicator {
-                                    id: loadingIndicator
-
-                                    anchors.centerIn: parent
-                                    containsIcon: true
-                                    implicitSize: Math.min(imageContainer.width, imageContainer.height) * 0.3
-                                }
-                            }
-
-                            Behavior on opacity {
-                                Anim {
-                                    type: Anim.DefaultEffects
-                                }
+                    model: {
+                        const walls = Wallpapers.list;
+                        const baseDir = Paths.wallsdir;
+                        const categories = {};
+                        const list = [];
+                        for (const w of walls) {
+                            if (w.parentDir !== baseDir) {
+                                const category = Wallpapers.getCategoryFor(w);
+                                if (category && (!(category in categories) || categories[category].name.localeCompare(w.name) > 0))
+                                    categories[category] = w;
+                            } else {
+                                list.push(w);
                             }
                         }
-
-                        Image {
-                            id: thumbImage
-
-                            anchors.fill: parent
-                            source: delegateRoot.modelData ? String(delegateRoot.modelData.path) : ""
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            opacity: status === Image.Ready ? 1 : 0
-                            retainWhileLoading: true
-
-                            Behavior on opacity {
-                                Anim {
-                                    type: Anim.SlowEffects
-                                }
-                            }
-                        }
-
-                        StateLayer {
-                            id: itemStateLayer
-
-                            anchors.fill: parent
-                            onClicked: {
-                                if (!delegateRoot.modelData) return;
-                                if (delegateRoot.modelData.parentDir !== Paths.wallsdir) {
-                                    root.nState.selectedWallpaperCategory = Wallpapers.getCategoryFor(delegateRoot.modelData);
-                                    root.nState.openSubPage(2);
-                                } else {
-                                    Wallpapers.setWallpaper(delegateRoot.modelData.path);
-                                    root.nState.closeSubPage();
-                                }
-                            }
-                        }
-
-                        IconButton {
-                            id: deleteBtn
-
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.margins: Tokens.padding.small
-                            icon: "delete"
-                            z: 10
-                            visible: delegateRoot.isLocal
-                            type: IconButton.Tonal
-                            activeColour: Colours.palette.m3errorContainer
-                            inactiveColour: Colours.palette.m3errorContainer
-                            activeOnColour: Colours.palette.m3onErrorContainer
-                            inactiveOnColour: Colours.palette.m3onErrorContainer
-                            opacity: itemStateLayer.containsMouse || deleteBtn.hovered ? 1 : 0
-
-                            onClicked: {
-                                if (delegateRoot.modelData) {
-                                    root.wallpaperToDeletePath = delegateRoot.modelData.path;
-                                    deleteDialog.visible = true;
-                                }
-                            }
-
-                            Behavior on opacity {
-                                Anim {
-                                    type: Anim.DefaultEffects
-                                }
-                            }
-                        }
+                        list.push(...Object.values(categories));
+                        list.sort((a, b) => ((a.parentDir === baseDir) - (b.parentDir === baseDir)) || a.name.localeCompare(b.name));
+                        while (list.length < Config.nexus.wallpapersPerRow)
+                            list.push(null);
+                        return list;
                     }
 
-                    // 2. Info Row
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.bottomMargin: Tokens.padding.small
+                    delegate: ColumnLayout {
+                        id: delegateRoot
+
+                        required property FileSystemEntry modelData
+                        readonly property bool isLocal: delegateRoot.modelData ? delegateRoot.modelData.parentDir === Paths.wallsdir : false
+
+                        // Empty placeholders for sizing
+                        opacity: modelData ? 1 : 0
+                        enabled: modelData
+
                         spacing: Tokens.spacing.small
 
-                        StyledText {
+                        // 1. Widescreen Thumbnail Container
+                        StyledClippingRect {
+                            id: imageContainer
+
                             Layout.fillWidth: true
-                            text: {
-                                if (!delegateRoot.modelData)
-                                    return "";
-                                if (delegateRoot.modelData.parentDir !== Paths.wallsdir) {
-                                    const category = Wallpapers.getCategoryFor(delegateRoot.modelData);
-                                    return category.slice(0, 1).toUpperCase() + category.slice(1);
+                            implicitHeight: Math.round(width * 0.56)
+                            radius: Tokens.rounding.large
+                            color: Colours.tPalette.m3surfaceContainer
+
+                            Loader {
+                                anchors.centerIn: parent
+                                opacity: thumbImage.status === Image.Ready ? 0 : 1
+                                active: opacity > 0
+
+                                sourceComponent: StyledRect {
+                                    implicitWidth: loadingIndicator.implicitSize + Tokens.padding.large * 2
+                                    implicitHeight: loadingIndicator.implicitSize + Tokens.padding.large * 2
+                                    color: Colours.palette.m3primaryContainer
+                                    radius: Tokens.rounding.full
+
+                                    LoadingIndicator {
+                                        id: loadingIndicator
+
+                                        anchors.centerIn: parent
+                                        containsIcon: true
+                                        implicitSize: Math.min(imageContainer.width, imageContainer.height) * 0.3
+                                    }
                                 }
-                                return delegateRoot.modelData.name;
+
+                                Behavior on opacity {
+                                    Anim {
+                                        type: Anim.DefaultEffects
+                                    }
+                                }
                             }
-                            font: Tokens.font.label.builders.small.weight(Font.Medium).build()
-                            color: Colours.palette.m3onSurfaceVariant
-                            elide: Text.ElideRight
+
+                            Image {
+                                id: thumbImage
+
+                                anchors.fill: parent
+                                source: delegateRoot.modelData ? String(delegateRoot.modelData.path) : ""
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                opacity: status === Image.Ready ? 1 : 0
+                                retainWhileLoading: true
+
+                                Behavior on opacity {
+                                    Anim {
+                                        type: Anim.SlowEffects
+                                    }
+                                }
+                            }
+
+                            StateLayer {
+                                id: itemStateLayer
+
+                                anchors.fill: parent
+                                onClicked: {
+                                    if (!delegateRoot.modelData) return;
+                                    if (delegateRoot.modelData.parentDir !== Paths.wallsdir) {
+                                        root.nState.selectedWallpaperCategory = Wallpapers.getCategoryFor(delegateRoot.modelData);
+                                        root.nState.openSubPage(2);
+                                    } else {
+                                        Wallpapers.setWallpaper(delegateRoot.modelData.path);
+                                        root.nState.closeSubPage();
+                                    }
+                                }
+                            }
+
+                            IconButton {
+                                id: deleteBtn
+
+                                anchors.top: parent.top
+                                anchors.right: parent.right
+                                anchors.margins: Tokens.padding.small
+                                icon: "delete"
+                                z: 10
+                                visible: delegateRoot.isLocal
+                                type: IconButton.Tonal
+                                activeColour: Colours.palette.m3errorContainer
+                                inactiveColour: Colours.palette.m3errorContainer
+                                activeOnColour: Colours.palette.m3onErrorContainer
+                                inactiveOnColour: Colours.palette.m3onErrorContainer
+                                opacity: itemStateLayer.containsMouse || deleteBtn.hovered ? 1 : 0
+
+                                onClicked: {
+                                    if (delegateRoot.modelData) {
+                                        root.wallpaperToDeletePath = delegateRoot.modelData.path;
+                                        deleteDialog.visible = true;
+                                    }
+                                }
+
+                                Behavior on opacity {
+                                    Anim {
+                                        type: Anim.DefaultEffects
+                                    }
+                                }
+                            }
                         }
 
-                        Row {
-                            spacing: 4
-                            Layout.alignment: Qt.AlignVCenter
-                            visible: delegateRoot.isLocal && root.colorsDb && root.colorsDb[delegateRoot.modelData.name] !== undefined
+                        // 2. Info Row
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.bottomMargin: Tokens.padding.small
+                            spacing: Tokens.spacing.small
 
-                            Repeater {
-                                model: {
-                                    if (!delegateRoot.modelData) return [];
-                                    const cols = root.colorsDb ? root.colorsDb[delegateRoot.modelData.name] : null;
-                                    return cols ? cols : [];
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: {
+                                    if (!delegateRoot.modelData)
+                                        return "";
+                                    if (delegateRoot.modelData.parentDir !== Paths.wallsdir) {
+                                        const category = Wallpapers.getCategoryFor(delegateRoot.modelData);
+                                        return category.slice(0, 1).toUpperCase() + category.slice(1);
+                                    }
+                                    return delegateRoot.modelData.name;
                                 }
+                                font: Tokens.font.label.builders.small.weight(Font.Medium).build()
+                                color: Colours.palette.m3onSurfaceVariant
+                                elide: Text.ElideRight
+                            }
 
-                                delegate: StyledRect {
-                                    required property string modelData
+                            Row {
+                                spacing: 4
+                                Layout.alignment: Qt.AlignVCenter
+                                visible: delegateRoot.isLocal && root.colorsDb && root.colorsDb[delegateRoot.modelData.name] !== undefined
 
-                                    width: 10
-                                    height: 10
-                                    radius: 5
-                                    color: modelData
-                                    border.width: 1
-                                    border.color: Qt.alpha(Colours.palette.m3outline, 0.3)
+                                Repeater {
+                                    model: {
+                                        if (!delegateRoot.modelData) return [];
+                                        const cols = root.colorsDb ? root.colorsDb[delegateRoot.modelData.name] : null;
+                                        return cols ? cols : [];
+                                    }
+
+                                    delegate: StyledRect {
+                                        required property string modelData
+
+                                        width: 10
+                                        height: 10
+                                        radius: 5
+                                        color: modelData
+                                        border.width: 1
+                                        border.color: Qt.alpha(Colours.palette.m3outline, 0.3)
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        Loader {
-            Layout.fillWidth: true
+            Loader {
+                Layout.fillWidth: true
 
-            asynchronous: true
-            active: localWalls.count === 0
-            visible: active
+                asynchronous: true
+                active: localWalls.count === 0
+                visible: active
 
-            sourceComponent: StyledRect {
-                color: Colours.tPalette.m3surfaceContainer
-                radius: Tokens.rounding.extraLarge
-                implicitHeight: noWallsLayout.implicitHeight + Tokens.padding.extraExtraLarge * 2
+                sourceComponent: StyledRect {
+                    color: Colours.tPalette.m3surfaceContainer
+                    radius: Tokens.rounding.extraLarge
+                    implicitHeight: noWallsLayout.implicitHeight + Tokens.padding.extraExtraLarge * 2
 
-                ColumnLayout {
-                    id: noWallsLayout
+                    ColumnLayout {
+                        id: noWallsLayout
 
-                    anchors.centerIn: parent
-                    spacing: Tokens.spacing.extraSmall
+                        anchors.centerIn: parent
+                        spacing: Tokens.spacing.extraSmall
 
-                    MaterialIcon {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "hide_image"
-                        color: Colours.palette.m3outline
-                        fontStyle: Tokens.font.icon.extraLarge
-                    }
+                        MaterialIcon {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: "hide_image"
+                            color: Colours.palette.m3outline
+                            fontStyle: Tokens.font.icon.extraLarge
+                        }
 
-                    StyledText {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: qsTr("No local wallpapers found")
-                        color: Colours.palette.m3outline
-                        font: Tokens.font.title.small
+                        StyledText {
+                            Layout.alignment: Qt.AlignHCenter
+                            text: qsTr("No local wallpapers found")
+                            color: Colours.palette.m3outline
+                            font: Tokens.font.title.small
+                        }
                     }
                 }
             }
-        }
         }
 
         StyledRect {

@@ -16,6 +16,7 @@ Item {
     required property real offsetScale
 
     readonly property alias content: content
+    readonly property alias winfo: winfo
     readonly property alias nexus: nexus
 
     readonly property real nonAnimWidth: children.find(c => c.shouldBeActive)?.implicitWidth ?? content.implicitWidth
@@ -43,12 +44,11 @@ Item {
     }
 
     function detach(mode: string): void {
-        console.log("[Wrapper] detach requested for mode:", mode);
         setAnims(true);
-        queuedMode = mode;
         if (mode === "winfo") {
-            detachedMode = "winfo";
+            detachedMode = mode;
         } else {
+            queuedMode = mode;
             detachedMode = "any";
         }
         setAnims(false);
@@ -56,21 +56,8 @@ Item {
     }
 
     function close(): void {
-        console.log("[Wrapper] close requested");
         hasCurrent = false;
         detachedMode = "";
-    }
-
-    onDetachedModeChanged: {
-        console.log("[Wrapper] detachedMode changed to:", detachedMode);
-    }
-
-    onHasCurrentChanged: {
-        console.log("[Wrapper] hasCurrent changed to:", hasCurrent, "currentName:", currentName);
-    }
-
-    onCurrentNameChanged: {
-        console.log("[Wrapper] currentName changed to:", currentName);
     }
 
     implicitWidth: nonAnimWidth
@@ -122,6 +109,19 @@ Item {
     }
 
     Comp {
+        id: winfo
+
+        shouldBeActive: root.detachedMode === "winfo"
+        anchors.centerIn: parent
+
+        sourceComponent: WindowInfo {
+            screen: root.screen
+            client: (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.lastFocusedWindow : (typeof Hypr !== "undefined" ? Hypr.activeToplevel : null)
+            onClose: root.close()
+        }
+    }
+
+    Comp {
         id: nexus
 
         shouldBeActive: root.detachedMode === "any"
@@ -137,22 +137,10 @@ Item {
 
                 anchors.fill: parent
                 nState.screen: root.screen
-                nState.currentPageIdx: ["appearance", "", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
+                nState.animatingContainer: nexus.opacity < 1
+                nState.currentPageIdx: ["appearance", "network", "bluetooth", "audio"].indexOf(root.queuedMode)
                 onClose: root.close()
             }
-        }
-    }
-
-    Comp {
-        id: winfo
-
-        shouldBeActive: root.detachedMode === "winfo"
-        anchors.centerIn: parent
-
-        sourceComponent: WindowInfo {
-            screen: root.screen
-            client: Niri.lastFocusedWindow
-            onClose: root.close()
         }
     }
 
@@ -176,6 +164,7 @@ Item {
         id: comp
 
         property bool shouldBeActive
+        property bool activeState: false
 
         active: false
         opacity: 0
@@ -223,3 +212,4 @@ Item {
         ]
     }
 }
+

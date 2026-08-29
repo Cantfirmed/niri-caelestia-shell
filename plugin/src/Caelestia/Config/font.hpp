@@ -1,15 +1,15 @@
 #pragma once
 
-#include "fontbuilder.hpp"
-
+#include <qobject.h>
 #include <qqmlintegration.h>
+#include <qvariantmap.h>
+
+#include "fontbuilder.hpp"
+#include "settings/objectnode.hpp"
 
 namespace caelestia::config {
 
 class AppearanceFont;
-class FontConfig;
-class FontStyleConfig;
-class IconFontStyleConfig;
 class FontStyleBase;
 class IconFontStyle;
 
@@ -58,7 +58,7 @@ public:
     explicit FontStyleBase(QObject* parent = nullptr)
         : QObject(parent) {}
 
-    void bind(FontStyleConfig* cfg);
+    void bind(settings::ObjectNode* cfg);
     void setScale(qreal scale);
 
     [[nodiscard]] QFont large() const;
@@ -71,9 +71,9 @@ signals:
 protected:
     virtual void rebuild();
 
-    static QFont buildFont(const FontConfig* cfg, const QString& fallbackFamily, qreal scale);
+    static QFont buildFont(const settings::ObjectNode* cfg, const QString& fallbackFamily, qreal scale);
 
-    FontStyleConfig* m_cfg = nullptr;
+    settings::ObjectNode* m_cfg = nullptr;
     qreal m_scale = 1;
     QFont m_large;
     QFont m_medium;
@@ -107,7 +107,7 @@ public:
 
     Q_INVOKABLE FontBuilder size(int pointSize);
 
-    void bind(IconFontStyleConfig* cfg);
+    void bind(settings::ObjectNode* cfg);
 
     [[nodiscard]] QFont extraLarge() const;
     [[nodiscard]] IconFontBuilders* builders() const;
@@ -131,6 +131,7 @@ class FontTokens : public QObject {
     Q_PROPERTY(caelestia::config::FontStyle* mono READ mono CONSTANT FINAL)
     Q_PROPERTY(caelestia::config::IconFontStyle* icon READ icon CONSTANT FINAL)
     Q_PROPERTY(caelestia::config::FontBuilder clock READ clock NOTIFY clockChanged FINAL)
+    Q_PROPERTY(QString workspaces READ workspaces NOTIFY workspacesChanged FINAL)
 
 public:
     explicit FontTokens(QObject* parent = nullptr);
@@ -144,9 +145,11 @@ public:
     [[nodiscard]] FontStyle* mono() const;
     [[nodiscard]] IconFontStyle* icon() const;
     [[nodiscard]] FontBuilder clock() const;
+    [[nodiscard]] QString workspaces() const;
 
 signals:
     void clockChanged();
+    void workspacesChanged();
 
 private:
     void rebuildClock();

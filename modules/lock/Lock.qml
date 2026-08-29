@@ -36,11 +36,25 @@ Scope {
         // the first request it fails to capture (because it's async and the compositor
         // refuses capture when locked)
         sourceComponent: ScreencopyView {
-            captureSource: Quickshell.screens.length > 0 && Quickshell.screens[0] ? Quickshell.screens[0] : null
+            captureSource: Quickshell.screens[0]
         }
     }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "lock"
+        description: "Lock the current session"
+        onPressed: lock.locked = true
+    }
 
+    // qmllint disable unresolved-type
+    CustomShortcut {
+        // qmllint enable unresolved-type
+        name: "unlock"
+        description: "Unlock the current session"
+        onPressed: lock.unlock()
+    }
 
     IpcHandler {
         function lock(): void {

@@ -19,7 +19,7 @@ Column {
     StyledText {
         function formatSeconds(s: int, fallback: string): string {
             const day = Math.floor(s / 86400);
-            const hr = Math.floor(s / 3600) % 60;
+            const hr = Math.floor(s / 3600) % 24;
             const min = Math.floor(s / 60) % 60;
 
             let comps = [];
@@ -33,12 +33,7 @@ Column {
             return comps.join(", ") || fallback;
         }
 
-        text: UPower.displayDevice.isLaptopBattery ? qsTr("Time %1: %2").arg(UPower.onBattery ? "remaining" : "until charged").arg(UPower.onBattery ? formatSeconds(UPower.displayDevice.timeToEmpty, "Calculating...") : formatSeconds(UPower.displayDevice.timeToFull, "Fully charged!")) : qsTr("Power profile: %1").arg(PowerManagement.autoBalance ? qsTr("Auto (%1)").arg(PowerManagement.profileName) : PowerManagement.profileName)
-    }
-
-    StyledText {
-        text: qsTr("Power profile: %1").arg(PowerManagement.autoBalance ? qsTr("Auto (%1)").arg(PowerManagement.profileName) : PowerManagement.profileName)
-        visible: UPower.displayDevice.isLaptopBattery
+        text: UPower.displayDevice.isLaptopBattery ? qsTr("Time %1: %2").arg(UPower.onBattery ? "remaining" : "until charged").arg(UPower.onBattery ? formatSeconds(UPower.displayDevice.timeToEmpty, "Calculating...") : formatSeconds(UPower.displayDevice.timeToFull, "Fully charged!")) : qsTr("Power profile: %1").arg(PowerProfile.toString(PowerProfiles.profile))
     }
 
     Loader {
@@ -103,8 +98,6 @@ Column {
         id: profiles
 
         property string current: {
-            if (PowerManagement.autoBalance)
-                return autoMode.icon;
             const p = PowerProfiles.profile;
             if (p === PowerProfile.PowerSaver)
                 return saver.icon;
@@ -115,8 +108,8 @@ Column {
 
         anchors.horizontalCenter: parent.horizontalCenter
 
-        implicitWidth: saver.implicitHeight + balance.implicitHeight + perf.implicitHeight + autoMode.implicitHeight + Tokens.padding.extraSmall * 2 + Tokens.spacing.largeIncreased * 3
-        implicitHeight: Math.max(saver.implicitHeight, balance.implicitHeight, perf.implicitHeight, autoMode.implicitHeight) + Tokens.padding.small
+        implicitWidth: saver.implicitHeight + balance.implicitHeight + perf.implicitHeight + Tokens.padding.medium * 2 + Tokens.spacing.largeIncreased * 2
+        implicitHeight: Math.max(saver.implicitHeight, balance.implicitHeight, perf.implicitHeight) + Tokens.padding.small
 
         color: Colours.tPalette.m3surfaceContainer
         radius: Tokens.rounding.full
@@ -149,13 +142,6 @@ Column {
                     Fill {
                         item: perf
                     }
-                },
-                State {
-                    name: autoMode.icon
-
-                    Fill {
-                        item: autoMode
-                    }
                 }
             ]
 
@@ -178,9 +164,7 @@ Column {
         Profile {
             id: balance
 
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: saver.right
-            anchors.leftMargin: Tokens.spacing.largeIncreased
+            anchors.centerIn: parent
 
             profile: PowerProfile.Balanced
             icon: "balance"
@@ -190,24 +174,11 @@ Column {
             id: perf
 
             anchors.verticalCenter: parent.verticalCenter
-            anchors.left: balance.right
-            anchors.leftMargin: Tokens.spacing.largeIncreased
-
-            profile: PowerProfile.Performance
-            icon: "rocket_launch"
-        }
-
-        Profile {
-            id: autoMode
-
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: perf.right
-            anchors.leftMargin: Tokens.spacing.largeIncreased
             anchors.right: parent.right
             anchors.rightMargin: Tokens.padding.extraSmall
 
-            isAuto: true
-            icon: "auto_mode"
+            profile: PowerProfile.Performance
+            icon: "rocket_launch"
         }
     }
 
@@ -223,8 +194,7 @@ Column {
 
     component Profile: Item {
         required property string icon
-        property int profile: PowerProfile.Balanced
-        property bool isAuto: false
+        required property int profile
 
         implicitWidth: icon.implicitHeight + Tokens.padding.small
         implicitHeight: icon.implicitHeight + Tokens.padding.small
@@ -232,12 +202,7 @@ Column {
         StateLayer {
             radius: Tokens.rounding.full
             color: profiles.current === parent.icon ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
-            onClicked: {
-                if (parent.isAuto)
-                    PowerManagement.setAutoBalance(true);
-                else
-                    PowerManagement.setManualProfile(parent.profile);
-            }
+            onClicked: PowerProfiles.profile = parent.profile
         }
 
         MaterialIcon {

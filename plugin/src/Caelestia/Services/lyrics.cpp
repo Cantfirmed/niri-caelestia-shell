@@ -1,6 +1,6 @@
 #include "lyrics.hpp"
 
-#include "../Config/config.hpp"
+#include "../Config/rootnodes.hpp"
 #include "../Config/serviceconfig.hpp"
 #include "../Config/userpaths.hpp"
 
@@ -69,11 +69,11 @@ Lyrics::Lyrics(QObject* parent)
     m_loadDebounce->setInterval(kLoadDebounceMs);
     QObject::connect(m_loadDebounce, &QTimer::timeout, this, &Lyrics::doLoad);
 
-    const auto* cfg = config::GlobalConfig::instance();
+    const auto* cfg = config::ConfigSingleton::instance();
     const auto* svcCfg = cfg->services();
     const auto* paths = cfg->paths();
 
-    m_preferredBackend = backendFromKey(svcCfg->lyricsBackend());
+    m_preferredBackend = svcCfg->lyricsBackend();
 
     QObject::connect(
         svcCfg, &config::ServiceConfig::lyricsBackendChanged, this, &Lyrics::onPreferredBackendConfigChanged);
@@ -86,26 +86,22 @@ QStringList Lyrics::lyrics() const {
     return m_lyrics;
 }
 
-LyricsBackend::Backend Lyrics::backend() const {
+LyricsBackend Lyrics::backend() const {
     return m_backend;
 }
 
-LyricsBackend::Backend Lyrics::preferredBackend() const {
+LyricsBackend Lyrics::preferredBackend() const {
     return m_preferredBackend;
 }
 
-void Lyrics::setPreferredBackend(LyricsBackend::Backend value) {
+void Lyrics::setPreferredBackend(LyricsBackend value) {
     if (m_preferredBackend == value) {
         return;
     }
     m_preferredBackend = value;
     emit preferredBackendChanged();
 
-    auto* const svcCfg = config::GlobalConfig::instance()->services();
-    const QString key = backendKey(value);
-    if (svcCfg->lyricsBackend() != key) {
-        svcCfg->set_lyricsBackend(key);
-    }
+    config::ConfigSingleton::instance()->services()->set_lyricsBackend(value);
 
     scheduleLoad();
 }
@@ -264,7 +260,7 @@ void Lyrics::refresh() {
     scheduleLoad();
 }
 
-void Lyrics::setBackend(LyricsBackend::Backend value) {
+void Lyrics::setBackend(LyricsBackend value) {
     if (m_backend == value) {
         return;
     }
@@ -280,7 +276,7 @@ void Lyrics::setLoading(bool value) {
     emit loadingChanged();
 }
 
-void Lyrics::setLines(QVector<LyricLine> lines, LyricsBackend::Backend source) {
+void Lyrics::setLines(QVector<LyricLine> lines, LyricsBackend source) {
     std::sort(lines.begin(), lines.end(), [](const LyricLine& a, const LyricLine& b) {
         return a.time < b.time;
     });
@@ -417,7 +413,7 @@ void Lyrics::doLoad() {
     }
 }
 
-void Lyrics::chainNext(LyricsBackend::Backend just_failed, int reqId) {
+void Lyrics::chainNext(LyricsBackend just_failed, int reqId) {
     if (m_preferredBackend != LyricsBackend::Auto) {
         // Non-auto modes don't chain
         setLoading(false);
@@ -510,7 +506,9 @@ void Lyrics::tryLrclib(int reqId) {
     if (!m_album.isEmpty()) {
         q.addQueryItem(u"album_name"_s, m_album);
     }
-    if (m_duration > 0) {
+
+    constexpr qreal kMaxDurationSecs = std::numeric_limits<int>::max();
+    if (m_duration > 0 && qIsFinite(m_duration) && m_duration < kMaxDurationSecs) {
         q.addQueryItem(u"duration"_s, QString::number(qRound(m_duration)));
     }
     url.setQuery(q);
@@ -777,8 +775,7 @@ QNetworkReply* Lyrics::getJson(const QUrl& url, const QHash<QByteArray, QByteArr
 }
 
 void Lyrics::onPreferredBackendConfigChanged() {
-    auto* svcCfg = config::GlobalConfig::instance()->services();
-    const LyricsBackend::Backend desired = backendFromKey(svcCfg->lyricsBackend());
+    const LyricsBackend desired = config::ConfigSingleton::instance()->services()->lyricsBackend();
     if (desired == m_preferredBackend) {
         return;
     }
@@ -788,7 +785,6 @@ void Lyrics::onPreferredBackendConfigChanged() {
 }
 
 void Lyrics::onLyricsDirChanged() {
-    loadLyricsMap();
     scheduleLoad();
 }
 
@@ -828,11 +824,7 @@ void Lyrics::persistTrackPrefs() {
     }
     m_lyricsMap.insert(key, entry);
 
-    const QString dir = lyricsDir();
-    if (dir.isEmpty()) {
-        return;
-    }
-    QDir().mkpath(dir);
+    QDir().mkpath(stateDir());
 
     QSaveFile out(lyricsMapPath());
     if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -851,9 +843,14 @@ void Lyrics::persistTrackPrefs() {
 }
 
 QString Lyrics::lyricsDir() const {
-    QString dir = config::GlobalConfig::instance()->paths()->lyricsDir();
+    QString dir = config::ConfigSingleton::instance()->paths()->lyricsDir();
     if (dir.isEmpty()) {
         return {};
+    }
+    if (dir == u"~"_s) {
+        dir = QDir::homePath();
+    } else if (dir.startsWith(u"~/"_s)) {
+        dir.replace(0, 1, QDir::homePath());
     }
     while (dir.endsWith(QLatin1Char('/')) && dir.size() > 1) {
         dir.chop(1);
@@ -862,8 +859,7 @@ QString Lyrics::lyricsDir() const {
 }
 
 QString Lyrics::lyricsMapPath() const {
-    const QString dir = lyricsDir();
-    return dir.isEmpty() ? QString() : dir + u"/lyrics_map.json"_s;
+    return stateDir() + u"/lyrics_map.json"_s;
 }
 
 QString Lyrics::trackKey() const {
@@ -873,31 +869,42 @@ QString Lyrics::trackKey() const {
     return u"%1 - %2"_s.arg(joinArtists(m_artist), m_title);
 }
 
-QString Lyrics::backendKey(LyricsBackend::Backend value) {
+QString Lyrics::backendKey(LyricsBackend value) {
     switch (value) {
     case LyricsBackend::Local:
-        return u"LyricsBackend::Local"_s;
+        return u"Local"_s;
     case LyricsBackend::LRCLIB:
-        return u"LyricsBackend::LRCLIB"_s;
+        return u"LRCLIB"_s;
     case LyricsBackend::NetEase:
-        return u"LyricsBackend::NetEase"_s;
+        return u"NetEase"_s;
     case LyricsBackend::Auto:
     default:
-        return u"LyricsBackend::Auto"_s;
+        return u"Auto"_s;
     }
 }
 
-LyricsBackend::Backend Lyrics::backendFromKey(const QString& key) {
-    if (key.compare(u"LyricsBackend::Local"_s, Qt::CaseInsensitive) == 0) {
+LyricsBackend Lyrics::backendFromKey(const QString& key) {
+    if (key.compare(u"Local"_s, Qt::CaseInsensitive) == 0) {
         return LyricsBackend::Local;
     }
-    if (key.compare(u"LyricsBackend::LRCLIB"_s, Qt::CaseInsensitive) == 0) {
+    if (key.compare(u"LRCLIB"_s, Qt::CaseInsensitive) == 0) {
         return LyricsBackend::LRCLIB;
     }
-    if (key.compare(u"LyricsBackend::NetEase"_s, Qt::CaseInsensitive) == 0) {
+    if (key.compare(u"NetEase"_s, Qt::CaseInsensitive) == 0) {
         return LyricsBackend::NetEase;
     }
     return LyricsBackend::Auto;
+}
+
+const QString& Lyrics::stateDir() {
+    static const QString s_dir = [] {
+        QString state = qEnvironmentVariable("XDG_STATE_HOME");
+        if (state.isEmpty()) {
+            state = QDir::homePath() + u"/.local/state"_s;
+        }
+        return state + u"/caelestia/lyrics"_s;
+    }();
+    return s_dir;
 }
 
 const QString& Lyrics::cacheDir() {
@@ -911,14 +918,14 @@ const QString& Lyrics::cacheDir() {
     return s_dir;
 }
 
-QString Lyrics::cachePathFor(LyricsBackend::Backend backend, const QString& id) {
+QString Lyrics::cachePathFor(LyricsBackend backend, const QString& id) {
     if (id.isEmpty() || backend == LyricsBackend::Auto || backend == LyricsBackend::Local) {
         return {};
     }
     return u"%1/%2/%3.lrc"_s.arg(cacheDir(), backendKey(backend), sanitizeFilenamePart(id));
 }
 
-QString Lyrics::readCachedLrc(LyricsBackend::Backend backend, const QString& id) {
+QString Lyrics::readCachedLrc(LyricsBackend backend, const QString& id) {
     const QString path = cachePathFor(backend, id);
     if (path.isEmpty()) {
         return {};
@@ -930,7 +937,7 @@ QString Lyrics::readCachedLrc(LyricsBackend::Backend backend, const QString& id)
     return QString::fromUtf8(f.readAll());
 }
 
-void Lyrics::writeCachedLrc(LyricsBackend::Backend backend, const QString& id, const QString& text) {
+void Lyrics::writeCachedLrc(LyricsBackend backend, const QString& id, const QString& text) {
     if (text.isEmpty()) {
         return;
     }

@@ -15,9 +15,8 @@ Item {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            const visibilities = Visibilities.getForActive();
-            if (visibilities)
-                visibilities.launcher = !visibilities.launcher;
+            const screenState = ShellState.forActive();
+            screenState.launcher = !screenState.launcher;
         }
     }
 

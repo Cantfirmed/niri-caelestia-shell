@@ -115,7 +115,6 @@ ColumnLayout {
             StyledRect {
                 implicitWidth: implicitHeight
                 implicitHeight: wirelessConnectIcon.implicitHeight + Tokens.padding.extraSmall
-
                 radius: Tokens.rounding.full
                 color: Qt.alpha(Colours.palette.m3primary, networkItem.modelData.active ? 1 : 0)
 
@@ -139,9 +138,6 @@ ColumnLayout {
                                 root.showPasswordDialog = true;
                                 root.popouts.currentName = "wirelesspassword";
                             });
-
-                            // Clear connecting state if connection succeeds immediately (saved profile)
-                            // This is handled by the onActiveChanged connection below
                         }
                     }
                 }
@@ -246,7 +242,9 @@ ColumnLayout {
             values: [...Nmcli.ethernetDevices].sort((a, b) => {
                 if (a.connected !== b.connected)
                     return b.connected - a.connected;
-                return (a.interface || "").localeCompare(b.interface || "");
+                const ifaceA = a.iface || a.interface || "";
+                const ifaceB = b.iface || b.interface || "";
+                return ifaceA.localeCompare(ifaceB);
             }).slice(0, 8)
         }
 
@@ -289,7 +287,7 @@ ColumnLayout {
                 Layout.leftMargin: Tokens.spacing.extraSmall
                 Layout.rightMargin: Tokens.spacing.extraSmall
                 Layout.fillWidth: true
-                text: ethernetItem.modelData.interface || qsTr("Unknown")
+                text: ethernetItem.modelData.iface || ethernetItem.modelData.interface || qsTr("Unknown")
                 elide: Text.ElideRight
                 font: Tokens.font.body.builders.medium.weight(ethernetItem.modelData.connected ? Font.Medium : Font.Normal).build()
                 color: ethernetItem.modelData.connected ? Colours.palette.m3primary : Colours.palette.m3onSurface
@@ -315,7 +313,7 @@ ColumnLayout {
                         if (ethernetItem.modelData.connected && ethernetItem.modelData.connection) {
                             Nmcli.disconnectEthernet(ethernetItem.modelData.connection, () => {});
                         } else {
-                            Nmcli.connectEthernet(ethernetItem.modelData.connection || "", ethernetItem.modelData.interface || "", () => {});
+                            Nmcli.connectEthernet(ethernetItem.modelData.connection || "", ethernetItem.modelData.iface || ethernetItem.modelData.interface || "", () => {});
                         }
                     }
                 }
@@ -406,3 +404,4 @@ ColumnLayout {
         }
     }
 }
+

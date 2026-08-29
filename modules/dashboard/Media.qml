@@ -9,7 +9,7 @@ import qs.services
 Item {
     id: root
 
-    required property DrawerVisibilities visibilities
+    required property ScreenState screenState
 
     implicitWidth: Tokens.sizes.dashboard.mediaTabWidth
     implicitHeight: Tokens.sizes.dashboard.mediaTabHeight
@@ -24,7 +24,6 @@ Item {
         spacing: Tokens.spacing.extraLarge
 
         CoverVisualiser {
-            visibilities: root.visibilities
             Layout.fillHeight: true
             implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
         }
@@ -138,7 +137,6 @@ Item {
                     spacing: Tokens.spacing.extraLarge
 
                     Details {
-                        visibilities: root.visibilities
                         Layout.fillWidth: true
                     }
 

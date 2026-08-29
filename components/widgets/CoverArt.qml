@@ -47,7 +47,7 @@ Item {
 
             Anim on rotation {
                 running: true
-                paused: !Players.active?.isPlaying || !root.visible
+                paused: !Players.active?.isPlaying
                 from: 360
                 to: 0
                 duration: 23500

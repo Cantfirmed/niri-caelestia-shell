@@ -25,8 +25,8 @@ QtObject {
         onTriggered: notif.updateTimeStr()
     }
 
-    property Notification notification
-    property string id
+    property string notificationId
+    readonly property alias id: notif.notificationId
     property string summary
     property string body
     property string appIcon
@@ -39,7 +39,19 @@ QtObject {
     property bool hasActionIcons
     property list<var> actions
 
-    readonly property bool hasFullscreen: false
+    readonly property bool hasFullscreen: {
+        if (typeof Hypr !== "undefined" && Hypr.focusedMonitor) {
+            const monitor = Hypr.focusedMonitor;
+            const specialName = monitor?.lastIpcObject.specialWorkspace?.name;
+            if (specialName) {
+                const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
+                return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+            }
+            return monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
+        }
+        return false;
+    }
+
 
     readonly property Timer timer: Timer {
         running: true
@@ -67,7 +79,8 @@ QtObject {
                     if (status !== Image.Ready || width != TokenConfig.sizes.notifs.image || height != TokenConfig.sizes.notifs.image)
                         return;
 
-                    const cacheKey = notif.appName + notif.summary + notif.id + notif.image;
+                    const cacheKey = notif.appName + notif.summary + notif.notificationId + notif.image;
+
                     let h1 = 0xdeadbeef, h2 = 0x41c6ce57, ch;
                     for (let i = 0; i < cacheKey.length; i++) {
                         ch = cacheKey.charCodeAt(i);
@@ -212,7 +225,8 @@ QtObject {
         if (!notification)
             return;
 
-        id = notification.id;
+        notificationId = notification.id;
+
         summary = notification.summary;
         body = notification.body;
         appIcon = notification.appIcon;

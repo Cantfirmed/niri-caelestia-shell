@@ -53,11 +53,8 @@ StyledRect {
     ColumnLayout {
         anchors.left: tempProg.right
         anchors.right: usageShape.left
-        anchors.rightMargin: Tokens.spacing.medium
-        anchors.leftMargin: Tokens.spacing.large
-        anchors.topMargin: Tokens.spacing.large
-        anchors.bottomMargin: Tokens.spacing.large
         anchors.verticalCenter: tempProg.verticalCenter
+        anchors.margins: Tokens.spacing.large
         spacing: Tokens.spacing.extraSmall
 
         StyledText {
@@ -71,8 +68,6 @@ StyledRect {
             text: root.subLabel
             font: Tokens.font.body.small
             color: Colours.palette.m3onSurfaceVariant
-            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-            maximumLineCount: 2
             elide: Text.ElideRight
         }
     }
