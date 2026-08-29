@@ -11,17 +11,23 @@ Scope {
 	id: root
 	property bool failed;
 	property string errorString;
+	property bool isStartup: true;
 
 	// Connect to the Quickshell global to listen for the reload signals.
 	Connections {
 		target: Quickshell
 
 		function onReloadCompleted() {
+			if (root.isStartup) {
+				root.isStartup = false;
+				return;
+			}
 			root.failed = false;
 			popupLoader.loading = true;
 		}
 
 		function onReloadFailed(error: string) {
+			root.isStartup = false;
 			// Close any existing popup before making a new one.
 			popupLoader.active = false;
 
@@ -46,6 +52,8 @@ Scope {
 			implicitHeight: rect.height + shadow.radius * 2
 
 			WlrLayershell.namespace: "quickshell:reloadPopup"
+
+			surfaceFormat.opaque: false
 
 			// color blending is a bit odd as detailed in the type reference.
 			color: "transparent"

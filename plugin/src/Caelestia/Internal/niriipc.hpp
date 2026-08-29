@@ -122,6 +122,7 @@ public:
 
     // ── Workspace Helpers ──
     Q_INVOKABLE int getWorkspaceIdxById(int workspaceId) const;
+    Q_INVOKABLE QVariantList getWorkspacesForOutput(const QString& outputName) const;
     Q_INVOKABLE QVariantList getWindowsByWorkspaceId(int wsId) const;
     Q_INVOKABLE QVariantList getWindowsByWorkspaceIndex(int index) const;
     Q_INVOKABLE QVariantList getActiveWorkspaceWindows() const;
@@ -181,6 +182,7 @@ private:
     QString m_focusedMonitorName;
     QVariantList m_currentOutputWorkspaces;
     QVariantMap m_workspaceHasWindows;
+    QSet<QString> m_lastWorkspaceOutputs;
 
     // Window state
     NiriListModel* m_windowsModel;

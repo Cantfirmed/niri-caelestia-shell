@@ -324,7 +324,7 @@ MouseArea {
                         default: return Colours.palette.m3onPrimaryContainer;
                         }
                     }
-                    font.pointSize: Appearance.font.size.labelLarge
+                    size: Appearance.font.size.labelLarge
                 }
 
                 StyledText {

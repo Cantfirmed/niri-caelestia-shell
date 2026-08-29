@@ -22,7 +22,7 @@ Card {
     padding: Appearance.padding.xl
     radius: Appearance.rounding.large
 
-    implicitWidth: 460
+    implicitWidth: root.streamNodes.length === 0 ? 320 : 460
     implicitHeight: layout.implicitHeight + padding * 2
 
     property var clientMap: ({})
@@ -130,7 +130,7 @@ Card {
 
             MaterialIcon {
                 text: "volume_mute"
-                font.pointSize: 48
+                size: 48
                 color: Colours.palette.m3outline
                 Layout.alignment: Qt.AlignHCenter
             }

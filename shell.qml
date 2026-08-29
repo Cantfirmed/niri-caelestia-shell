@@ -37,8 +37,9 @@ ShellRoot {
     PolkitDialog {}
     ReloadPopup {}
 
-    // Initialize LidInhibitor service
+    // Initialize LidInhibitor and PowerManagement services
     property var _lidInhibitor: LidInhibitor
+    property var _powerManagement: PowerManagement
 
     // Fallback display watcher:
     // When the external screen is unplugged (no physical screens remain configured),

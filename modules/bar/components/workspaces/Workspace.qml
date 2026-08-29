@@ -14,14 +14,18 @@ ColumnLayout {
     required property int groupOffset
     required property int focusedWindowId
     required property int activeWsId
+    required property int workspaceId
+    required property int virtualIdx
+    required property string outputName
 
     required property Item windowPopoutSignal
 
     readonly property bool isWorkspace: true // Flag for finding workspace children
     readonly property int size: isWorkspace ? implicitHeight + (hasWindows ? Appearance.padding.xs : 0) : 0
-    readonly property int ws: groupOffset + index + 1
+    readonly property int ws: virtualIdx
     readonly property bool isOccupied: occupied[ws.toString()] ?? false
     readonly property bool hasWindows: isOccupied && GlobalConfig.bar.workspaces.showWindows
+    readonly property bool isWsFocused: activeWsId === ws
 
     onIsOccupiedChanged: console.log("Workspace.qml: ws:", ws, "isOccupied:", isOccupied, "occupied keys:", JSON.stringify(Object.keys(occupied || {})))
     onHasWindowsChanged: console.log("Workspace.qml: ws:", ws, "hasWindows:", hasWindows, "showWindows:", GlobalConfig.bar.workspaces.showWindows)
@@ -65,6 +69,7 @@ ColumnLayout {
             windowPopoutSignal: root.windowPopoutSignal
             idx: root.index
             groupOffset: root.groupOffset
+            outputName: root.outputName
         }
     }
 

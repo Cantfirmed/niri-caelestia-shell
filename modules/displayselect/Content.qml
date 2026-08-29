@@ -37,6 +37,12 @@ Card {
 
     Column {
         id: container
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.leftMargin: root.padding
+        anchors.rightMargin: root.padding
+        anchors.topMargin: root.padding
         spacing: Appearance.spacing.xl
 
         StyledText {
@@ -48,6 +54,7 @@ Card {
         }
 
         Row {
+            anchors.horizontalCenter: parent.horizontalCenter
             spacing: Appearance.spacing.lg
 
             DisplayCard {
@@ -77,17 +84,28 @@ Card {
                 visible: root.hasExternalMonitor
 
                 KeyNavigation.left: internalCard
-                KeyNavigation.right: extendCard
+                KeyNavigation.right: extendLeftCard
             }
 
             DisplayCard {
-                id: extendCard
-                icon: "space_dashboard"
-                label: qsTr("Extend Screen")
-                mode: "extend"
+                id: extendLeftCard
+                icon: "arrow_back"
+                label: qsTr("Extend Left")
+                mode: "extend-left"
                 visible: root.hasExternalMonitor
 
                 KeyNavigation.left: externalCard
+                KeyNavigation.right: extendRightCard
+            }
+
+            DisplayCard {
+                id: extendRightCard
+                icon: "arrow_forward"
+                label: qsTr("Extend Right")
+                mode: "extend-right"
+                visible: root.hasExternalMonitor
+
+                KeyNavigation.left: extendLeftCard
                 KeyNavigation.right: duplicateCard
             }
 
@@ -98,7 +116,7 @@ Card {
                 mode: "duplicate"
                 visible: root.hasExternalMonitor
 
-                KeyNavigation.left: extendCard
+                KeyNavigation.left: extendRightCard
             }
         }
     }
@@ -165,25 +183,27 @@ Card {
             radius: parent.radius
             color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
 
-            function onClicked(): void {
-                button.trigger();
-            }
+            onClicked: button.trigger()
         }
 
         Column {
             anchors.centerIn: parent
+            width: parent.width - Appearance.padding.md * 2
             spacing: Appearance.spacing.md
 
             MaterialIcon {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: button.icon
                 color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
-                font.pointSize: 40
-                font.weight: 500
+                size: 40
+                fontStyle: Tokens.font.icon.builders.small.weight(Font.Medium).build()
             }
 
             StyledText {
+                width: parent.width
                 anchors.horizontalCenter: parent.horizontalCenter
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
                 text: button.label
                 color: button.activeFocus ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
                 font.pointSize: Appearance.font.size.bodyMedium

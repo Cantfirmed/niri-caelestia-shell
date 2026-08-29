@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Caelestia
 import Caelestia.Internal
 import Caelestia.Config
@@ -176,6 +177,27 @@ Singleton {
         return NiriIpc.getWorkspaceIdxById(workspaceId);
     }
 
+    function getWorkspacesForOutput(outputName) {
+        if (!outputName) return [];
+        return NiriIpc.getWorkspacesForOutput(outputName);
+    }
+
+    function getActiveWorkspaceIndexForOutput(outputName) {
+        const wsList = getWorkspacesForOutput(outputName);
+        for (let i = 0; i < wsList.length; i++) {
+            if (wsList[i].is_focused) return i;
+        }
+        return wsList.length > 0 ? 0 : -1;
+    }
+
+    function getFocusedWorkspaceIdForOutput(outputName) {
+        const wsList = getWorkspacesForOutput(outputName);
+        for (let i = 0; i < wsList.length; i++) {
+            if (wsList[i].is_active) return wsList[i].id;
+        }
+        return wsList.length > 0 ? wsList[0].id : -1;
+    }
+
     function getActiveWorkspaceName() {
         if (allWorkspaces && focusedWorkspaceIndex >= 0 && focusedWorkspaceIndex < allWorkspaces.length) {
             return allWorkspaces[focusedWorkspaceIndex].name || "";
@@ -186,6 +208,14 @@ Singleton {
     function getWorkspaceNameByIndex(idx) {
         if (allWorkspaces && idx >= 0 && idx < allWorkspaces.length) {
             return allWorkspaces[idx].name || "";
+        }
+        return "";
+    }
+
+    function getWorkspaceNameByOutputIndex(outputName, idx) {
+        const wsList = getWorkspacesForOutput(outputName);
+        if (idx >= 0 && idx < wsList.length) {
+            return wsList[idx].name || "";
         }
         return "";
     }
@@ -227,6 +257,12 @@ Singleton {
     function switchToWorkspace(workspaceId) {
         if (!niriAvailable) return false;
         return NiriIpc.action("focus-workspace", [workspaceId.toString()]);
+    }
+
+    function switchToWorkspaceById(workspaceId) {
+        // Switch using the global workspace ID so it targets the correct output
+        if (!niriAvailable) return false;
+        return NiriIpc.action("focus-workspace", ["--id", workspaceId.toString()]);
     }
 
     function switchToWorkspaceUpDown(direction) {
@@ -491,5 +527,56 @@ Singleton {
             }
         }
         return groups;
+    }
+
+    // --- Layout Config (Gaps) ---
+    readonly property string layoutConfigPath: `${Paths.home}/.config/niri/niri/layout.kdl`
+    property int gaps: 0
+    readonly property bool gapsEnabled: gaps > 0
+
+    FileView {
+        id: layoutConfigFile
+        path: root.layoutConfigPath
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            const content = text();
+            const match = content.match(/gaps\s+(\d+)/);
+            if (match) {
+                root.gaps = parseInt(match[1]);
+            }
+        }
+    }
+
+    function setGaps(val: int): void {
+        val = Math.max(0, val);
+        const content = layoutConfigFile.text();
+        if (!content) return;
+
+        let newContent = content;
+        if (/gaps\s+\d+/.test(content)) {
+            newContent = content.replace(/gaps\s+\d+/, `gaps ${val}`);
+        } else {
+            newContent = content.replace(/(layout\s*\{)/, `$1\n    gaps ${val}`);
+        }
+
+        // Clean up any remaining struts block if present
+        newContent = newContent.replace(/\n?\s*struts\s*\{[^}]*\}/g, "");
+
+        if (newContent !== content) {
+            layoutConfigFile.watchChanges = false;
+            layoutConfigFile.setText(newContent);
+            layoutConfigFile.watchChanges = true;
+            root.gaps = val;
+
+            const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["niri", "msg", "action", "load-config-file"] }', root);
+            proc.exited.connect(() => proc.destroy());
+            proc.running = true;
+        }
+    }
+
+    function toggleGaps(): void {
+        setGaps(gaps > 0 ? 0 : 20);
     }
 }

@@ -23,10 +23,13 @@ ColumnLayout {
         return `${mins}:${secs}`;
     }
 
+    property DrawerVisibilities visibilities
+    readonly property bool isDashVisible: (visibilities?.dashboard ?? false) && !GameMode.enabled
+
     spacing: Tokens.spacing.extraSmall
 
     Timer {
-        running: Players.active?.isPlaying ?? false
+        running: (Players.active?.isPlaying ?? false) && root.isDashVisible
         interval: GlobalConfig.dashboard.mediaUpdateInterval
         triggeredOnStart: true
         repeat: true
@@ -88,7 +91,7 @@ ColumnLayout {
             value: Players.active ? Players.active.position / (Players.active.length || 1) : 0
             enabled: Players.active?.canSeek ?? false
             wavy: true
-            animateWave: Players.active?.isPlaying ?? false
+            animateWave: (Players.active?.isPlaying ?? false) && root.isDashVisible
             waveFrequency: 5
             waveDuration: 2000
             interactionOnMove: false

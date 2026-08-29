@@ -16,7 +16,7 @@ StyledRect {
     required property DrawerVisibilities visibilities
 
     readonly property StyledText body: (expandedContent.item as ExpandedBody)?.body ?? null
-    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + expandedContent.anchors.topMargin + Tokens.padding.medium * 2 : summaryHeightMetrics.height
+    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + Tokens.spacing.extraSmall + Tokens.padding.medium * 2 : summaryHeightMetrics.height
 
     implicitHeight: nonAnimHeight
 

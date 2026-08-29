@@ -18,7 +18,7 @@ ConnectedRect {
 
     signal moved(value: real)
 
-    implicitHeight: rowLayout.implicitHeight + rowLayout.anchors.margins + rowLayout.anchors.topMargin
+    implicitHeight: rowLayout.implicitHeight + Tokens.padding.largeIncreased + Tokens.padding.large
 
     RowLayout {
         id: rowLayout

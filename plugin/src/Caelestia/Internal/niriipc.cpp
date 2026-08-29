@@ -152,9 +152,19 @@ bool NiriIpc::action(const QString& actionName, const QVariantList& args) {
     if (args.size() >= 2 && args.at(0).toString() == QStringLiteral("--id")) {
         // Actions with --id: FocusWindow, CloseWindow, ToggleWindowFloating
         // Format: {"ActionName": {"id": N}}
-        QJsonObject inner;
-        inner[QStringLiteral("id")] = args.at(1).toLongLong();
-        innerValue = inner;
+        const qint64 id = args.at(1).toLongLong();
+        if (pascalName == QStringLiteral("FocusWorkspace")) {
+            // FocusWorkspace by global ID: {"FocusWorkspace": {"reference": {"Id": N}}}
+            QJsonObject ref;
+            ref[QStringLiteral("Id")] = id;
+            QJsonObject inner;
+            inner[QStringLiteral("reference")] = ref;
+            innerValue = inner;
+        } else {
+            QJsonObject inner;
+            inner[QStringLiteral("id")] = id;
+            innerValue = inner;
+        }
     } else if (args.size() == 2 && args.at(0).toString() == QStringLiteral("-d")) {
         // DoScreenTransition with delay: {"DoScreenTransition": {"delay_ms": N}}
         QJsonObject inner;
@@ -257,6 +267,17 @@ QVariantList NiriIpc::getWindowsByWorkspaceIndex(int index) const {
     return getWindowsByWorkspaceId(wsId);
 }
 
+QVariantList NiriIpc::getWorkspacesForOutput(const QString& outputName) const {
+    QVariantList result;
+    const auto& wsList = m_workspacesModel->items();
+    for (const auto& v : wsList) {
+        if (v.toMap().value(QStringLiteral("output")).toString() == outputName) {
+            result.append(v);
+        }
+    }
+    return result;
+}
+
 QVariantList NiriIpc::getActiveWorkspaceWindows() const {
     if (m_focusedWorkspaceId < 0) return {};
     return getWindowsByWorkspaceId(m_focusedWorkspaceId);
@@ -310,6 +331,7 @@ void NiriIpc::onEvent(const QJsonObject& event) {
             }
         }
         updateCurrentOutputWorkspaces();
+        emit workspacesChanged();
         emit focusedWorkspaceChanged();
     } else if (event.contains(QStringLiteral("WindowsChanged"))) {
         handleWindowsChanged(event.value(QStringLiteral("WindowsChanged")).toObject());
@@ -450,6 +472,18 @@ void NiriIpc::handleWorkspacesChanged(const QJsonObject& data) {
     updateWorkspaceHasWindows();
     emit workspacesChanged();
     emit focusedWorkspaceChanged();
+
+    QSet<QString> currentWorkspaceOutputs;
+    for (const auto& v : wsList) {
+        QString out = v.toMap().value(QStringLiteral("output")).toString();
+        if (!out.isEmpty()) {
+            currentWorkspaceOutputs.insert(out);
+        }
+    }
+    if (m_lastWorkspaceOutputs != currentWorkspaceOutputs) {
+        m_lastWorkspaceOutputs = currentWorkspaceOutputs;
+        fetchOutputs();
+    }
 }
 
 void NiriIpc::handleWindowsChanged(const QJsonObject& data) {

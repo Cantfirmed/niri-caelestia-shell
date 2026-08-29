@@ -23,7 +23,7 @@ StyledRect {
     MaterialIcon {
         id: icon
         color: parent.onColor
-        font.pointSize: Appearance.font.size.labelLarge
+        size: Appearance.font.size.labelLarge
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
 

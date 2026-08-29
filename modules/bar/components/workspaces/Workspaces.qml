@@ -11,11 +11,91 @@ import "context"
 StyledRect {
     id: root
 
-    // required property ShellScreen screen
+    required property string outputName
 
-    readonly property int activeWsId: Niri.focusedWorkspaceIndex + 1
-    readonly property var occupied: Niri.workspaceHasWindows
-    readonly property int groupOffset: Math.floor((Niri.focusedWorkspaceIndex) / GlobalConfig.bar.workspaces.shown) * GlobalConfig.bar.workspaces.shown
+    // Per-output workspace data from niri
+    readonly property var outputWorkspaces: {
+        const _ = Niri.allWorkspaces;
+        return Niri.getWorkspacesForOutput(outputName);
+    }
+
+    // The active workspace on THIS output (is_active, not global is_focused)
+    readonly property var outputActiveWs: {
+        const wsList = outputWorkspaces;
+        for (let i = 0; i < wsList.length; i++) {
+            if (wsList[i].is_active) return wsList[i];
+        }
+        return wsList.length > 0 ? wsList[0] : null;
+    }
+    readonly property int activeWsId: outputActiveWs ? outputActiveWs.idx : 1
+
+    // Find the slot index of the active workspace on this output
+    readonly property int activeSlotIndex: {
+        const wsList = outputWorkspaces;
+        for (let i = 0; i < wsList.length; i++) {
+            if (wsList[i].is_active) return i;
+        }
+        return 0;
+    }
+
+    // Array of booleans representing slot occupancy for background pills
+    readonly property var occupiedSlots: {
+        let arr = [];
+        const wsList = outputWorkspaces;
+        const wins = Niri.windows;
+        for (let i = 0; i < GlobalConfig.bar.workspaces.shown; i++) {
+            let hasWindows = false;
+            let isActive = i === activeSlotIndex;
+            if (i < wsList.length) {
+                const ws = wsList[i];
+                for (let j = 0; j < wins.length; j++) {
+                    if (wins[j].workspace_id === ws.id) {
+                        hasWindows = true;
+                        break;
+                    }
+                }
+            }
+            arr.push(hasWindows || isActive);
+        }
+        return arr;
+    }
+
+    // Per-output occupied map: workspace number (idx+1) -> whether it has windows
+    readonly property var occupied: {
+        let map = {};
+        const wsList = outputWorkspaces;
+        const wins = Niri.windows;
+
+        // Mark workspaces that exist on this output
+        for (let i = 0; i < wsList.length; i++) {
+            const ws = wsList[i];
+            const wsNum = ws.idx;
+            let hasWindows = false;
+            for (let j = 0; j < wins.length; j++) {
+                if (wins[j].workspace_id === ws.id) {
+                    hasWindows = true;
+                    break;
+                }
+            }
+            map[wsNum.toString()] = hasWindows;
+        }
+        return map;
+    }
+
+    // Map of workspace number -> global workspace ID for click handling
+    readonly property var workspaceIdMap: {
+        let m = {};
+        const wsList = outputWorkspaces;
+        for (let i = 0; i < wsList.length; i++) {
+            m[(wsList[i].idx).toString()] = wsList[i].id;
+        }
+        return m;
+    }
+
+    // groupOffset stays 0 for per-output — workspaces on each output start at idx 0
+    readonly property int groupOffset: 0
+
+
 
     readonly property int focusedWindowId: Niri.focusedWindow?.id ?? -1
 
@@ -48,12 +128,7 @@ StyledRect {
 
         sourceComponent: OccupiedBg {
             workspaces: workspaces
-            occupied: {
-                let merged = Object.assign({}, root.occupied);
-                merged[root.activeWsId] = true;
-                return merged;
-            }
-            groupOffset: root.groupOffset
+            occupiedSlots: root.occupiedSlots
         }
     }
 
@@ -82,22 +157,6 @@ StyledRect {
         when: !root.dying
     }
 
-    //TODO, For Niri, workspace context menu on right click.
-    // Loader {
-    //     active: GlobalConfig.bar.workspaces.windowRighClickContext && Niri.wsContextType !== "none"
-    //     asynchronous: true
-    //     z: Niri.wsContextType === "item" ? 10 : 1
-
-    //     anchors.right: parent.right
-    //     anchors.rightMargin: -Appearance.padding.xs
-
-    //     sourceComponent: ContextIndicator {
-    //         groupOffset: root.groupOffset
-    //         wsOffset: root.y
-    //         anchorWs: Niri.wsContextAnchor
-    //     }
-    // }
-
     ColumnLayout {
         id: layout
 
@@ -113,12 +172,26 @@ StyledRect {
 
             model: GlobalConfig.bar.workspaces.shown
 
-            Workspace {
+            delegate: Workspace {
+                id: wsItem
+                virtualIdx: {
+                    const wsList = root.outputWorkspaces;
+                    const sIdx = wsItem.index;
+                    if (sIdx < wsList.length) {
+                        return wsList[sIdx].idx;
+                    } else if (wsList.length > 0) {
+                        return wsList[wsList.length - 1].idx + (sIdx - wsList.length + 1);
+                    } else {
+                        return sIdx;
+                    }
+                }
                 activeWsId: root.activeWsId
                 occupied: root.occupied
                 groupOffset: root.groupOffset
                 focusedWindowId: root.focusedWindowId
                 windowPopoutSignal: root
+                workspaceId: (wsItem.index < root.outputWorkspaces.length) ? root.outputWorkspaces[wsItem.index].id : -1
+                outputName: root.outputName
             }
         }
     }
@@ -131,6 +204,7 @@ StyledRect {
         asynchronous: true
 
         sourceComponent: ActiveIndicator {
+            activeSlotIndex: root.activeSlotIndex
             activeWsId: root.activeWsId
             workspaces: workspaces
             mask: layout
@@ -140,7 +214,7 @@ StyledRect {
 
     Loader {
         id: pager
-        active: GlobalConfig.bar.workspaces.pagerActive ?? true
+        active: Config.bar.workspaces.pagerActive ?? true
 
         anchors.top: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
@@ -148,8 +222,9 @@ StyledRect {
 
         sourceComponent: Pager {
             groupOffset: root.groupOffset
+            outputName: root.outputName
         }
     }
 
-    Component.onCompleted: console.log("Workspaces.qml completed successfully! shown count:", GlobalConfig.bar.workspaces.shown)
+    Component.onCompleted: console.log("Workspaces.qml completed successfully! output:", outputName, "workspaces:", outputWorkspaces.length)
 }

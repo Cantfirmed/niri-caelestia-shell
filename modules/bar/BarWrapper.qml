@@ -36,6 +36,14 @@ Item {
         (content.item as Bar)?.handleWheel(y, angleDelta);
     }
 
+    // Reactive clock position — updates when Bar loads
+    readonly property real clockY: content.item ? content.item.getClockY() : 0
+    readonly property real clockHeight: content.item ? content.item.getClockHeight() : 0
+
+    function getClockY(): real { return clockY; }
+    function getClockHeight(): real { return clockHeight; }
+    function isClockAtY(y: real): bool { return (content.item as Bar)?.isClockAtY(y) ?? false; }
+
     clip: true
     visible: width > Config.border.thickness
     implicitWidth: fullscreen ? 0 : Config.border.thickness

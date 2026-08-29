@@ -13,6 +13,32 @@ Item {
     implicitHeight: layout.implicitHeight
     Component.onCompleted: Weather.reload()
 
+    function getPrecipitationWarning(code: var): string {
+        if (code === undefined)
+            return "";
+        const c = parseInt(code);
+        if ([95, 96, 99].includes(c))
+            return qsTr("Expect storms today");
+        if ([71, 73, 75, 77, 85, 86].includes(c))
+            return qsTr("Expect snow today");
+        if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(c))
+            return qsTr("Expect rain today");
+        return "";
+    }
+
+    function getPrecipitationIcon(code: var): string {
+        if (code === undefined)
+            return "";
+        const c = parseInt(code);
+        if ([95, 96, 99].includes(c))
+            return "thunderstorm";
+        if ([71, 73, 75, 77, 85, 86].includes(c))
+            return "ac_unit";
+        if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(c))
+            return "umbrella";
+        return "";
+    }
+
     ColumnLayout {
         id: layout
 
@@ -86,7 +112,7 @@ Item {
 
                 ColumnLayout {
                     Layout.alignment: Qt.AlignVCenter
-                    spacing: -Tokens.spacing.small
+                    spacing: 0
 
                     StyledText {
                         text: Weather.temp
@@ -94,11 +120,43 @@ Item {
                         color: Colours.palette.m3primary
                     }
 
-                    StyledText {
+                    Column {
                         Layout.leftMargin: Tokens.padding.extraSmall
-                        text: Weather.description
-                        font: Tokens.font.body.medium
-                        color: Colours.palette.m3onSurfaceVariant
+                        spacing: Tokens.spacing.extraSmall / 2
+
+                        StyledText {
+                            text: Weather.description
+                            font: Tokens.font.body.medium
+                            color: Colours.palette.m3onSurfaceVariant
+                        }
+
+                        StyledText {
+                            text: {
+                                const todayData = root.today;
+                                return todayData ? qsTr("High %1 • Low %2").arg(Weather.formatTemp(todayData.maxTempC)).arg(Weather.formatTemp(todayData.minTempC)) : "";
+                            }
+                            font: Tokens.font.body.small
+                            color: Colours.palette.m3outline
+                        }
+
+                        RowLayout {
+                            visible: warningText !== ""
+                            spacing: Tokens.spacing.extraSmall
+
+                            readonly property string warningText: root.getPrecipitationWarning(root.today?.weatherCode)
+
+                            MaterialIcon {
+                                text: root.getPrecipitationIcon(root.today?.weatherCode)
+                                fontStyle: Tokens.font.icon.builders.small.scale(0.95).build()
+                                color: Colours.palette.m3tertiary
+                            }
+
+                            StyledText {
+                                text: parent.warningText
+                                font: Tokens.font.body.small
+                                color: Colours.palette.m3tertiary
+                            }
+                        }
                     }
                 }
             }
@@ -189,7 +247,7 @@ Item {
 
                         StyledText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: GlobalConfig.services.useFahrenheit ? forecastItem.modelData.maxTempF + "°" + " / " + forecastItem.modelData.minTempF + "°" : forecastItem.modelData.maxTempC + "°" + " / " + forecastItem.modelData.minTempC + "°"
+                            text: `${Weather.formatTemp(forecastItem.modelData.maxTempC).slice(0, -1)} / ${Weather.formatTemp(forecastItem.modelData.minTempC).slice(0, -1)}`
                             font: Tokens.font.body.builders.small.weight(Font.DemiBold).build()
                             color: Colours.palette.m3tertiary
                         }

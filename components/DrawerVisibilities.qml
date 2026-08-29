@@ -14,4 +14,5 @@ PersistentProperties {
     property bool wallpaperRequested
     property bool manga
     property bool novel
+    property bool calendar
 }

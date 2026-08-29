@@ -8,17 +8,13 @@ import QtQuick
 StyledRect {
     id: root
 
+    required property int activeSlotIndex
     required property int activeWsId
     required property Repeater workspaces
     required property Item mask
     required property int groupOffset
 
-    readonly property int currentWsIdx: {
-        let i = activeWsId - 1;
-        while (i < 0)
-            i += Config.bar.workspaces.shown;
-        return i % Config.bar.workspaces.shown;
-    }
+    readonly property int currentWsIdx: activeSlotIndex
     onCurrentWsIdxChanged: {
         lastWs = cWs;
         cWs = currentWsIdx;

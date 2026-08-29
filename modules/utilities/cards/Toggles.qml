@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Bluetooth
+import Quickshell.Io
 import Caelestia.Components
 import Caelestia.Config
 import qs.components
@@ -93,9 +94,9 @@ StyledRect {
                         icon: "bluetooth"
                         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
                         onClicked: {
-                            const adapter = Bluetooth.defaultAdapter; // qmllint disable unresolved-type
-                            if (adapter)
-                                adapter.enabled = !adapter.enabled;
+                            const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["rfkill", "toggle", "bluetooth"] }', root);
+                            proc.exited.connect(() => proc.destroy());
+                            proc.running = true;
                         }
                     }
                 }

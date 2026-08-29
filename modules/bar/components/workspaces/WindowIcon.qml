@@ -127,7 +127,7 @@ Item {
                 property int windowCount: iconItem.windowCount
                 size: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Tokens.sizes.bar.innerWidth * (Config.bar.workspaces.windowIconScale ?? 0.6)) : (Tokens.sizes.bar.innerWidth * (Config.bar.workspaces.windowIconScale ?? 0.6)) - Appearance.padding.xs
                 grade: 0
-                text: Icons.getAppCategoryIcon(windowData.app_id, "help_center")
+                text: Icons.getAppCategoryIcon(windowData?.app_id ?? "", "help_center")
                 color: (iconItem.isWsFocused ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant)
                 Behavior on size {
                     Anim {

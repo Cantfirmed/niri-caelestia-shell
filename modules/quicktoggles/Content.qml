@@ -129,9 +129,9 @@ Item {
                     icon: "bluetooth"
                     checked: Bluetooth.defaultAdapter?.enabled ?? false
                     onClicked: {
-                        const adapter = Bluetooth.defaultAdapter;
-                        if (adapter)
-                            adapter.enabled = !adapter.enabled;
+                        const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["rfkill", "toggle", "bluetooth"] }', root);
+                        proc.exited.connect(() => proc.destroy());
+                        proc.running = true;
                     }
                 }
 

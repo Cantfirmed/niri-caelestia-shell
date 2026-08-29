@@ -21,22 +21,24 @@ Region {
     readonly property real bottomOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.launcher && win.contentItem.Config.launcher.enabled && win.contentItem.Config.launcher.showOnHover) ? clampedThickness : 0, (win.contentItem.Config.utilities && win.contentItem.Config.utilities.enabled) ? clampedThickness : 0)
     readonly property real rightOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.osd && win.contentItem.Config.osd.enabled) ? clampedThickness : 0)
 
-    x: bar.clampedWidth + win.dragMaskPadding
+    readonly property real effectiveBarWidth: (bar.shouldBeVisible || bar.implicitWidth > (win.fullscreen ? 0 : win.contentItem.Config.border.thickness)) ? bar.contentWidth : bar.clampedWidth
+
+    x: effectiveBarWidth
     y: maskBorderThickness + topOffset
-    width: win.width - bar.clampedWidth - maskBorderThickness - win.dragMaskPadding - rightOffset
+    width: win.width - effectiveBarWidth - maskBorderThickness - rightOffset
     height: win.height - maskBorderThickness * 2 - topOffset - bottomOffset
     intersection: Intersection.Xor
 
     R {
         panel: root.panels.dashboard
         y: 0
-        height: panel.height * (1 - root.panels.dashboard.offsetScale) + root.maskClampedThickness
+        height: (root.panels.dashboard.offsetScale < 1 ? panel.height : 0) + root.maskClampedThickness
     }
 
     R {
         panel: root.panels.launcher
         y: root.win.height - height
-        height: panel.height * (1 - root.panels.launcher.offsetScale) + root.maskClampedThickness
+        height: (root.panels.launcher.offsetScale < 1 ? panel.height : 0) + root.maskClampedThickness
     }
 
     R {
@@ -44,7 +46,7 @@ Region {
 
         panel: root.panels.sessionWrapper
         x: root.win.width - width
-        width: panel.width * (1 - root.panels.session.offsetScale) + root.maskClampedThickness + sidebarRegion.width
+        width: (root.panels.session.offsetScale < 1 ? panel.width : 0) + root.maskClampedThickness + sidebarRegion.width
     }
 
     R {
@@ -52,13 +54,13 @@ Region {
 
         panel: root.panels.sidebar
         x: root.win.width - width
-        width: panel.width * (1 - root.panels.sidebar.offsetScale) + root.maskClampedThickness
+        width: (root.panels.sidebar.offsetScale < 1 ? panel.width : 0) + root.maskClampedThickness
     }
 
     R {
         panel: root.panels.osdWrapper
         x: root.win.width - width
-        width: panel.width * (1 - root.panels.osd.offsetScale) + root.maskClampedThickness + sessionRegion.width
+        width: (root.panels.osd.offsetScale < 1 ? panel.width : 0) + root.maskClampedThickness + sessionRegion.width
     }
 
     R {
@@ -70,12 +72,12 @@ Region {
     R {
         panel: root.panels.utilities
         y: root.win.height - height
-        height: panel.height * (1 - root.panels.utilities.offsetScale) + root.maskClampedThickness
+        height: (root.panels.utilities.offsetScale < 1 ? panel.height : 0) + root.maskClampedThickness
     }
 
     R {
         panel: root.panels.popoutsWrapper
-        width: panel.width * (1 - root.panels.popoutsWrapper.offsetScale)
+        width: root.panels.popoutsWrapper.offsetScale < 1 ? panel.width : 0
     }
 
     R {
@@ -96,6 +98,10 @@ Region {
         panel: root.panels.soundpanel
         width: panel.visible ? panel.width : 0
         height: panel.visible ? panel.height : 0
+    }
+
+    R {
+        panel: root.panels.calendar
     }
 
     // Right-side corner preservation — always punch through the Xor'd region

@@ -78,11 +78,8 @@ Item {
                         StateLayer {
                             anchors.fill: parent
                             color: active ? Colours.palette.m3primary : Colours.palette.m3onSurface
-                            opacity: active ? 0.12 : 0
                             
-                            function onClicked(): void {
-                                root.tabIndex = index
-                            }
+                            onClicked: root.tabIndex = index
                         }
 
                         RowLayout {
@@ -91,7 +88,7 @@ Item {
 
                             MaterialIcon {
                                 text: modelData.icon
-                                font.pointSize: Appearance.font.size.bodyLarge
+                                size: Appearance.font.size.bodyLarge
                                 color: active ? c.m3primary : c.m3onSurfaceVariant
                                 opacity: active ? 1 : 0.7
                                 Behavior on color { ColorAnimation { duration: 180 } }

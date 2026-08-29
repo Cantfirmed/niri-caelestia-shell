@@ -34,7 +34,7 @@ Singleton {
         var physical = [];
         for (var i = 0; i < Quickshell.screens.length; i++) {
             var screen = Quickshell.screens[i];
-            if (screen.name !== "") {
+            if (screen && screen.name && screen.name !== "") {
                 physical.push(screen);
             }
         }
@@ -43,7 +43,7 @@ Singleton {
             hasPhysicalScreens = true;
         } else {
             hasPhysicalScreens = false;
-            if (Quickshell.screens.length > 0) {
+            if (Quickshell.screens.length > 0 && Quickshell.screens[0]) {
                 activeScreens = [Quickshell.screens[0]];
             } else {
                 activeScreens = [];

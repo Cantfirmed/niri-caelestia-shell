@@ -26,6 +26,7 @@ Item {
     required property int ws
     required property int idx
     required property int groupOffset
+    required property string outputName
     required property Item windowPopoutSignal
 
     property bool isWsFocused: root.activeWsId === root.ws
@@ -35,19 +36,21 @@ Item {
     property int windowIconGap: GlobalConfig.bar.workspaces.windowIconGap ?? 5
 
     property var wsWindows: {
-        const wsIndex = root.idx + root.groupOffset + 1;
-        const niriWorkspace = Niri.currentOutputWorkspaces.find(w => w.idx === wsIndex);
+        const _ = Niri.windows;
+        const wsNum = root.ws;
+        const outputWsList = Niri.getWorkspacesForOutput(root.outputName);
+        const niriWorkspace = outputWsList.find(w => w.idx === wsNum);
         if (!niriWorkspace)
             return [];
         return Niri.getWindowsByWorkspaceId(niriWorkspace.id);
     }
 
     function updateGroupedWindowsModel() {
-        const wsIndex = root.idx + root.groupOffset + 1;
-        console.log("DraggableWindowColumn (idx:", root.idx, "ws:", root.ws, ") - wsIndex:", wsIndex, "currentOutputWorkspaces.length:", Niri.currentOutputWorkspaces.length);
-        const niriWorkspace = Niri.currentOutputWorkspaces.find(w => w.idx === wsIndex);
+        const wsNum = root.ws;
+        const outputWsList = Niri.getWorkspacesForOutput(root.outputName);
+        const niriWorkspace = outputWsList.find(w => w.idx === wsNum);
         if (!niriWorkspace) {
-            console.log("niriWorkspace is null for wsIndex:", wsIndex);
+            console.log("niriWorkspace is null for ws:", wsNum, "on output:", root.outputName);
             groupedWindowsModel.clear();
             root.groupedWindowsArray = [];
             return;
@@ -250,7 +253,7 @@ Item {
                 windowData: root.groupIconsByApp ? fullGroup.main : fullGroup
                 groupWindowData: root.groupIconsByApp ? (fullGroup.windows || []) : [fullGroup]
                 windowCount: root.groupIconsByApp ? fullGroup.count : 1
-                isFocused: root.groupIconsByApp ? fullGroup.windows.some(w => w.id === root.focusedWindowId) : root.focusedWindowId === fullGroup.id
+                isFocused: root.groupIconsByApp ? (fullGroup?.windows?.some(w => w?.id === root.focusedWindowId) ?? false) : root.focusedWindowId === fullGroup?.id
                 isWsFocused: root.isWsFocused
                 curWindowIndex: index
                 wsWindowCount: root.model ? root.model.count : 0

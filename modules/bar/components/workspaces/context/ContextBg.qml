@@ -18,7 +18,7 @@ Item {
     readonly property bool isWorkspaces: Niri.wsContextType === "workspaces"
     readonly property bool isWorkspace: Niri.wsContextType === "workspace"
     readonly property bool hasWindows: (isItem && anchorWs.wsWindowCount > 0) || (isWorkspace && anchorWs.isOccupied)
-    readonly property bool isFocused: (isItem && anchorWs.isWsFocused) || (isWorkspace && (Number(anchorWs.index) === Number(Niri.focusedWorkspaceIndex)))
+    readonly property bool isFocused: anchorWs.isWsFocused
 
     readonly property int rounding: Appearance.rounding.small
     readonly property int gPadding: isItem ? Appearance.padding.xs / 2 : 0

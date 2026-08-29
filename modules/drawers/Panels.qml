@@ -11,6 +11,7 @@ import qs.modules.session as Session
 import qs.modules.sidebar as Sidebar
 import qs.modules.utilities as Utilities
 import qs.modules.bar.popouts as BarPopouts
+import qs.modules.bar.calendar as BarCalendar
 import qs.modules.utilities.toasts as Toasts
 import qs.modules.manga as MangaModule
 import qs.modules.novel as NovelModule
@@ -41,6 +42,7 @@ Item {
     readonly property alias novel: novel
     readonly property alias displayselect: displayselect
     readonly property alias soundpanel: soundpanel
+    readonly property alias calendar: calendar
 
     anchors.fill: parent
     anchors.margins: borderThickness
@@ -158,7 +160,7 @@ Item {
         anchors.top: notifications.bottom
         anchors.bottom: utilities.top
         anchors.right: parent.right
-        anchors.topMargin: -notifications.anchors.topMargin
+        anchors.topMargin: 5
     }
 
     MangaModule.Wrapper {
@@ -186,5 +188,20 @@ Item {
     SoundPanel.Wrapper {
         id: soundpanel
         visibilities: root.visibilities
+    }
+
+    BarCalendar.CalendarPanel {
+        id: calendar
+
+        visibilities: root.visibilities
+
+        anchors.left: parent.left
+    }
+
+    Binding {
+        target: calendar
+        property: "y"
+        // Center calendar vertically on the clock
+        value: bar.clockY + (bar.clockHeight || 100) / 2 - calendar.implicitHeight / 2 - borderThickness
     }
 }

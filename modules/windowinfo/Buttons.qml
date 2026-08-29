@@ -87,7 +87,7 @@ ColumnLayout {
 
                     color: isCurrent ? Colours.tPalette.m3surfaceContainerHighest : Colours.palette.m3tertiaryContainer
                     onColor: isCurrent ? Colours.palette.m3onSurface : Colours.palette.m3onTertiaryContainer
-                    text: modelData.name || (wsIdx + 1).toString()
+                    text: modelData.name || wsIdx.toString()
                     disabled: isCurrent
                 }
             }

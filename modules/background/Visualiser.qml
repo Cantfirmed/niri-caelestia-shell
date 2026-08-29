@@ -46,7 +46,7 @@ Item {
             anchors.topMargin: root.offset
             anchors.bottomMargin: -root.offset
 
-            active: root.opacity > 0
+            active: root.opacity > 0 && root.shouldBeActive
 
             sourceComponent: Item {
                 ServiceRef {

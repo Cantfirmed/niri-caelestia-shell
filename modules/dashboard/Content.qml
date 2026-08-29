@@ -46,8 +46,8 @@ Item {
         return allTabs.filter(tab => tab.enabled);
     }
 
-    readonly property real nonAnimWidth: view.implicitWidth + viewWrapper.anchors.margins * 2
-    readonly property real nonAnimHeight: tabs.implicitHeight + tabs.anchors.topMargin + view.implicitHeight + viewWrapper.anchors.margins * 2
+    readonly property real nonAnimWidth: view.implicitWidth + Tokens.padding.large * 2
+    readonly property real nonAnimHeight: tabs.implicitHeight + CUtils.clamp(Tokens.padding.large - Config.border.thickness, 0, Tokens.padding.large) + view.implicitHeight + Tokens.padding.large * 2
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
@@ -61,7 +61,7 @@ Item {
         anchors.topMargin: CUtils.clamp(anchors.margins - Config.border.thickness, 0, anchors.margins)
         anchors.margins: Tokens.padding.large
 
-        nonAnimWidth: root.nonAnimWidth - anchors.margins * 2
+        nonAnimWidth: root.nonAnimWidth - Tokens.padding.large * 2
         dashState: root.dashState
         tabs: root.dashboardTabs
     }

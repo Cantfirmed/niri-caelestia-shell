@@ -22,6 +22,7 @@ CustomMouseArea {
     property bool dashboardShortcutActive
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
+    property bool calendarShortcutActive
 
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
         const panelY = root.borderThickness + panel.y;
@@ -34,20 +35,26 @@ CustomMouseArea {
     }
 
     function inLeftPanel(panel: Item, x: real, y: real): bool {
-        return x < bar.implicitWidth + panel.x + panel.width && withinPanelHeight(panel, x, y);
+        const isOpen = (panel.offsetScale ?? 1) < 1;
+        const panelWidth = isOpen ? panel.width : 0;
+        return x < bar.implicitWidth + panelWidth && withinPanelHeight(panel, x, y);
     }
 
     function inRightPanel(panel: Item, x: real, y: real): bool {
-        return x > Math.min(width - Config.border.minThickness, bar.implicitWidth + panel.x) && withinPanelHeight(panel, x, y);
+        const isOpen = (panel.offsetScale ?? 1) < 1;
+        const panelX = isOpen ? width - panel.width : panel.x;
+        return x > Math.min(width - Config.border.minThickness, bar.implicitWidth + panelX) && withinPanelHeight(panel, x, y);
     }
 
     function inTopPanel(panel: Item, x: real, y: real): bool {
-        const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
+        const isOpen = (panel.offsetScale ?? 1) < 1;
+        const panelHeight = isOpen ? panel.height : 0;
         return y < Math.max(Config.border.minThickness, Config.border.thickness + panelHeight) && withinPanelWidth(panel, x, y);
     }
 
     function inBottomPanel(panel: Item, x: real, y: real, isCorner = false): bool {
-        const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
+        const isOpen = (panel.offsetScale ?? 1) < 1;
+        const panelHeight = isOpen ? panel.height : 0;
         return y > height - Math.max(Config.border.minThickness, Config.border.thickness + panelHeight) - (isCorner ? Config.border.rounding : 0) && withinPanelWidth(panel, x, y);
     }
 
@@ -77,6 +84,10 @@ function onWheel(event: WheelEvent): void {
 
             if (!utilitiesShortcutActive)
                 visibilities.utilities = false;
+
+            if (!calendarShortcutActive)
+                visibilities.calendar = false;
+
 
             if (!popouts.currentName.startsWith("traymenu") || ((popouts.current as StackView)?.depth ?? 0) <= 1) {
                 popouts.hasCurrent = false;
@@ -202,7 +213,31 @@ function onWheel(event: WheelEvent): void {
                 visibilities.dashboard = false;
         }
 
+        // Show calendar on hover over clock in bar
+        const inClock = x < bar.implicitWidth && bar.isClockAtY(y);
+        // Calendar is anchored left of Panels, not right-edge like OSD.
+        // Must check panel.visible because the slide animation positions it
+        // off-screen when hidden, but its width still contributes to bounds.
+        const inCalendar = panels.calendar.visible
+            && x >= bar.implicitWidth && x <= bar.implicitWidth + panels.calendar.width
+            && withinPanelHeight(panels.calendar, x, y);
+        const oldVis = visibilities.calendar;
+
+        if (!calendarShortcutActive) {
+            visibilities.calendar = inClock || inCalendar;
+        } else if (inClock || inCalendar) {
+            calendarShortcutActive = false;
+            visibilities.calendar = true;
+        } else {
+            visibilities.calendar = false;
+        }
+
+        if (visibilities.calendar !== oldVis)
+            console.log("[Calendar] VIS:", oldVis, "->", visibilities.calendar, "inCk:", inClock, "inCal:", inCalendar, "x:", Math.round(x), "y:", Math.round(y), "barW:", bar.implicitWidth, "calW:", Math.round(panels.calendar.width), "calH:", Math.round(panels.calendar.height));
+
 // Show utilities on hover
+
+
         const showUtilities = inBottomPanel(panels.utilities, x, y, true);
 
         // Always update visibility based on hover if not in shortcut mode
@@ -230,7 +265,7 @@ function onWheel(event: WheelEvent): void {
                 root.dashboardShortcutActive = false;
                 root.osdShortcutActive = false;
                 root.utilitiesShortcutActive = false;
-
+                root.calendarShortcutActive = false;
                 // Also hide panels if they're not being hovered
                 const inDashboardArea = root.inTopPanel(root.panels.dashboard, root.mouseX, root.mouseY);
                 const inOsdArea = root.inRightPanel(root.panels.osdWrapper, root.mouseX, root.mouseY);
@@ -281,8 +316,25 @@ function onWheel(event: WheelEvent): void {
             } else {
                 // Utilities hidden, clear shortcut flag
                 root.utilitiesShortcutActive = false;
+
             }
         }
+
+        function onCalendarChanged() {
+            if (root.visibilities.calendar) {
+                // Calendar became visible, immediately check if this should be shortcut mode
+                const inClock = root.mouseX < root.bar.implicitWidth
+                    && root.mouseY >= root.bar.getClockY()
+                    && root.mouseY <= root.bar.getClockY() + root.bar.getClockHeight();
+                if (!inClock) {
+                    root.calendarShortcutActive = true;
+                }
+            } else {
+                // Calendar hidden, clear shortcut flag
+                root.calendarShortcutActive = false;
+            }
+        }
+
 
         target: root.visibilities
     }

@@ -71,6 +71,7 @@ StyledWindow {
         return Math.max(...thresholds);
     }
 
+
     onHasFullscreenChanged: {
         visibilities.launcher = false;
         visibilities.session = false;
@@ -269,6 +270,13 @@ StyledWindow {
                 Anim {}
             }
         }
+
+        PanelBg {
+            id: calendarBg
+
+            panel: panels.calendar
+            deformAmount: 0.15
+        }
     }
 
     DrawerVisibilities {
@@ -324,6 +332,9 @@ StyledWindow {
             }
             popouts.transform: Matrix4x4 {
                 matrix: popoutBg.deformMatrix
+            }
+            calendar.transform: Matrix4x4 {
+                matrix: calendarBg.deformMatrix
             }
         }
 

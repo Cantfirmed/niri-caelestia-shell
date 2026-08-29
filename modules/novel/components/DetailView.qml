@@ -235,7 +235,7 @@ Item {
                     RowLayout {
                         anchors.centerIn: parent
                         spacing: 4
-                        MaterialIcon { text: "history"; font.pointSize: 14; color: c.m3onPrimaryContainer }
+                        MaterialIcon { text: "history"; size: 14; color: c.m3onPrimaryContainer }
                         StyledText {
                             id: lastReadText
                             text: {
@@ -288,7 +288,7 @@ Item {
 
                         MaterialIcon {
                             text: "search"
-                            font.pointSize: 20
+                            size: 20
                             color: c.m3primary
                             opacity: 0.7
                         }
@@ -373,7 +373,7 @@ Item {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: isLastRead ? Qt.alpha(c.m3primary, 0.08) : "transparent"
+                        color: isLastRead ? Qt.alpha(c.m3primary, 0.08) : c.m3surfaceContainerHigh
                     }
 
                     StateLayer {

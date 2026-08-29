@@ -6,6 +6,7 @@ import Caelestia.Config
 import qs.components
 import qs.components.controls
 import qs.modules.nexus.common
+import qs.services
 
 PageBase {
     id: root
@@ -194,6 +195,32 @@ PageBase {
             to: 5.0
             stepSize: 0.1
             onMoved: v => GlobalConfig.background.visualiser.spacing = v
+        }
+
+        // Window Layout
+        SectionHeader {
+            text: qsTr("Window Layout")
+        }
+
+        ToggleRow {
+            Layout.fillWidth: true
+            first: true
+            text: qsTr("Window gaps")
+            subtext: qsTr("Enable spacing around windows (turn off to align flush with the left bar)")
+            checked: Niri.gapsEnabled
+            onToggled: Niri.setGaps(checked ? 20 : 0)
+        }
+
+        StepperRow {
+            Layout.fillWidth: true
+            last: true
+            label: qsTr("Gap size")
+            subtext: qsTr("Size of the gaps in pixels (set to 0 for flush alignment)")
+            value: Niri.gaps
+            from: 0
+            to: 60
+            stepSize: 2
+            onMoved: v => Niri.setGaps(Math.round(v))
         }
     }
 }

@@ -11,10 +11,10 @@ StyledRect {
     readonly property bool showForecast: rootHeight >= Tokens.sizes.lock.showForecastHeight
 
     implicitHeight: {
-        const base = brief.implicitHeight + brief.anchors.topMargin;
+        const base = brief.implicitHeight + Tokens.padding.extraLarge;
         if (showForecast)
-            return base + Tokens.spacing.largeIncreased + forecast.implicitHeight + forecast.anchors.margins;
-        return base + brief.anchors.topMargin;
+            return base + Tokens.spacing.largeIncreased + forecast.implicitHeight + Tokens.padding.large;
+        return base + Tokens.padding.extraLarge;
     }
     radius: Tokens.rounding.extraExtraLarge
     color: Colours.tPalette.m3surfaceContainer

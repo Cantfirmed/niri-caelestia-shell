@@ -1,4 +1,4 @@
-spawn-sh-at-startup "qs -c niri-caelestia-shell"
+spawn-sh-at-startup "~/.config/niri_caelestia/scripts/launch-quickshell.sh"
 
 binds {
 

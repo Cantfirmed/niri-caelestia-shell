@@ -26,9 +26,7 @@ StyledRect {
         radius: root.radius
         color: selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
 
-        function onClicked(): void {
-            root.clicked();
-        }
+        onClicked: root.clicked()
     }
 
     RowLayout {
@@ -43,7 +41,7 @@ StyledRect {
         MaterialIcon {
             visible: root.icon.length > 0
             text: root.icon
-            font.pointSize: Appearance.font.size.labelLarge
+            size: Appearance.font.size.labelLarge
             color: selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
         }
 
@@ -56,7 +54,7 @@ StyledRect {
         MaterialIcon {
             visible: root.closable
             text: "close"
-            font.pointSize: Appearance.font.size.labelLarge
+            size: Appearance.font.size.labelLarge
             color: selected ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurfaceVariant
 
             MouseArea {

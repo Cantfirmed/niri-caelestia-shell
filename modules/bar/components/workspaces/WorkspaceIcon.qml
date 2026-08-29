@@ -45,8 +45,9 @@ Item {
                 text: {
                     //TODO: Add config option to choose between name/number/both for workspaces
 
-                    const wsName = Niri.getWorkspaceNameByIndex(root.workspace.index) || (root.workspace.ws);
-                    const label = Config.bar.workspaces.label || root.workspace.ws;
+                    const _ = Niri.allWorkspaces;
+                    const wsName = root.workspace.workspaceId > 0 ? Niri.getWorkspaceNameById(root.workspace.workspaceId) : "";
+                    const label = wsName || root.workspace.ws;
                     const occupiedLabel = Config.bar.workspaces.occupiedLabel || label;
                     const activeLabel = Config.bar.workspaces.activeLabel || (root.workspace.isOccupied ? occupiedLabel : label);
                     return root.workspace.activeWsId === root.workspace.ws ? activeLabel : root.workspace.isOccupied ? occupiedLabel : label;
@@ -70,7 +71,10 @@ Item {
 
                 font.pointSize: Tokens.font.body.small.pointSize * (Config.bar.workspaces.workspaceIconScale ?? 1.0)
                 font.family: Appearance.font.family.mono
-                text: Niri.getWorkspaceNameByIndex(root.workspace.index) || "Workspace " + (root.workspace.index + 1)
+                text: {
+                    const _ = Niri.allWorkspaces;
+                    return root.workspace.workspaceId > 0 ? Niri.getWorkspaceNameById(root.workspace.workspaceId) : "Workspace " + (root.workspace.ws)
+                }
             }
         }
 
@@ -97,9 +101,9 @@ Item {
 
         onClicked: mouse => {
             if (mouse.button === Qt.LeftButton) {
-                const wsArrayIndex = root.workspace.index + root.workspace.groupOffset;
-                if (Niri.focusedWorkspaceIndex !== wsArrayIndex)
-                    Niri.switchToWorkspaceByIndex(wsArrayIndex);
+                const targetId = root.workspace.workspaceId;
+                if (targetId > 0)
+                    Niri.switchToWorkspaceById(targetId);
                 return;
             }
         }

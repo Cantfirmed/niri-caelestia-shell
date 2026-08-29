@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia
+import Caelestia.Internal
 import qs.services
 import qs.modules.nexus
 import Caelestia.Config
@@ -132,12 +133,9 @@ Scope {
         target: "display"
 
         function open(): void {
-            if (!root.hasExternalMonitor) {
-                Toaster.toast(qsTr("Display Switcher"), qsTr("No external display connected"), "desktop_windows", Toast.Warning);
-                return;
-            }
             const visibilities = Visibilities.getForActive();
             if (visibilities) {
+                NiriIpc.fetchOutputs(); // Refresh outputs on opening
                 visibilities.displaySelect = true;
             }
         }
@@ -152,9 +150,8 @@ Scope {
         function toggle(): void {
             const visibilities = Visibilities.getForActive();
             if (visibilities) {
-                if (!visibilities.displaySelect && !root.hasExternalMonitor) {
-                    Toaster.toast(qsTr("Display Switcher"), qsTr("No external display connected"), "desktop_windows", Toast.Warning);
-                    return;
+                if (!visibilities.displaySelect) {
+                    NiriIpc.fetchOutputs(); // Refresh outputs on opening
                 }
                 visibilities.displaySelect = !visibilities.displaySelect;
             }
@@ -183,14 +180,34 @@ Scope {
     // Helper property to check for external monitors
     readonly property bool hasExternalMonitor: {
         const outputs = Niri.outputs;
+        console.log("Shortcuts.qml: hasExternalMonitor eval. outputs keys:", outputs ? Object.keys(outputs) : "null");
         if (!outputs) return false;
         for (const connector in outputs) {
             const lower = connector.toLowerCase();
+            console.log("Shortcuts.qml: checking connector:", connector, "lower:", lower);
             if (!lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi")) {
+                console.log("Shortcuts.qml: detected external monitor:", connector);
                 return true;
             }
         }
+        console.log("Shortcuts.qml: no external monitor detected.");
         return false;
+    }
+
+    IpcHandler {
+        target: "niriLayout"
+
+        function toggleGaps(): void {
+            Niri.toggleGaps();
+        }
+
+        function setGaps(val: int): void {
+            Niri.setGaps(val);
+        }
+
+        function getGaps(): int {
+            return Niri.gaps;
+        }
     }
 
     LoggingCategory {

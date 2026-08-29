@@ -18,7 +18,7 @@ Item {
 
     readonly property alias count: bar.count
 
-    implicitHeight: bar.implicitHeight + bar.anchors.topMargin + indicator.implicitHeight + indicator.anchors.topMargin + separator.implicitHeight
+    implicitHeight: bar.implicitHeight + Tokens.sizes.dashboard.tabIndicatorSpacing + indicator.implicitHeight + 5 + separator.implicitHeight
 
     TabBar {
         id: bar

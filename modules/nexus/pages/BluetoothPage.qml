@@ -33,8 +33,9 @@ PageBase {
             horizontalPadding: Tokens.padding.largeIncreased
             checked: root.btEnabled
             onToggled: {
-                if (root.adapter)
-                    root.adapter.enabled = checked;
+                const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["rfkill", "toggle", "bluetooth"] }', root);
+                proc.exited.connect(() => proc.destroy());
+                proc.running = true;
             }
         }
 

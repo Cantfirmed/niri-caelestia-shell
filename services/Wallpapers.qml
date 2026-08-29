@@ -122,6 +122,12 @@ Searcher {
         recursive: true
         path: Paths.wallsdir
         filter: FileSystemModel.Images
+
+        onEntriesChanged: {
+            let temp = root.key;
+            root.key = "";
+            root.key = temp;
+        }
     }
 
     Process {

@@ -95,7 +95,7 @@
     },
     "visualiser": {
       "enabled": true,
-      "autoHide": false,
+      "autoHide": true,
       "blur": false,
       "rounding": 1,
       "spacing": 1
@@ -221,7 +221,8 @@
   },
   "border": {
     "thickness": 5,
-    "rounding": 25
+    "rounding": 25,
+    "smoothing": 5
   },
   "dashboard": {
     "enabled": true,

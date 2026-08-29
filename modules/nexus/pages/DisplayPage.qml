@@ -260,7 +260,7 @@ Item {
         for (let i = 0; i < localOutputs.length; i++) {
             const out = localOutputs[i];
             if (!out.active) continue;
-            root.runCmd("niri msg output " + out.connector + " position " + out.x + " " + out.y);
+            root.runCmd("niri msg output " + out.connector + " position set " + out.x + " " + out.y);
         }
     }
 
@@ -269,13 +269,18 @@ Item {
         const res = [];
         const outputs = Niri.outputs;
         if (!outputs) {
+            console.log("DisplayPane: Niri.outputs is null/undefined");
             root.outputsArray = res;
             root.initializeLocalOutputs();
             return;
         }
+
+        const keys = Object.keys(outputs);
+        console.log("DisplayPane: output keys:", JSON.stringify(keys));
         
         for (const connector in outputs) {
             const out = outputs[connector];
+            console.log("DisplayPane: processing output", connector, "logical:", JSON.stringify(out.logical));
             const currentModeIdx = out.current_mode;
             const currentMode = out.modes && out.modes[currentModeIdx] ? out.modes[currentModeIdx] : null;
             
@@ -309,6 +314,7 @@ Item {
             };
             res.push(item);
         }
+        console.log("DisplayPane: outputsArray built, count:", res.length, JSON.stringify(res.map(o => o.connector + " active:" + o.active)));
         root.outputsArray = res;
         root.initializeLocalOutputs();
     }
@@ -557,6 +563,7 @@ Item {
                                     }
                                     
                                     Repeater {
+                                        id: canvasRepeater
                                         model: root.localOutputs
                                         
                                         delegate: Rectangle {
@@ -614,52 +621,76 @@ Item {
                                                     elide: Text.ElideRight
                                                 }
                                             }
-                                            
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.OpenHandCursor
-                                                
-                                                property real dragStartX
-                                                property real dragStartY
-                                                property real dragStartLogicalX
-                                                property real dragStartLogicalY
-                                                
-                                                onPressed: (mouse) => {
-                                                    cursorShape = Qt.ClosedHandCursor;
-                                                    root.selectedIndex = index;
-                                                    dragStartX = mouse.x;
-                                                    dragStartY = mouse.y;
-                                                    dragStartLogicalX = modelData.x;
-                                                    dragStartLogicalY = modelData.y;
-                                                    root.freezeMapping();
-                                                }
-                                                
-                                                onPositionChanged: (mouse) => {
-                                                    if (pressed) {
-                                                        const dx = mouse.x - dragStartX;
-                                                        const dy = mouse.y - dragStartY;
-                                                        const dxLogical = dx / root.currentScale;
-                                                        const dyLogical = dy / root.currentScale;
-                                                        
-                                                        let newX = dragStartLogicalX + dxLogical;
-                                                        let newY = dragStartLogicalY + dyLogical;
-                                                        
-                                                        if (root.enableSnapping) {
-                                                            const snapped = root.snapPosition(index, newX, newY);
-                                                            newX = snapped.x;
-                                                            newY = snapped.y;
-                                                        }
-                                                        
-                                                        root.updateLocalPosition(index, newX, newY);
-                                                    }
-                                                }
-                                                
-                                                onReleased: {
-                                                    cursorShape = Qt.OpenHandCursor;
-                                                    root.unfreezeMapping();
+                                        }
+                                    }
+
+                                    // ── Canvas-wide drag handler ──
+                                    // Single MouseArea covering the entire canvas to avoid losing the
+                                    // drag grab when the cursor leaves a small monitor rectangle.
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: dragIndex >= 0 ? Qt.ClosedHandCursor : Qt.ArrowCursor
+
+                                        property int dragIndex: -1
+                                        property real dragStartX
+                                        property real dragStartY
+                                        property real dragStartLogicalX
+                                        property real dragStartLogicalY
+
+                                        function hitTest(mx: real, my: real): int {
+                                            // Iterate children in reverse (topmost first) to find which
+                                            // monitor rectangle the cursor landed on.
+                                            for (let i = canvasRepeater.count - 1; i >= 0; i--) {
+                                                const item = canvasRepeater.itemAt(i);
+                                                if (!item || !item.visible || !item.modelData.active) continue;
+                                                if (mx >= item.x && mx <= item.x + item.width &&
+                                                    my >= item.y && my <= item.y + item.height) {
+                                                    return i;
                                                 }
                                             }
+                                            return -1;
+                                        }
+
+                                        onPressed: (mouse) => {
+                                            const idx = hitTest(mouse.x, mouse.y);
+                                            if (idx < 0) return;  // didn't click on a monitor
+
+                                            dragIndex = idx;
+                                            root.selectedIndex = idx;
+
+                                            const out = root.localOutputs[idx];
+                                            dragStartX = mouse.x;
+                                            dragStartY = mouse.y;
+                                            dragStartLogicalX = out.x;
+                                            dragStartLogicalY = out.y;
+
+                                            root.freezeMapping();
+                                        }
+
+                                        onPositionChanged: (mouse) => {
+                                            if (dragIndex < 0) return;
+
+                                            const dx = mouse.x - dragStartX;
+                                            const dy = mouse.y - dragStartY;
+                                            const dxLogical = dx / root.currentScale;
+                                            const dyLogical = dy / root.currentScale;
+
+                                            let newX = Math.round(dragStartLogicalX + dxLogical);
+                                            let newY = Math.round(dragStartLogicalY + dyLogical);
+
+                                            if (root.enableSnapping) {
+                                                const snapped = root.snapPosition(dragIndex, newX, newY);
+                                                newX = Math.round(snapped.x);
+                                                newY = Math.round(snapped.y);
+                                            }
+
+                                            root.updateLocalPosition(dragIndex, newX, newY);
+                                        }
+
+                                        onReleased: {
+                                            dragIndex = -1;
+                                            root.unfreezeMapping();
                                         }
                                     }
                                 }

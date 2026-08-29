@@ -93,42 +93,15 @@ PageBase {
         }
 
         // Placeholder until the map-based location picker lands
-        ConnectedRect {
+        InputRow {
             Layout.fillWidth: true
             first: true
             last: true
-            implicitHeight: comingSoon.implicitHeight + Tokens.padding.extraLarge * 2
-
-            ColumnLayout {
-                id: comingSoon
-
-                anchors.centerIn: parent
-                width: parent.width - Tokens.padding.largeIncreased * 2
-                spacing: Tokens.padding.extraSmall
-
-                MaterialIcon {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "map"
-                    color: Colours.palette.m3outlineVariant
-                    font: Tokens.font.icon.extraLarge
-                }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("Location picker coming soon")
-                    color: Colours.palette.m3outlineVariant
-                    font: Tokens.font.title.small
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    text: qsTr("Choose your weather location on a map in a future update")
-                    color: Colours.palette.m3outlineVariant
-                    font: Tokens.font.body.small
-                }
-            }
+            label: qsTr("Location")
+            subtext: Weather.city ? qsTr("Active: %1. Enter city or coords (e.g. 'London, UK' or '51.5,-0.1'). Empty for auto-detect.").arg(Weather.city) : qsTr("Enter city/coords or leave empty for auto-detect.")
+            placeholderText: qsTr("Auto-detect")
+            text: GlobalConfig.services.weatherLocation
+            onEditingFinished: text => GlobalConfig.services.weatherLocation = text
         }
 
         // Units

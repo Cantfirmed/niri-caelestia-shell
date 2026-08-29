@@ -24,6 +24,7 @@ Item {
         spacing: Tokens.spacing.extraLarge
 
         CoverVisualiser {
+            visibilities: root.visibilities
             Layout.fillHeight: true
             implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
         }
@@ -137,6 +138,7 @@ Item {
                     spacing: Tokens.spacing.extraLarge
 
                     Details {
+                        visibilities: root.visibilities
                         Layout.fillWidth: true
                     }
 

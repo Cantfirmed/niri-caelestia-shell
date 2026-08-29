@@ -165,6 +165,9 @@ Popup {
 
     // Monitor hover state
     Connections {
+        target: root.target
+        ignoreUnknownSignals: true
+
         function onHoveredChanged() {
             if (target.hovered) {
                 showTimer.start();
@@ -178,7 +181,5 @@ Popup {
                 tooltipVisible = false;
             }
         }
-
-        target: root.target
     }
 }

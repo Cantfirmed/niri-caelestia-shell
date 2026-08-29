@@ -37,7 +37,7 @@ Item {
                 MaterialIcon {
                     Layout.alignment: Qt.AlignHCenter
                     text: "library_books"
-                    font.pointSize: 64
+                    size: 64
                     color: c.m3outline
                     opacity: 0.3
                 }
@@ -125,7 +125,7 @@ Item {
                                 MaterialIcon {
                                     anchors.centerIn: parent
                                     text: "image"
-                                    font.pointSize: 32
+                                    size: 32
                                     color: c.m3outline
                                     opacity: 0.3
                                 }
@@ -143,7 +143,7 @@ Item {
 
                                 MaterialIcon {
                                     text: modelData.lastReadChapterNum ? "play_arrow" : "pause"
-                                    font.pointSize: 14
+                                    size: 14
                                     color: modelData.lastReadChapterNum ? c.m3primary : c.m3outline
                                 }
 

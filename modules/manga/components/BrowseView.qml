@@ -53,7 +53,7 @@ Item {
                     MaterialIcon {
                         text: "auto_stories"
                         color: c.m3primary
-                        font.pointSize: Appearance.font.size.headlineLarge
+                        size: Appearance.font.size.headlineLarge
                     }
 
                     StyledText {
@@ -83,7 +83,7 @@ Item {
 
                         MaterialIcon {
                             text: "search"
-                            font.pointSize: 20
+                            size: 20
                             color: c.m3primary
                             opacity: 0.7
                         }
@@ -240,7 +240,7 @@ Item {
                     MaterialIcon {
                         Layout.alignment: Qt.AlignHCenter
                         text: "error"
-                        font.pointSize: 48
+                        size: 48
                         color: c.m3error
                     }
                     
@@ -318,7 +318,7 @@ Item {
                                     MaterialIcon {
                                         anchors.centerIn: parent
                                         text: "image"
-                                        font.pointSize: 32
+                                        size: 32
                                         color: c.m3outline
                                         opacity: 0.3
                                     }

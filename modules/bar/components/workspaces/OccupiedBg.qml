@@ -10,32 +10,28 @@ Item {
     id: root
 
     required property Repeater workspaces
-    required property var occupied
-    required property int groupOffset
+    required property var occupiedSlots
 
     property list<var> pills: []
 
-    onGroupOffsetChanged: buildPills()
-    onOccupiedChanged: buildPills()
+    onOccupiedSlotsChanged: buildPills()
 
     function buildPills() {
         let count = 0;
-        const start = groupOffset;
-        const end = start + Config.bar.workspaces.shown;
-        for (const [wsStr, occ] of Object.entries(occupied)) {
-            const ws = Number(wsStr);
-            if (ws > start && ws <= end && occ) {
-                if (!occupied[(ws - 1).toString()]) {
+        const len = Config.bar.workspaces.shown;
+        for (let i = 0; i < len; i++) {
+            if (occupiedSlots[i]) {
+                if (i === 0 || !occupiedSlots[i - 1]) {
                     if (pills[count])
-                        pills[count].start = ws;
+                        pills[count].start = i;
                     else
                         pills.push(pillComp.createObject(root, {
-                            start: ws
+                            start: i
                         }));
                     count++;
                 }
-                if (!occupied[(ws + 1).toString()])
-                    pills[count - 1].end = ws;
+                if (i === len - 1 || !occupiedSlots[i + 1])
+                    pills[count - 1].end = i;
             }
         }
         if (pills.length > count)
@@ -52,15 +48,9 @@ Item {
 
             required property var modelData
 
-            readonly property Workspace start: root.workspaces.itemAt(getWsIdx(modelData.start)) ?? null
-            readonly property Workspace end: root.workspaces.itemAt(getWsIdx(modelData.end)) ?? null
+            readonly property Workspace start: root.workspaces.itemAt(modelData.start) ?? null
+            readonly property Workspace end: root.workspaces.itemAt(modelData.end) ?? null
             property bool isContextActiveInWs: Niri.wsContextType === "workspaces" && Niri.wsContextAnchor
-            function getWsIdx(ws: int): int {
-                let i = ws - 1;
-                while (i < 0)
-                    i += Config.bar.workspaces.shown;
-                return i % Config.bar.workspaces.shown;
-            }
 
             anchors {
                 // horizontalCenter: root.horizontalCenter

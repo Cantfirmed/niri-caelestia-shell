@@ -36,7 +36,7 @@ Item {
 
     clip: true
     implicitWidth: Math.max(icon.implicitWidth, current.implicitHeight)
-    implicitHeight: icon.implicitHeight + current.implicitWidth + current.anchors.topMargin
+    implicitHeight: icon.implicitHeight + current.implicitWidth + Tokens.spacing.small
 
     Loader {
         asynchronous: true

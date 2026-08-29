@@ -127,7 +127,7 @@ Item {
             MaterialIcon {
                 Layout.alignment: Qt.AlignHCenter
                 text: "error"
-                font.pointSize: 48
+                size: 48
                 color: c.m3error
             }
             

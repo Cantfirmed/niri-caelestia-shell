@@ -7,12 +7,39 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
+import Caelestia.Internal
 import qs.components
 import qs.services
 
 ColumnLayout {
     id: root
 
+
+    function getClockY(): real {
+        const count = repeater.count;
+        for (let i = 0; i < count; i++) {
+            const item = repeater.itemAt(i);
+            if (item?.id === "clock" && item.enabled)
+                return item.y;
+        }
+        return vPadding; // fallback
+    }
+
+    function getClockHeight(): real {
+        const count = repeater.count;
+        for (let i = 0; i < count; i++) {
+            const item = repeater.itemAt(i);
+            if (item?.id === "clock" && item.enabled && item.item)
+                return item.item.implicitHeight;
+        }
+        return 100; // fallback
+    }
+
+    // Checks if the mouse Y is directly over the clock item (not just within range)
+    function isClockAtY(y: real): bool {
+        const ch = childAt(width / 2, y) as WrappedLoader;
+        return ch?.enabled && ch?.id === "clock";
+    }
     required property ShellScreen screen
     required property DrawerVisibilities visibilities
     required property BarPopouts.Wrapper popouts
@@ -126,6 +153,7 @@ ColumnLayout {
                 roleValue: "workspaces"
                 delegate: WrappedLoader {
                     sourceComponent: Workspaces {
+                        outputName: root.screen.name
                     }
                 }
             }

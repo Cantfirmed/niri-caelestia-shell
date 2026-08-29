@@ -40,7 +40,9 @@ Singleton {
             } else {
                 fetchCoordsFromCity(configLocation);
             }
-        } else if (!loc || timer.elapsed() > 900) {
+        } else {
+            loc = "";
+            city = "";
             Requests.get("https://ipinfo.io/json", text => {
                 const response = JSON.parse(text);
                 if (response.loc) {

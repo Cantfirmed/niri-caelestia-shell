@@ -21,6 +21,7 @@ https://github.com/user-attachments/assets/0840f496-575c-4ca6-83a8-87bb01a85c5f
 -   Widgets: [`Quickshell`](https://quickshell.outfoxxed.me)
 -   Window manager: [`Niri`](https://github.com/YaLTeR/niri)
 -   Dots: [`caelestia`](https://github.com/caelestia-dots)
+-   **Display Options (Alpha):** Drag-and-drop monitor arrangement in Nexus settings (position, scale, resolution). Currently in alpha — may have rough edges with multi-monitor hotplug.
 
 ## Installation
 

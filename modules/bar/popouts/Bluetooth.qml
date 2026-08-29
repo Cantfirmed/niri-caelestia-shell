@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Bluetooth
+import Quickshell.Io
 import Caelestia.Config
 import qs.components
 import qs.components.controls
@@ -12,7 +13,6 @@ import qs.utils
 
 ColumnLayout {
     id: root
-
     required property PopoutState popouts
 
     width: 300
@@ -29,9 +29,9 @@ ColumnLayout {
         label: qsTr("Enabled")
         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
         toggle.onToggled: {
-            const adapter = Bluetooth.defaultAdapter; // qmllint disable unresolved-type
-            if (adapter)
-                adapter.enabled = checked;
+            const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["rfkill", "toggle", "bluetooth"] }', root);
+            proc.exited.connect(() => proc.destroy());
+            proc.running = true;
         }
     }
 

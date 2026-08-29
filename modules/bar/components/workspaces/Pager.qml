@@ -9,13 +9,27 @@ StyledRect {
     anchors.horizontalCenter: parent.horizontalCenter
 
     required property int groupOffset
+    required property string outputName
+
+    readonly property var outputWorkspaces: {
+        const _ = Niri.allWorkspaces;
+        return Niri.getWorkspacesForOutput(outputName);
+    }
 
     Component.onCompleted: active = true
     property bool active: false
-    property bool entered: Config.bar.workspaces.shown < Niri.getWorkspaceCount() && active
+    property bool entered: GlobalConfig.bar.workspaces.shown < outputWorkspaces.length && active
 
-    readonly property int wsCount: Niri.getWorkspaceCount()
-    readonly property int focusedIdx: Niri.focusedWorkspaceIndex
+    property bool dying: false
+    Component.onDestruction: dying = true
+
+    readonly property int wsCount: outputWorkspaces.length
+    readonly property int focusedIdx: {
+        for (let i = 0; i < outputWorkspaces.length; i++) {
+            if (outputWorkspaces[i].is_focused) return i;
+        }
+        return -1;
+    }
 
     color: Colours.palette.m3surfaceContainer
     radius: entered ? Appearance.rounding.small / 2 : Appearance.rounding.full
@@ -26,6 +40,7 @@ StyledRect {
     height: minimap.height + Appearance.spacing.sm * 2
 
     Behavior on anchors.topMargin {
+        enabled: !root.dying
         Anim {}
     }
 
@@ -52,6 +67,7 @@ StyledRect {
                 anchors.verticalCenter: parent.verticalCenter
 
                 Behavior on height {
+                    enabled: !root.dying
                     Anim {
                         duration: Appearance.anim.durations.small
                     }
@@ -62,6 +78,7 @@ StyledRect {
         }
 
         Behavior on opacity {
+            enabled: !root.dying
             Anim {}
         }
     }
