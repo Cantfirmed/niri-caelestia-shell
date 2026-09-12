@@ -320,6 +320,21 @@ pkill -9 quickshell; pkill -9 qs
 - **Guard non-existent slots:** When rendering fixed workspace slots (e.g., `GlobalConfig.bar.workspaces.shown = 4`), ensure slots beyond `outputWorkspaces.length` have `workspaceId = -1` and require `workspaceId > 0` before applying active or occupied styling.
 - **Use `outputActiveWs` instead of global focus:** Determine the active workspace for a bar using the output's `is_active` workspace, not global `is_focused`.
 
+### Auto-lock, DPMS Power-Off, and Display Monitor Conflicts
+
+**Symptom**: Quickshell crashes (SIGSEGV) when the laptop auto-locks after a few minutes of idle, or when monitors wake from DPMS sleep.
+
+**Root causes**:
+1. **DPMS Sleep vs. Fallback Daemon:** `IdleMonitors.qml` powers off monitors via `niri msg action power-off-monitors` at 300s of inactivity. The `niri-display-monitor.py` daemon, polling every 1.5s, previously checked `has_active_display` and mistook DPMS sleep for a black-screen hardware failure, triggering `niri-display.py internal`, which sent `kill -9` to Quickshell and disabled external outputs while locked.
+2. **LockSurface Null Dereference:** `LockSurface.qml` accessed `screen.name` without optional chaining during output state transitions, causing QtWayland `surface_enter` crashes.
+3. **Render Loop Race Condition:** Under `QSG_RENDER_LOOP=threaded`, destroying layer-shell surfaces mid-flight caused `QQuickWindow::maybeUpdate()` to access deleted window `d_ptr`s.
+
+**Invariants & Best Practices**:
+- **Guard Display Daemon:** `niri-display-monitor.py` must check `is_session_locked()` and verify that external monitors are physically disconnected in DRM (`status != "connected"`) before triggering any display fallback. Never rewrite display configs or kill Quickshell during DPMS sleep.
+- **Defensive Screen Property Access:** Always use `screen?.name ?? ""` in `LockSurface.qml` and `StyledWindow.qml`.
+- **Do Not Downgrade Render Loop:** Keep `QSG_RENDER_LOOP=threaded` to maintain 144Hz/120Hz smooth rendering for SDF shaders and glassmorphic blurs; fix the underlying surface lifecycle instead of switching to `basic`.
+- **Never "Fix" Crashes by Changing Timers:** Increasing or disabling timers only postpones the crash until the timer expires. Always resolve the root cause.
+
 ### Adding a new panel
 
 1. Add a boolean property to `DrawerVisibilities.qml`

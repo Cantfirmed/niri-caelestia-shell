@@ -109,4 +109,12 @@ Refer to [`NIRI-DELTAS.md`](file:///home/patrick/.config/niri_caelestia/NIRI-DEL
 > Always use `scripts/port-upstream.sh` (which auto-excludes protected files) and verify with `./scripts/verify-deltas.sh`.
 > Git hooks installed via `./scripts/install-hooks.sh` automatically enforce these checks on commit and merge.
 
+---
+
+## 5. Auto-lock, DPMS, and Display Monitor Guidelines
+
+- **DPMS & Display Fallback Daemon:** `niri-display-monitor.py` must check `is_session_locked()` and never trigger display fallbacks when monitors are powered off for DPMS sleep. Reverting to internal screen is only for genuine cable disconnects (`status != "connected"` in DRM).
+- **Preserve `QSG_RENDER_LOOP=threaded`:** Do not downgrade to `basic` for stability workarounds; keep `threaded` for multi-refresh (144Hz + 120Hz) fluid rendering and fix the underlying surface lifecycle instead.
+- **Root-Cause Invariant:** Never propose changing idle/lock timers to "fix" crashes; timers only postpone the trigger.
+
 
