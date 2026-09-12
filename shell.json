@@ -316,6 +316,12 @@
     "dragThreshold": 30,
     "vimKeybinds": false,
     "lidBehavior": "ignoreExternal",
+    "icons": {
+      "logout": "logout",
+      "shutdown": "power_settings_new",
+      "sleep": "dark_mode",
+      "reboot": "cached"
+    },
     "commands": {
       "logout": [
         "niri",
@@ -346,6 +352,7 @@
     }
   },
   "lock": {
+    "useWallpaper": true,
     "recolourLogo": false,
     "enableFprint": false,
     "showExtras": true,
@@ -363,6 +370,41 @@
       "width": 430,
       "toastWidth": 430
     },
+    "cards": {
+      "keepAwake": true,
+      "recorder": true,
+      "quickToggles": true
+    },
+    "quickToggles": [
+      {
+        "enabled": true,
+        "id": "wifi"
+      },
+      {
+        "enabled": true,
+        "id": "bluetooth"
+      },
+      {
+        "enabled": true,
+        "id": "mic"
+      },
+      {
+        "enabled": true,
+        "id": "settings"
+      },
+      {
+        "enabled": true,
+        "id": "gameMode"
+      },
+      {
+        "enabled": true,
+        "id": "dnd"
+      },
+      {
+        "enabled": false,
+        "id": "vpn"
+      }
+    ],
     "toasts": {
       "configLoaded": true,
       "chargingChanged": true,

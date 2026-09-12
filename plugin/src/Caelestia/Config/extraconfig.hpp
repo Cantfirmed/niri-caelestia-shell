@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.hpp"
 #include "settings/objectnode.hpp"
 
 namespace caelestia::config {

@@ -14,21 +14,29 @@ Scope {
 
     ExclusionZone {
         anchors.left: true
-        exclusiveZone: root.bar.exclusiveZone
+        anchors.top: true
+        anchors.bottom: true
+        exclusiveZone: root.bar ? root.bar.exclusiveZone : 0
     }
 
     ExclusionZone {
         anchors.top: true
-        exclusiveZone: 0
-    }
-
-    ExclusionZone {
+        anchors.left: true
         anchors.right: true
         exclusiveZone: 0
     }
 
     ExclusionZone {
+        anchors.right: true
+        anchors.top: true
         anchors.bottom: true
+        exclusiveZone: 0
+    }
+
+    ExclusionZone {
+        anchors.bottom: true
+        anchors.left: true
+        anchors.right: true
         exclusiveZone: 0
     }
 

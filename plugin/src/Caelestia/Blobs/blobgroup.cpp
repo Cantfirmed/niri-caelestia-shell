@@ -6,10 +6,15 @@ BlobGroup::BlobGroup(QObject* parent)
     : QObject(parent) {}
 
 BlobGroup::~BlobGroup() {
-    for (auto* shape : std::as_const(m_shapes))
-        shape->m_group = nullptr;
-    if (m_invertedRect)
+    for (auto* shape : std::as_const(m_shapes)) {
+        if (shape)
+            shape->m_group = nullptr;
+    }
+    m_shapes.clear();
+    if (m_invertedRect) {
         static_cast<BlobShape*>(m_invertedRect)->m_group = nullptr;
+        m_invertedRect = nullptr;
+    }
 }
 
 void BlobGroup::setSmoothing(qreal s) {
@@ -45,7 +50,9 @@ void BlobGroup::addShape(BlobShape* shape) {
 
 void BlobGroup::removeShape(BlobShape* shape) {
     m_shapes.removeOne(shape);
-    markDirty();
+    // Do not call markDirty() here. When shapes are removed during window or component
+    // destruction, triggering polish() and update() on other shapes causes
+    // QQuickWindow::maybeUpdate to access dying window surfaces, leading to SIGSEGV crashes.
 }
 
 void BlobGroup::setInvertedRect(BlobInvertedRect* rect) {
@@ -59,22 +66,29 @@ void BlobGroup::clearInvertedRect(BlobInvertedRect* rect) {
     if (m_invertedRect != rect)
         return;
     m_invertedRect = nullptr;
-    markDirty();
 }
 
 void BlobGroup::markDirty() {
     m_physicsUpdated = false;
     for (auto* shape : std::as_const(m_shapes)) {
+        if (!shape || !shape->window() || !shape->isVisible())
+            continue;
         shape->polish();
         shape->update();
     }
     if (m_invertedRect) {
-        static_cast<BlobShape*>(m_invertedRect)->polish();
-        static_cast<BlobShape*>(m_invertedRect)->update();
+        auto* inverted = static_cast<BlobShape*>(m_invertedRect);
+        if (inverted && inverted->window() && inverted->isVisible()) {
+            inverted->polish();
+            inverted->update();
+        }
     }
 }
 
 void BlobGroup::markShapeDirty(BlobShape* source) {
+    if (!source || !source->window() || !source->isVisible())
+        return;
+
     m_physicsUpdated = false;
 
     source->polish();
@@ -87,7 +101,7 @@ void BlobGroup::markShapeDirty(BlobShape* source) {
         static_cast<double>(source->m_cachedPaddedH + pad * 2.0f));
 
     for (auto* shape : std::as_const(m_shapes)) {
-        if (shape == source)
+        if (shape == source || !shape || !shape->window() || !shape->isVisible())
             continue;
         const QRectF otherRect(static_cast<double>(shape->m_cachedPaddedX), static_cast<double>(shape->m_cachedPaddedY),
             static_cast<double>(shape->m_cachedPaddedW), static_cast<double>(shape->m_cachedPaddedH));
@@ -98,8 +112,11 @@ void BlobGroup::markShapeDirty(BlobShape* source) {
     }
 
     if (m_invertedRect && static_cast<BlobShape*>(m_invertedRect) != source) {
-        static_cast<BlobShape*>(m_invertedRect)->polish();
-        static_cast<BlobShape*>(m_invertedRect)->update();
+        auto* inverted = static_cast<BlobShape*>(m_invertedRect);
+        if (inverted && inverted->window() && inverted->isVisible()) {
+            inverted->polish();
+            inverted->update();
+        }
     }
 }
 
@@ -107,6 +124,8 @@ void BlobGroup::ensurePhysicsUpdated() {
     if (m_physicsUpdated)
         return;
     m_physicsUpdated = true;
-    for (auto* shape : std::as_const(m_shapes))
-        shape->updatePhysics();
+    for (auto* shape : std::as_const(m_shapes)) {
+        if (shape && shape->window())
+            shape->updatePhysics();
+    }
 }

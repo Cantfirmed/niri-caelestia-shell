@@ -61,7 +61,7 @@ WlSessionLockSurface {
                 type: Anim.StandardLarge
             }
             Anim {
-                target: background
+                target: Config.lock.useWallpaper ? null : background
                 property: "opacity"
                 to: 0
                 type: Anim.StandardLarge
@@ -91,7 +91,7 @@ WlSessionLockSurface {
         running: true
 
         Anim {
-            target: background
+            target: Config.lock.useWallpaper ? null : background
             property: "opacity"
             to: 1
             type: Anim.StandardLarge
@@ -155,17 +155,22 @@ WlSessionLockSurface {
         }
     }
 
+    Rectangle {
+        anchors.fill: parent
+        color: Colours.palette.m3background
+    }
+
     Item {
         id: background
 
         anchors.fill: parent
-        opacity: 0
+        opacity: Config.lock.useWallpaper ? 1 : 0
 
         layer.enabled: true
         layer.effect: MultiEffect {
             autoPaddingEnabled: false
             blurEnabled: true
-            blur: 1
+            blur: 0.8
             blurMax: 64
             blurMultiplier: 1
         }
@@ -187,8 +192,21 @@ WlSessionLockSurface {
     Component {
         id: wallpaperBackground
 
-        CachingImage {
-            path: Wallpapers.current
+        Image {
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectCrop
+            source: {
+                const p = Wallpapers.current;
+                if (!p) return "";
+                return p.startsWith("/") ? "file://" + p : p;
+            }
+
+            sourceSize.width: root.width > 0 ? root.width / 4 : 640
+            sourceSize.height: root.height > 0 ? root.height / 4 : 360
+
+            asynchronous: false
+            cache: true
+            smooth: true
         }
     }
 

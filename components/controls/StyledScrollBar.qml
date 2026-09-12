@@ -7,7 +7,7 @@ import qs.services
 ScrollBar {
     id: root
 
-    required property Flickable flickable
+    property Flickable flickable: (parent as Flickable) ?? null
     property bool shouldBeActive
     property real nonAnimPosition
     property bool animating
@@ -18,7 +18,7 @@ ScrollBar {
         if (hovered)
             shouldBeActive = true;
         else
-            shouldBeActive = flickable.moving;
+            shouldBeActive = flickable ? flickable.moving : false;
     }
 
     // Sync nonAnimPosition with Qt's automatic position binding
@@ -83,7 +83,7 @@ ScrollBar {
     // Sync nonAnimPosition with flickable when not animating
     Connections {
         function onContentYChanged() {
-            if (!root.animating && !fullMouse.pressed) {
+            if (!root.animating && !fullMouse.pressed && root.flickable) {
                 root._updatingFromFlickable = true;
                 const contentHeight = root.flickable.contentHeight;
                 const height = root.flickable.height;
@@ -101,7 +101,7 @@ ScrollBar {
 
     Connections {
         function onMovingChanged(): void {
-            if (root.flickable.moving)
+            if (root.flickable && root.flickable.moving)
                 root.shouldBeActive = true;
             else
                 hideDelay.restart();
@@ -114,7 +114,7 @@ ScrollBar {
         id: hideDelay
 
         interval: 600
-        onTriggered: root.shouldBeActive = root.flickable.moving || root.hovered
+        onTriggered: root.shouldBeActive = (root.flickable ? root.flickable.moving : false) || root.hovered
     }
 
     CustomMouseArea {

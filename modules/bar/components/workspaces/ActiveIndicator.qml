@@ -20,6 +20,8 @@ StyledRect {
         cWs = currentWsIdx;
     }
 
+
+
     property int cWs
     property int lastWs
 

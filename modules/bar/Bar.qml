@@ -16,7 +16,7 @@ ColumnLayout {
 
     function getClockY(): real {
         for (let i = 0; i < repeater.count; i++) {
-            const item = repeater.itemAt(i) as EntryWrapper;
+            const item = repeater.itemAt(i);
             if (item?.entryId === "clock")
                 return item.y;
         }
@@ -25,7 +25,7 @@ ColumnLayout {
 
     function getClockHeight(): real {
         for (let i = 0; i < repeater.count; i++) {
-            const item = repeater.itemAt(i) as EntryWrapper;
+            const item = repeater.itemAt(i);
             if (item?.entryId === "clock")
                 return item.implicitHeight;
         }
@@ -33,7 +33,7 @@ ColumnLayout {
     }
 
     function isClockAtY(y: real): bool {
-        const ch = childAt(width / 2, y) as EntryWrapper;
+        const ch = childAt(width / 2, y);
         return ch?.entryId === "clock";
     }
 
@@ -48,14 +48,14 @@ ColumnLayout {
             return;
 
         for (let i = 0; i < repeater.count; i++) {
-            const tray = (repeater.itemAt(i) as EntryWrapper).item as Tray;
+            const tray = repeater.itemAt(i)?.item as Tray;
             if (tray)
                 tray.expanded = false;
         }
     }
 
     function checkPopout(y: real): void {
-        const ch = childAt(width / 2, y) as EntryWrapper;
+        const ch = childAt(width / 2, y);
 
         if (ch?.entryId !== "tray")
             closeTray();
@@ -69,38 +69,51 @@ ColumnLayout {
         const top = ch.y;
 
         if (id === "statusIcons" && Config.bar.popouts.statusIcons) {
-            const items = (ch.item as StatusIcons).items;
-            const icon = items.childAt(items.width / 2, mapToItem(items, 0, y).y);
-            if (icon) {
-                popouts.currentName = icon.name;
-                popouts.currentCenter = Qt.binding(() => icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
-                popouts.hasCurrent = true;
-            }
-        } else if (id === "tray" && Config.bar.popouts.tray) {
-            const tray = ch.item as Tray;
-            if (!Config.bar.tray.compact || (tray.expanded && !tray.expandIcon.contains(mapToItem(tray.expandIcon, tray.implicitWidth / 2, y)))) {
-                const index = Math.floor(((y - top - tray.padding * 2 + tray.spacing) / tray.layout.implicitHeight) * tray.items.count);
-                const trayItem = tray.items.itemAt(index);
-                if (trayItem) {
-                    popouts.currentName = `traymenu${index}`;
-                    popouts.currentCenter = Qt.binding(() => trayItem.mapToItem(root, 0, trayItem.implicitHeight / 2).y);
+            const statusItem = ch.item;
+            const items = statusItem ? statusItem.items : null;
+            if (items) {
+                const localPos = mapToItem(items, 0, y);
+                const icon = items.childAt(items.width / 2, localPos.y);
+                if (icon) {
+                    popouts.currentName = icon.name;
+                    popouts.currentCenter = Qt.binding(() => icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
                     popouts.hasCurrent = true;
-                } else {
-                    popouts.hasCurrent = false;
+                    return;
                 }
-            } else {
-                popouts.hasCurrent = false;
-                tray.expanded = true;
             }
+            popouts.hasCurrent = false;
+        } else if (id === "tray" && Config.bar.popouts.tray) {
+            const tray = ch.item;
+            if (tray) {
+                if (!Config.bar.tray.compact || (tray.expanded && !tray.expandIcon.contains(mapToItem(tray.expandIcon, tray.implicitWidth / 2, y)))) {
+                    const index = Math.floor(((y - top - tray.padding * 2 + tray.spacing) / tray.layout.implicitHeight) * tray.items.count);
+                    const trayItem = tray.items.itemAt(index);
+                    if (trayItem) {
+                        popouts.currentName = `traymenu${index}`;
+                        popouts.currentCenter = Qt.binding(() => trayItem.mapToItem(root, 0, trayItem.implicitHeight / 2).y);
+                        popouts.hasCurrent = true;
+                        return;
+                    }
+                } else {
+                    tray.expanded = true;
+                }
+            }
+            popouts.hasCurrent = false;
         } else if (id === "activeWindow" && Config.bar.popouts.activeWindow && Config.bar.activeWindow.showOnHover) {
-            popouts.currentName = id.toLowerCase();
-            popouts.currentCenter = (ch.item as Item).mapToItem(root, 0, (ch.item as Item).implicitHeight / 2).y ?? 0;
-            popouts.hasCurrent = true;
+            if (ch.item) {
+                popouts.currentName = id.toLowerCase();
+                popouts.currentCenter = ch.item.mapToItem(root, 0, ch.item.implicitHeight / 2).y ?? 0;
+                popouts.hasCurrent = true;
+                return;
+            }
+            popouts.hasCurrent = false;
+        } else {
+            popouts.hasCurrent = false;
         }
     }
 
     function handleWheel(y: real, angleDelta: point): void {
-        const ch = childAt(width / 2, y) as EntryWrapper;
+        const ch = childAt(width / 2, y);
         if (ch?.entryId === "workspaces" && Config.bar.scrollActions.workspaces) {
             if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
                 if (angleDelta.y < 0)
@@ -137,95 +150,116 @@ ColumnLayout {
         id: repeater
 
         model: ScriptModel {
-            values: root.Config.bar.entries.values.filter(e => e.enabled)
+            values: {
+                const raw = GlobalConfig.bar?.entries ?? Config.bar?.entries;
+                let list = [];
+                if (raw) {
+                    if (Array.isArray(raw)) list = raw;
+                    else if (raw.values) {
+                        list = Array.from(typeof raw.values === "function" ? raw.values() : raw.values);
+                    }
+                }
+                if (!list || list.length === 0) {
+                    list = [
+                        { id: "logo", enabled: true },
+                        { id: "workspaces", enabled: true },
+                        { id: "spacer", enabled: true },
+                        { id: "activeWindow", enabled: true },
+                        { id: "spacer", enabled: true },
+                        { id: "tray", enabled: true },
+                        { id: "clock", enabled: true },
+                        { id: "statusIcons", enabled: true },
+                        { id: "power", enabled: true }
+                    ];
+                }
+                return list.filter(e => e && e.enabled);
+            }
         }
 
-        DelegateChooser {
-            role: "id"
+        delegate: Loader {
+            id: entryLoader
+            required property var modelData
+            required property int index
 
-            DelegateChoice {
-                roleValue: "spacer"
-                delegate: EntryWrapper {
-                    Layout.fillHeight: true
-                }
-            }
-            DelegateChoice {
-                roleValue: "logo"
-                delegate: EntryWrapper {
-                    OsIcon {
-                        objectName: "taskbarLogo"
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "workspaces"
-                delegate: EntryWrapper {
-                    Workspaces {
-                        objectName: "taskbarWorkspaces"
-                        outputName: root.screen.name
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "activeWindow"
-                delegate: EntryWrapper {
-                    ActiveWindow {
-                        objectName: "taskbarActiveWindow"
-                        bar: root
-                        monitor: Brightness.getMonitorForScreen(root.screen)
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "tray"
-                delegate: EntryWrapper {
-                    Tray {
-                        objectName: "taskbarTray"
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "clock"
-                delegate: EntryWrapper {
-                    Clock {
-                        objectName: "taskbarClock"
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "statusIcons"
-                delegate: EntryWrapper {
-                    StatusIcons {
-                        objectName: "taskbarStatusIcons"
-                    }
-                }
-            }
-            DelegateChoice {
-                roleValue: "power"
-                delegate: EntryWrapper {
-                    Power {
-                        objectName: "taskbarPowerButton"
-                        screenState: root.screenState
-                    }
+            readonly property string entryId: modelData.id
+
+            Layout.topMargin: index === 0 ? root.vPadding : 0
+            Layout.bottomMargin: index === repeater.count - 1 ? root.vPadding : 0
+            Layout.alignment: Qt.AlignHCenter
+            Layout.fillHeight: modelData.id === "spacer"
+
+            sourceComponent: {
+                switch (entryLoader.modelData.id) {
+                case "spacer": return spacerComp;
+                case "logo": return logoComp;
+                case "workspaces": return workspacesComp;
+                case "activeWindow": return activeWindowComp;
+                case "tray": return trayComp;
+                case "clock": return clockComp;
+                case "statusIcons": return statusIconsComp;
+                case "power": return powerComp;
+                default: return null;
                 }
             }
         }
     }
 
-    component EntryWrapper: Item {
-        required property var modelData
-        required property int index
-        default property Item item
-        readonly property string entryId: modelData.id
+    Component {
+        id: spacerComp
+        Item {}
+    }
 
-        Layout.topMargin: index === 0 ? root.vPadding : 0
-        Layout.bottomMargin: index === repeater.count - 1 ? root.vPadding : 0
-        Layout.alignment: Qt.AlignHCenter
+    Component {
+        id: logoComp
+        OsIcon {
+            objectName: "taskbarLogo"
+        }
+    }
 
-        implicitWidth: item?.implicitWidth ?? 0
-        implicitHeight: item?.implicitHeight ?? 0
+    Component {
+        id: workspacesComp
+        Workspaces {
+            objectName: "taskbarWorkspaces"
+            outputName: root.screen.name
+        }
+    }
 
-        children: item
+    Component {
+        id: activeWindowComp
+        ActiveWindow {
+            objectName: "taskbarActiveWindow"
+            bar: root
+            monitor: Brightness.getMonitorForScreen(root.screen)
+        }
+    }
+
+    Component {
+        id: trayComp
+        Tray {
+            objectName: "taskbarTray"
+        }
+    }
+
+    Component {
+        id: clockComp
+        Clock {
+            objectName: "taskbarClock"
+        }
+    }
+
+    Component {
+        id: statusIconsComp
+        StatusIcons {
+            objectName: "taskbarStatusIcons"
+        }
+    }
+
+    Component {
+        id: powerComp
+        Power {
+            objectName: "taskbarPowerButton"
+            screenState: root.screenState
+        }
     }
 }
 

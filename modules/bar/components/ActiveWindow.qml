@@ -37,6 +37,8 @@ Item {
     clip: true
     implicitWidth: Math.max(icon.implicitWidth, current.implicitHeight)
     implicitHeight: icon.implicitHeight + current.implicitWidth + current.anchors.topMargin
+    width: implicitWidth
+    height: implicitHeight
 
     Loader {
         asynchronous: true
@@ -116,10 +118,10 @@ Item {
 
         transform: [
             Translate {
-                x: root.Config.bar.activeWindow.inverted ? -text.implicitWidth + text.implicitHeight : 0
+                x: Config.bar.activeWindow.inverted ? -text.implicitWidth + text.implicitHeight : 0
             },
             Rotation {
-                angle: root.Config.bar.activeWindow.inverted ? 270 : 90
+                angle: Config.bar.activeWindow.inverted ? 270 : 90
                 origin.x: text.implicitHeight / 2
                 origin.y: text.implicitHeight / 2
             }

@@ -10,6 +10,8 @@ Item {
 
     implicitWidth: icon.implicitHeight + Tokens.padding.small
     implicitHeight: icon.implicitHeight
+    width: implicitWidth
+    height: implicitHeight
 
     StateLayer {
         // Cursed workaround to make the height larger than the parent

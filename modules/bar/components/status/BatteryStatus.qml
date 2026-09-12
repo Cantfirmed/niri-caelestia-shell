@@ -8,6 +8,7 @@ MaterialIcon {
     required property color colour
 
     animate: true
+    horizontalAlignment: Text.AlignHCenter
     text: {
         if (!UPower.displayDevice.isLaptopBattery) {
             if (PowerProfiles.profile === PowerProfile.PowerSaver)

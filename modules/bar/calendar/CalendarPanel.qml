@@ -15,7 +15,7 @@ Item {
 
 
 
-    required property DrawerVisibilities visibilities
+    required property var visibilities
 
     readonly property DashboardState dashState: DashboardState {
         reloadableId: "calendarPopupState"
@@ -31,6 +31,8 @@ Item {
     anchors.leftMargin: (-implicitWidth - 5) * offsetScale
     implicitWidth: content.implicitWidth || 340
     implicitHeight: content.implicitHeight || 360
+    width: implicitWidth
+    height: implicitHeight
 
     opacity: 1 - offsetScale
 

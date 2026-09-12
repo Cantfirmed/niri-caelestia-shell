@@ -49,6 +49,13 @@ BlobShape::BlobShape(QQuickItem* parent)
     setFlag(ItemHasContents);
 }
 
+BlobShape::~BlobShape() {
+    if (m_group) {
+        unregisterFromGroup();
+        m_group = nullptr;
+    }
+}
+
 void BlobShape::setGroup(BlobGroup* g) {
     if (m_group == g)
         return;

@@ -106,19 +106,50 @@ Item {
             }
         }
 
-        Component.onCompleted: forceActiveFocus()
+        function checkLauncherState(): void {
+            Qt.callLater(() => {
+                const win = search.window;
+                if (win && win.requestActivate)
+                    win.requestActivate();
+                if (root.screenState.clipboardRequested) {
+                    search.text = GlobalConfig.launcher.actionPrefix + "clip ";
+                    root.screenState.clipboardRequested = false;
+                    search.cursorPosition = search.text.length;
+                } else if (root.screenState.wallpaperRequested) {
+                    search.text = GlobalConfig.launcher.actionPrefix + "wallpaper ";
+                    root.screenState.wallpaperRequested = false;
+                    search.cursorPosition = search.text.length;
+                }
+                search.forceActiveFocus();
+            });
+        }
+
+        Component.onCompleted: search.checkLauncherState()
 
         Connections {
             function onLauncherChanged(): void {
                 if (root.screenState.launcher) {
-                    Qt.callLater(() => {
-                        const win = search.window;
-                        if (win && win.requestActivate)
-                            win.requestActivate();
-                        search.forceActiveFocus();
-                    });
+                    search.checkLauncherState();
                 } else {
                     search.text = "";
+                }
+            }
+
+            function onClipboardRequestedChanged(): void {
+                if (root.screenState.clipboardRequested) {
+                    search.text = GlobalConfig.launcher.actionPrefix + "clip ";
+                    root.screenState.clipboardRequested = false;
+                    search.cursorPosition = search.text.length;
+                    search.forceActiveFocus();
+                }
+            }
+
+            function onWallpaperRequestedChanged(): void {
+                if (root.screenState.wallpaperRequested) {
+                    search.text = GlobalConfig.launcher.actionPrefix + "wallpaper ";
+                    root.screenState.wallpaperRequested = false;
+                    search.cursorPosition = search.text.length;
+                    search.forceActiveFocus();
                 }
             }
 

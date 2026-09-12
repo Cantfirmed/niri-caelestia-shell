@@ -10,6 +10,8 @@ Item {
 
     implicitWidth: Math.round(Tokens.font.body.large.pointSize * 1.2)
     implicitHeight: Math.round(Tokens.font.body.large.pointSize * 1.2)
+    width: implicitWidth
+    height: implicitHeight
 
     MouseArea {
         anchors.fill: parent

@@ -17,6 +17,8 @@ Item {
     Layout.preferredHeight: implicitHeight
 
     implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2 + (popupActive ? Config.bar.workspaces.windowContextWidth : 0)
+    width: implicitWidth
+    height: implicitHeight
     Behavior on implicitWidth {
         Anim {
             easing.bezierCurve: Appearance.anim.curves.emphasized
@@ -49,12 +51,13 @@ Item {
                     const wsName = root.workspace.workspaceId > 0 ? Niri.getWorkspaceNameById(root.workspace.workspaceId) : "";
                     const label = wsName || root.workspace.ws;
                     const occupiedLabel = Config.bar.workspaces.occupiedLabel || label;
+                    const isWsActive = root.workspace.workspaceId > 0 && root.workspace.activeWsId === root.workspace.ws;
                     const activeLabel = Config.bar.workspaces.activeLabel || (root.workspace.isOccupied ? occupiedLabel : label);
-                    return root.workspace.activeWsId === root.workspace.ws ? activeLabel : root.workspace.isOccupied ? occupiedLabel : label;
+                    return isWsActive ? activeLabel : root.workspace.isOccupied ? occupiedLabel : label;
                 }
 
-                color: Config.bar.workspaces.occupiedBg || root.workspace.isOccupied || root.workspace.activeWsId === root.workspace.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
-                opacity: root.workspace.isOccupied || root.workspace.activeWsId === root.workspace.ws ? 1.0 : 0.35
+                color: Config.bar.workspaces.occupiedBg || root.workspace.isOccupied || (root.workspace.workspaceId > 0 && root.workspace.activeWsId === root.workspace.ws) ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
+                opacity: root.workspace.isOccupied || (root.workspace.workspaceId > 0 && root.workspace.activeWsId === root.workspace.ws) ? 1.0 : 0.35
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
             }

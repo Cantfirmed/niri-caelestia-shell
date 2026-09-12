@@ -25,10 +25,13 @@ Item {
     ColumnLayout {
         id: layout
 
+        anchors.horizontalCenter: parent.horizontalCenter
         spacing: Tokens.spacing.medium / 2
 
         // Bluetooth icon
         MaterialIcon {
+            Layout.alignment: Qt.AlignHCenter
+            horizontalAlignment: Text.AlignHCenter
             animate: true
             text: {
                 if (!Bluetooth.defaultAdapter?.enabled) // qmllint disable unresolved-type
@@ -51,6 +54,8 @@ Item {
 
                 required property BluetoothDevice modelData
 
+                Layout.alignment: Qt.AlignHCenter
+                horizontalAlignment: Text.AlignHCenter
                 animate: true
                 text: Icons.getBluetoothIcon(modelData?.icon)
                 color: root.colour

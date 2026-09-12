@@ -4,3 +4,6 @@
 build/
 .cache/
 logs
+*.log
+__pycache__/
+.dfm_setup_done

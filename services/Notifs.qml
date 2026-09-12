@@ -22,6 +22,10 @@ Singleton {
     property bool loaded
 
     function hasFullscreen(): bool {
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const wsId = NiriIpc.focusedWorkspaceId;
+            return NiriIpc.windows.some(w => w.workspace_id === wsId && (w.is_fullscreen === true || w.fullscreen === true));
+        }
         if (typeof Hypr !== "undefined" && Hypr.monitors) {
             for (const monitor of Hypr.monitors.values) {
                 if (monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1))
@@ -34,7 +38,8 @@ Singleton {
     function shouldShowPopup(): bool {
         if (props.dnd || ShellState.anySidebarOpen())
             return false;
-        if (GlobalConfig.notifs.fullscreen === NotifsFullscreen.Off && hasFullscreen())
+        const isOff = (typeof NotifsFullscreen !== "undefined") ? (GlobalConfig.notifs.fullscreen === NotifsFullscreen.Off) : (GlobalConfig.notifs.fullscreen === 1);
+        if (isOff && hasFullscreen())
             return false;
         return true;
     }

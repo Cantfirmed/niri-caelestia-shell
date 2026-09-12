@@ -17,7 +17,10 @@ Singleton {
     readonly property bool niriAvailable: NiriIpc.available
 
     // --- Workspaces ---
+    signal workspacesChanged()
     readonly property var allWorkspaces: NiriIpc.workspaces
+
+
     readonly property int focusedWorkspaceIndex: NiriIpc.focusedWorkspaceIndex
     readonly property int focusedWorkspaceId: NiriIpc.focusedWorkspaceId
     readonly property var currentOutputWorkspaces: NiriIpc.currentOutputWorkspaces
@@ -28,16 +31,13 @@ Singleton {
         const workspaces = root.allWorkspaces;
         let map = {};
         const wins = root.windows;
-        console.log("NiriService: Updating workspaceHasWindows, total windows:", wins.length);
         for (let i = 0; i < wins.length; i++) {
             const win = wins[i];
             const wsIdx = root.getWorkspaceIdxById(win.workspace_id);
-            console.log("Window:", win.id, "app_id:", win.app_id, "workspace_id:", win.workspace_id, "wsIdx:", wsIdx);
             if (wsIdx >= 0) {
                 map[(wsIdx).toString()] = true;
             }
         }
-        console.log("Generated workspaceHasWindows map:", JSON.stringify(map));
         return map;
     }
 
@@ -168,19 +168,46 @@ Singleton {
         function onWindowOpenedOrChanged(windowData) {
             root.windowOpenedOrChanged(windowData);
         }
+        function onWorkspacesChanged() {
+            root.workspacesChanged();
+        }
+        function onFocusedWorkspaceChanged() {
+            root.workspacesChanged();
+        }
     }
+
+
 
     Component.onCompleted: console.log("NiriService: Using native C++ IPC (NiriIpc)")
 
     // --- Workspace Functions ---
     function getWorkspaceIdxById(workspaceId) {
-        return NiriIpc.getWorkspaceIdxById(workspaceId);
+        if (typeof NiriIpc.getWorkspaceIdxById === "function") {
+            try {
+                const idx = NiriIpc.getWorkspaceIdxById(workspaceId);
+                if (idx !== undefined && idx >= 0) return idx;
+            } catch (e) {}
+        }
+        if (!allWorkspaces || !Array.isArray(allWorkspaces)) return -1;
+        const ws = allWorkspaces.find(w => w && w.id === workspaceId);
+        return ws ? (ws.idx ?? -1) : -1;
     }
 
     function getWorkspacesForOutput(outputName) {
         if (!outputName) return [];
-        return NiriIpc.getWorkspacesForOutput(outputName);
+        if (typeof NiriIpc.getWorkspacesForOutput === "function") {
+            try {
+                const list = NiriIpc.getWorkspacesForOutput(outputName);
+                if (list && list.length > 0) return Array.from(list);
+            } catch (e) {}
+        }
+        if (!allWorkspaces || allWorkspaces.length === undefined) return [];
+        const all = Array.from(allWorkspaces);
+        return all.filter(ws => ws && (!ws.output || ws.output === outputName));
     }
+
+
+
 
     function getActiveWorkspaceIndexForOutput(outputName) {
         const wsList = getWorkspacesForOutput(outputName);

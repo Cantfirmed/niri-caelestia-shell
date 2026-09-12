@@ -84,7 +84,6 @@ Item {
     Component {
         id: imageIconComp
         StyledRect {
-            anchors.centerIn: parent
             width: implicitWidth
             height: implicitHeight
 
@@ -97,9 +96,9 @@ Item {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                width: (iconItem.isFocused && iconItem.isWsFocused) ? (Tokens.sizes.bar.innerWidth * (Config.bar.workspaces.windowIconScale ?? 0.6)) - Appearance.padding.xs : (Tokens.sizes.bar.innerWidth * (Config.bar.workspaces.windowIconScale ?? 0.6)) - Appearance.padding.xs * 2
+                width: (iconItem.isFocused && iconItem.isWsFocused) ? (Tokens.sizes.bar.innerWidth * 0.6) - Appearance.padding.xs : (Tokens.sizes.bar.innerWidth * 0.6) - Appearance.padding.xs * 2
                 height: width
-                source: Icons.getAppIcon(windowData.app_id ?? "", "image-missing")
+                source: Icons.getAppIcon(windowData?.app_id ?? "", "image-missing")
                 Behavior on width {
                     Anim {
                         easing.bezierCurve: Appearance.anim.curves.emphasized
@@ -114,7 +113,6 @@ Item {
     Component {
         id: materialIconComp
         StyledRect {
-            anchors.centerIn: parent
             width: implicitWidth
             height: implicitHeight
 
@@ -125,7 +123,7 @@ Item {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                size: ((iconItem.isFocused && iconItem.isWsFocused)) ? (Tokens.sizes.bar.innerWidth * (Config.bar.workspaces.windowIconScale ?? 0.6)) : (Tokens.sizes.bar.innerWidth * (Config.bar.workspaces.windowIconScale ?? 0.6)) - Appearance.padding.xs
+                size: (iconItem.isFocused && iconItem.isWsFocused) ? (Tokens.sizes.bar.innerWidth * 0.6) : (Tokens.sizes.bar.innerWidth * 0.6) - Appearance.padding.xs
                 grade: 0
                 text: Icons.getAppCategoryIcon(windowData?.app_id ?? "", "help_center")
                 color: (iconItem.isWsFocused ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant)

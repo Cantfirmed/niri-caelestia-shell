@@ -11,6 +11,13 @@ PersistentProperties {
     property bool dashboard
     property bool utilities
     property bool sidebar
+    property bool displaySelect
+    property bool soundPanel
+    property bool clipboardRequested
+    property bool wallpaperRequested
+    property bool manga
+    property bool novel
+    property bool calendar
 
     // Dashboard state
     property int dashboardTab

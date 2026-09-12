@@ -62,6 +62,8 @@ Item {
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
+    width: implicitWidth
+    height: implicitHeight
 
     focus: hasCurrent
     Keys.onEscapePressed: {

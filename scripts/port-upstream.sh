@@ -10,8 +10,10 @@ set -euo pipefail
 #
 # Requires: git remote "upstream" pointing at https://github.com/caelestia-dots/shell.git
 
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 UPSTREAM_REMOTE="${UPSTREAM_REMOTE:-upstream}"
-FILTER="$(git rev-parse --show-toplevel)/.pi/upstream-files.txt"
+FILTER="$REPO_ROOT/.pi/upstream-files.txt"
+PROTECTED="$REPO_ROOT/.pi/protected-files.txt"
 
 if [ ! -f "$FILTER" ]; then
     echo "Error: $FILTER not found. Run from repo root."
@@ -36,23 +38,46 @@ if ! git rev-parse --verify "$TO_REF" &>/dev/null; then
     TO_REF="$TO"
 fi
 
-echo "==> Changes from $FROM_REF to $TO_REF (shared files only):"
+# Build protected exclusions
+PROTECTED_EXCLUDES=()
+PROTECTED_LIST=()
+if [ -f "$PROTECTED" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${line// }" ]] && continue
+        PROTECTED_EXCLUDES+=(":!$line")
+        PROTECTED_LIST+=("$line")
+    done < "$PROTECTED"
+fi
+
+echo "==> Changes from $FROM_REF to $TO_REF (shared files only, protected files excluded):"
 echo ""
+
+# Check if upstream modified any protected files
+if [ ${#PROTECTED_LIST[@]} -gt 0 ]; then
+    PROTECTED_DIFF=$(git diff "$FROM_REF" "$TO_REF" -- "${PROTECTED_LIST[@]}" --stat || true)
+    if [ -n "$PROTECTED_DIFF" ]; then
+        echo "⚠️  NOTE: Upstream modified the following PROTECTED files."
+        echo "   These are excluded automatically to prevent regressions:"
+        echo "$PROTECTED_DIFF"
+        echo ""
+    fi
+fi
 
 # Generate the filtered diff
 DIFF_FILE=$(mktemp /tmp/upstream-diff-XXXXXX.patch)
 trap 'rm -f "$DIFF_FILE"' EXIT
 
-git diff "$FROM_REF" "$TO_REF" -- $(cat "$FILTER") > "$DIFF_FILE"
+git diff "$FROM_REF" "$TO_REF" -- $(cat "$FILTER") "${PROTECTED_EXCLUDES[@]}" > "$DIFF_FILE"
 
 if [ ! -s "$DIFF_FILE" ]; then
-    echo "No changes to shared files between $FROM and $TO."
+    echo "No eligible changes to shared files between $FROM and $TO."
     exit 0
 fi
 
 # Show summary
-echo "Changed files:"
-git diff "$FROM_REF" "$TO_REF" -- $(cat "$FILTER") --stat
+echo "Changed files to be patched:"
+git diff "$FROM_REF" "$TO_REF" -- $(cat "$FILTER") "${PROTECTED_EXCLUDES[@]}" --stat
 echo ""
 echo "Full diff saved to: $DIFF_FILE"
 echo ""
@@ -62,6 +87,8 @@ case "$ACTION" in
         echo "==> Applying patch..."
         # Use -p1 because the diff paths are relative to repo root
         git apply --recount -p1 "$DIFF_FILE"
+        echo "Patch applied. Reviewing with verify-deltas.sh..."
+        "$REPO_ROOT/scripts/verify-deltas.sh"
         echo "Done. Run 'git diff --stat' to review."
         ;;
     --patch)

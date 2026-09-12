@@ -8,8 +8,10 @@ BlobRect::BlobRect(QQuickItem* parent)
     : BlobShape(parent) {}
 
 BlobRect::~BlobRect() {
-    if (m_group)
+    if (m_group) {
         m_group->removeShape(this);
+        m_group = nullptr;
+    }
 }
 
 void BlobRect::updatePolish() {
@@ -31,11 +33,15 @@ void BlobRect::updatePolish() {
             updateCenteredDeformMatrix();
             m_physicsActive = false;
         } else {
+            QPointer<BlobRect> weakThis(this);
             QMetaObject::invokeMethod(
                 this,
-                [this]() {
-                    if (m_physicsActive && m_group)
-                        m_group->markDirty();
+                [weakThis]() {
+                    auto* ptr = weakThis.data();
+                    if (!ptr)
+                        return;
+                    if (ptr->m_physicsActive && ptr->m_group && ptr->window() && ptr->isVisible())
+                        ptr->m_group->markDirty();
                 },
                 Qt::QueuedConnection);
         }

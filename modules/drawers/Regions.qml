@@ -15,10 +15,18 @@ Region {
     readonly property real borderThickness: win.contentItem.Config.border.thickness
     readonly property real clampedThickness: win.contentItem.Config.border.clampedThickness
 
-    x: bar.clampedWidth + win.dragMaskPadding
-    y: clampedThickness + win.dragMaskPadding
-    width: win.width - bar.clampedWidth - clampedThickness - win.dragMaskPadding * 2
-    height: win.height - clampedThickness * 2 - win.dragMaskPadding * 2
+    readonly property real maskBorderThickness: win.dragMaskPadding > 0 ? borderThickness : 0
+
+    readonly property real topOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.dashboard && win.contentItem.Config.dashboard.enabled && win.contentItem.Config.dashboard.showOnHover) ? clampedThickness : 0)
+    readonly property real bottomOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.launcher && win.contentItem.Config.launcher.enabled && win.contentItem.Config.launcher.showOnHover) ? clampedThickness : 0, (win.contentItem.Config.utilities && win.contentItem.Config.utilities.enabled) ? clampedThickness : 0)
+    readonly property real rightOffset: Math.max(win.dragMaskPadding, (win.contentItem.Config.osd && win.contentItem.Config.osd.enabled) ? clampedThickness : 0)
+
+    readonly property real effectiveBarWidth: (bar.shouldBeVisible || bar.implicitWidth > (win.fullscreen ? 0 : win.contentItem.Config.border.thickness)) ? bar.contentWidth : bar.clampedWidth
+
+    x: effectiveBarWidth
+    y: maskBorderThickness + topOffset
+    width: win.width - effectiveBarWidth - maskBorderThickness - rightOffset
+    height: win.height - maskBorderThickness * 2 - topOffset - bottomOffset
     intersection: Intersection.Xor
 
     R {
@@ -70,14 +78,19 @@ Region {
     R {
         panel: root.panels.popoutsWrapper
         width: panel.width * (1 - root.panels.popoutsWrapper.offsetScale)
+        height: panel.visible ? panel.height : 0
     }
 
     R {
         panel: root.panels.manga
+        width: panel.visible ? panel.width : 0
+        height: panel.visible ? panel.height : 0
     }
 
     R {
         panel: root.panels.novel
+        width: panel.visible ? panel.width : 0
+        height: panel.visible ? panel.height : 0
     }
 
     R {
@@ -94,6 +107,8 @@ Region {
 
     R {
         panel: root.panels.calendar
+        width: panel.visible ? panel.width * (1 - root.panels.calendar.offsetScale) : 0
+        height: panel.visible ? panel.height : 0
     }
 
     component R: Region {

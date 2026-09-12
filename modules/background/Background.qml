@@ -9,7 +9,7 @@ import qs.components.containers
 import qs.services
 
 Variants {
-    model: Screens.screens.filter(s => GlobalConfig.forScreen(s.name).background.enabled)
+    model: Screens.screens.filter(s => s && s.name && (GlobalConfig.forScreen(s.name)?.background?.enabled ?? false))
 
     StyledWindow {
         id: win

@@ -31,7 +31,7 @@ Item {
             id: idleInhibit
 
             Layout.fillWidth: true
-            active: Config.utilities.cards.keepAwake
+            active: GlobalConfig.utilities.cards?.keepAwake ?? true
             visible: active
 
             sourceComponent: IdleInhibit {
@@ -43,7 +43,7 @@ Item {
             id: record
 
             Layout.fillWidth: true
-            active: Config.utilities.cards.recorder
+            active: GlobalConfig.utilities.cards?.recorder ?? true
             visible: active
             z: 1
 
@@ -59,7 +59,7 @@ Item {
             id: toggles
 
             Layout.fillWidth: true
-            active: Config.utilities.cards.quickToggles
+            active: GlobalConfig.utilities.cards?.quickToggles ?? true
             visible: active
 
             sourceComponent: Toggles {

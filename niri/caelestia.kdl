@@ -6,8 +6,8 @@ binds {
     Mod+D hotkey-overlay-title="Toggle Dashboard" {spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle dashboard";}
     Mod+I hotkey-overlay-title="Toggle Nexus" {spawn-sh "qs -c niri-caelestia-shell ipc call nexus open";}
     Mod+L allow-when-locked=true hotkey-overlay-title="Lock screen" { spawn-sh "qs -c niri-caelestia-shell ipc call lock lock"; }
-    Mod+V repeat=false hotkey-overlay-title="Toggle Clipboard" { spawn-sh "qs -c niri-caelestia-shell ipc call clipboard open"; }
-    Mod+W repeat=false hotkey-overlay-title="Change Wallpaper" { spawn-sh "qs -c niri-caelestia-shell ipc call wallpaper open"; }
+    Mod+V repeat=false hotkey-overlay-title="Toggle Clipboard" { spawn-sh "qs -c niri-caelestia-shell ipc call clipboard toggle"; }
+    Mod+W repeat=false hotkey-overlay-title="Change Wallpaper" { spawn-sh "qs -c niri-caelestia-shell ipc call wallpaper toggle"; }
     Ctrl+Alt+Delete {spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle session"; }
     Mod+Escape {spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle session"; }
     Mod+P repeat=false hotkey-overlay-title="Display Switcher" { spawn-sh "qs -c niri-caelestia-shell ipc call display toggle"; }

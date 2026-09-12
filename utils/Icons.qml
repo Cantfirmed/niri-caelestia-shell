@@ -107,9 +107,12 @@ Singleton {
     }
 
     function getAppCategoryIcon(name: string, fallback: string): string {
-        for (const iconConfig of GlobalConfig.bar.workspaces.windowIcons)
-            if (matchIconConfig(name, iconConfig))
-                return iconConfig.icon;
+        const iconList = GlobalConfig.bar?.workspaces?.windowIcons ?? Config.bar?.workspaces?.windowIcons;
+        if (iconList && Array.isArray(iconList)) {
+            for (const iconConfig of iconList)
+                if (iconConfig && matchIconConfig(name, iconConfig))
+                    return iconConfig.icon;
+        }
 
         const categories = DesktopEntries.heuristicLookup(name)?.categories;
 

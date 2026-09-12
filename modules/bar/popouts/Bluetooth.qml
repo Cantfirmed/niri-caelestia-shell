@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import Quickshell.Bluetooth
 import Caelestia.Config
 import qs.components
@@ -18,6 +19,16 @@ ColumnLayout {
     width: 300
     spacing: Tokens.spacing.small
 
+    Process {
+        id: unblockProc
+        command: ["rfkill", "unblock", "bluetooth"]
+        onExited: {
+            const adapter = Bluetooth.defaultAdapter; // qmllint disable unresolved-type
+            if (adapter && !adapter.enabled)
+                adapter.enabled = true;
+        }
+    }
+
     StyledText {
         Layout.topMargin: Tokens.padding.medium
         Layout.rightMargin: Tokens.padding.extraSmall
@@ -29,6 +40,8 @@ ColumnLayout {
         label: qsTr("Enabled")
         checked: Bluetooth.defaultAdapter?.enabled ?? false // qmllint disable unresolved-type
         toggle.onToggled: {
+            if (checked)
+                unblockProc.running = true;
             const adapter = Bluetooth.defaultAdapter; // qmllint disable unresolved-type
             if (adapter)
                 adapter.enabled = checked;

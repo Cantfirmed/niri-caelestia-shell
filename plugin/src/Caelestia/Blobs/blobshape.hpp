@@ -19,7 +19,7 @@ class BlobShape : public QQuickItem {
 
 public:
     explicit BlobShape(QQuickItem* parent = nullptr);
-    ~BlobShape() override = default;
+    ~BlobShape() override;
 
     BlobGroup* group() const { return m_group; }
 

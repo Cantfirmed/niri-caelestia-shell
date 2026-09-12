@@ -36,28 +36,19 @@ Item {
     property int windowIconGap: GlobalConfig.bar.workspaces.windowIconGap ?? 5
 
     property var wsWindows: {
-        const _ = Niri.windows;
+        const wins = Niri.windows;
         const wsNum = root.ws;
+        if (!root.outputName || wsNum <= 0)
+            return [];
         const outputWsList = Niri.getWorkspacesForOutput(root.outputName);
-        const niriWorkspace = outputWsList.find(w => w.idx === wsNum);
+        const niriWorkspace = outputWsList && outputWsList.find(w => w && w.idx === wsNum);
         if (!niriWorkspace)
             return [];
         return Niri.getWindowsByWorkspaceId(niriWorkspace.id);
     }
 
     function updateGroupedWindowsModel() {
-        const wsNum = root.ws;
-        const outputWsList = Niri.getWorkspacesForOutput(root.outputName);
-        const niriWorkspace = outputWsList.find(w => w.idx === wsNum);
-        if (!niriWorkspace) {
-            console.log("niriWorkspace is null for ws:", wsNum, "on output:", root.outputName);
-            groupedWindowsModel.clear();
-            root.groupedWindowsArray = [];
-            return;
-        }
-
-        var wsWindows = Niri.getWindowsByWorkspaceId(niriWorkspace.id);
-        console.log("ws:", root.ws, "niriWorkspace.id:", niriWorkspace.id, "wsWindows.length:", wsWindows.length);
+        const wsWindows = root.wsWindows || [];
         var newGroups;
 
         if (root.groupIconsByApp && root.groupingRespectsLayout) {
@@ -76,47 +67,6 @@ Item {
         }
 
         root.groupedWindowsArray = newGroups;
-
-        // Remove old items
-        for (let i = groupedWindowsModel.count - 1; i >= 0; --i) {
-            let oldItem = groupedWindowsModel.get(i);
-            if (!newGroups.find(g => g.id === oldItem.id && g.app_id === oldItem.app_id)) {
-                groupedWindowsModel.remove(i);
-            }
-        }
-
-        // Insert or update
-        for (let i = 0; i < newGroups.length; ++i) {
-            let g = newGroups[i];
-            let idx = -1;
-
-            for (let j = 0; j < groupedWindowsModel.count; ++j) {
-                let old = groupedWindowsModel.get(j);
-                if ((g.id && old.id === g.id) && (g.app_id && old.app_id === g.app_id)) {
-                    idx = j;
-                    break;
-                }
-            }
-
-            let modelItem = {
-                app_id: g.app_id,
-                id: g.id,
-                title: g.title,
-                count: g.count,
-                windows: g.windows,
-                main: g.main
-            };
-
-            if (idx >= 0) {
-                for (let key in modelItem) {
-                    groupedWindowsModel.setProperty(idx, key, modelItem[key]);
-                }
-                if (idx !== i)
-                    groupedWindowsModel.move(idx, i, 1);
-            } else {
-                groupedWindowsModel.insert(i, modelItem);
-            }
-        }
     }
 
     onWsWindowsChanged: updateGroupedWindowsModel()
@@ -174,6 +124,8 @@ Item {
     // width: column.width
     implicitWidth: column.implicitWidth
     implicitHeight: column.implicitHeight
+    width: implicitWidth
+    height: implicitHeight
 
     // Drop indicator
     Rectangle {
@@ -238,7 +190,7 @@ Item {
 
         Repeater {
             id: repeater
-            model: root.model
+            model: root.groupedWindowsArray
             anchors.left: parent.left
 
             delegate: WindowIcon {
@@ -248,15 +200,13 @@ Item {
                 required property var modelData
                 required property int index
 
-                property var fullGroup: root.groupedWindowsArray[index]
-
-                windowData: root.groupIconsByApp ? fullGroup.main : fullGroup
-                groupWindowData: root.groupIconsByApp ? (fullGroup.windows || []) : [fullGroup]
-                windowCount: root.groupIconsByApp ? fullGroup.count : 1
-                isFocused: root.groupIconsByApp ? (fullGroup?.windows?.some(w => w?.id === root.focusedWindowId) ?? false) : root.focusedWindowId === fullGroup?.id
+                windowData: root.groupIconsByApp ? modelData.main : modelData
+                groupWindowData: root.groupIconsByApp ? (modelData.windows || []) : [modelData]
+                windowCount: root.groupIconsByApp ? modelData.count : 1
+                isFocused: root.groupIconsByApp ? (modelData?.windows?.some(w => w?.id === root.focusedWindowId) ?? false) : root.focusedWindowId === modelData?.id
                 isWsFocused: root.isWsFocused
                 curWindowIndex: index
-                wsWindowCount: root.model ? root.model.count : 0
+                wsWindowCount: root.groupedWindowsArray ? root.groupedWindowsArray.length : 0
 
                 onDragStart: iconItem => {
                     if (root.draggedItem)

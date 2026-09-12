@@ -34,6 +34,7 @@ ColumnLayout {
     }
 
     Item {
+        Layout.alignment: Qt.AlignHCenter
         implicitWidth: capslockIcon.implicitWidth
         implicitHeight: Math.round(root.capsHeight)
 
@@ -63,6 +64,7 @@ ColumnLayout {
     }
 
     Item {
+        Layout.alignment: Qt.AlignHCenter
         implicitWidth: numlockIcon.implicitWidth
         implicitHeight: Math.round(root.numHeight)
 

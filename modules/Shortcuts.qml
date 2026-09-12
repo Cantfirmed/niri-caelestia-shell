@@ -244,7 +244,9 @@ Scope {
         function open(): void {
             const screenState = ShellState.forActive();
             if (screenState) {
-                NiriIpc.fetchOutputs(); // Refresh outputs on opening
+                if (typeof NiriIpc !== "undefined" && typeof NiriIpc.fetchOutputs === "function") {
+                    NiriIpc.fetchOutputs(); // Refresh outputs on opening
+                }
                 screenState.displaySelect = true;
             }
         }
@@ -260,7 +262,9 @@ Scope {
             const screenState = ShellState.forActive();
             if (screenState) {
                 if (!screenState.displaySelect) {
-                    NiriIpc.fetchOutputs(); // Refresh outputs on opening
+                    if (typeof NiriIpc !== "undefined" && typeof NiriIpc.fetchOutputs === "function") {
+                        NiriIpc.fetchOutputs(); // Refresh outputs on opening
+                    }
                 }
                 screenState.displaySelect = !screenState.displaySelect;
             }

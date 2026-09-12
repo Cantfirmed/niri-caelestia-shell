@@ -20,19 +20,19 @@ Column {
     spacing: Tokens.spacing.large
 
     SessionButton {
-        id: logout
+        id: shutdown
 
-        icon: Config.session.icons.logout
-        command: Config.session.commands.logout
+        icon: Config.session.icons.shutdown
+        command: Config.session.commands.shutdown
 
-        KeyNavigation.down: shutdown
+        KeyNavigation.down: sleep
 
         Component.onCompleted: forceActiveFocus()
 
         Connections {
             function onLauncherChanged(): void {
                 if (!root.screenState.launcher)
-                    logout.forceActiveFocus();
+                    shutdown.forceActiveFocus();
             }
 
             target: root.screenState
@@ -40,13 +40,13 @@ Column {
     }
 
     SessionButton {
-        id: shutdown
+        id: sleep
 
-        icon: Config.session.icons.shutdown
-        command: Config.session.commands.shutdown
+        icon: Config.session.icons.sleep || "dark_mode"
+        command: Config.session.commands.sleep
 
-        KeyNavigation.up: logout
-        KeyNavigation.down: hibernate
+        KeyNavigation.up: shutdown
+        KeyNavigation.down: reboot
     }
 
     AnimatedImage {
@@ -62,22 +62,22 @@ Column {
     }
 
     SessionButton {
-        id: hibernate
-
-        icon: Config.session.icons.hibernate
-        command: Config.session.commands.hibernate
-
-        KeyNavigation.up: shutdown
-        KeyNavigation.down: reboot
-    }
-
-    SessionButton {
         id: reboot
 
         icon: Config.session.icons.reboot
         command: Config.session.commands.reboot
 
-        KeyNavigation.up: hibernate
+        KeyNavigation.up: sleep
+        KeyNavigation.down: logout
+    }
+
+    SessionButton {
+        id: logout
+
+        icon: Config.session.icons.logout
+        command: Config.session.commands.logout
+
+        KeyNavigation.up: reboot
     }
 
     component SessionButton: IconButton {
@@ -86,8 +86,11 @@ Column {
         required property list<string> command
 
         function exec(): void {
-            if (!SessionManager.exec(command))
-                Quickshell.execDetached(command);
+            root.screenState.session = false;
+            if (command && command.length > 0) {
+                if (!SessionManager.exec(command))
+                    Quickshell.execDetached(command);
+            }
         }
 
         implicitWidth: Tokens.sizes.session.button

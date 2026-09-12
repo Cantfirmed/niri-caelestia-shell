@@ -1,0 +1,15 @@
+# Protected files that must NEVER be overwritten during upstream merges or patches.
+# scripts/port-upstream.sh and scripts/verify-deltas.sh reference these files.
+
+modules/session/Content.qml
+modules/lock/Center.qml
+modules/bar/popouts/ActiveWindow.qml
+modules/bar/popouts/Battery.qml
+plugin/src/Caelestia/Config/sessionconfig.hpp
+plugin/src/Caelestia/Config/extraconfig.hpp
+plugin/src/Caelestia/Config/CMakeLists.txt
+scripts/launch-quickshell.sh
+services/NetworkUsage.qml
+services/Niri.qml
+modules/launcher/Content.qml
+services/Wallpapers.qml

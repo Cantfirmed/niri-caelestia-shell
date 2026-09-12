@@ -211,7 +211,7 @@ StyledRect {
                         centerY: progressIndicator.height / 2
 
                         startAngle: -90
-                        sweepAngle: ((root.modelData.hints.value ?? 0) / 100) * 360
+                        sweepAngle: ((root.modelData.hints?.value ?? 0) / 100) * 360
 
                         Behavior on sweepAngle {
                             Anim {
@@ -247,7 +247,7 @@ StyledRect {
             TextMetrics {
                 id: appNameMetrics
 
-                text: root.modelData.appName
+                text: root.modelData.appName || qsTr("Notification")
                 font: appName.font
                 elide: Text.ElideRight
                 elideWidth: expandBtn.x - time.width - timeSep.width - summary.x - root.Tokens.spacing.small * 3
@@ -301,7 +301,7 @@ StyledRect {
             TextMetrics {
                 id: summaryMetrics
 
-                text: root.modelData.summary
+                text: root.modelData.summary || root.modelData.appName || qsTr("Notification")
                 font: summary.font
                 elide: Text.ElideRight
                 elideWidth: expandBtn.x - time.width - timeSep.width - summary.x - root.Tokens.spacing.small * 3

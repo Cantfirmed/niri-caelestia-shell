@@ -32,7 +32,18 @@ StyledWindow {
         return false;
     }
 
-    readonly property bool hasOpenPanels: screenState ? (screenState.launcher || screenState.dashboard || screenState.session || screenState.sidebar || screenState.utilities || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.osd) : false
+    readonly property bool hasWindows: {
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const activeWsId = NiriIpc.focusedWorkspaceId;
+            return activeWsId >= 0 && NiriIpc.windows.some(w => w.workspace_id === activeWsId);
+        }
+        if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
+            return (Hypr.focusedWorkspace?.lastIpcObject?.windows ?? 0) > 0;
+        }
+        return false;
+    }
+
+    readonly property bool hasOpenPanels: screenState ? (screenState.launcher || screenState.dashboard || screenState.session || screenState.sidebar || screenState.utilities || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.osd || screenState.calendar || (panels?.popouts?.hasCurrent ?? false)) : false
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
@@ -43,10 +54,10 @@ StyledWindow {
 
     property color surfaceColour: Colours.tPalette.m3surface
 
-    // dragMaskPadding controls the hover zone at screen edges.
-    // Must remain non-zero across all workspaces so edge hover detection works reliably.
+    // dragMaskPadding controls the hover zone at screen edges on empty workspaces.
+    // When windows exist or popouts are detached, it is 0 so apps receive clicks near edges.
     readonly property int dragMaskPadding: {
-        if (panels.popouts.isDetached)
+        if (root._needsKeyboardFocus || panels.popouts.isDetached || hasWindows)
             return 0;
 
         const thresholds = [];
@@ -256,6 +267,8 @@ StyledWindow {
     Interactions {
         id: interactions
 
+        anchors.fill: parent
+
         screen: root.screen
         popouts: panels.popouts
         screenState: root.screenState
@@ -307,6 +320,7 @@ StyledWindow {
         BarWrapper {
             id: bar
 
+            anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
 

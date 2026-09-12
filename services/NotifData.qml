@@ -25,6 +25,7 @@ QtObject {
         onTriggered: notif.updateTimeStr()
     }
 
+    property Notification notification
     property string notificationId
     readonly property alias id: notif.notificationId
     property string summary
@@ -40,6 +41,10 @@ QtObject {
     property list<var> actions
 
     readonly property bool hasFullscreen: {
+        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
+            const wsId = NiriIpc.focusedWorkspaceId;
+            return NiriIpc.windows.some(w => w.workspace_id === wsId && (w.is_fullscreen === true || w.fullscreen === true));
+        }
         if (typeof Hypr !== "undefined" && Hypr.focusedMonitor) {
             const monitor = Hypr.focusedMonitor;
             const specialName = monitor?.lastIpcObject.specialWorkspace?.name;

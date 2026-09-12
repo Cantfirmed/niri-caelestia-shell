@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Caelestia.Config
 import qs.components.misc
 
 Scope {
@@ -28,7 +29,7 @@ Scope {
 
     Loader {
         asynchronous: true
-        active: true
+        active: !Config.lock.useWallpaper && Quickshell.screens.length > 0
         onLoaded: active = false
 
         // Force a load of a screencopy so the one in the lock works
@@ -36,7 +37,7 @@ Scope {
         // the first request it fails to capture (because it's async and the compositor
         // refuses capture when locked)
         sourceComponent: ScreencopyView {
-            captureSource: Quickshell.screens[0]
+            captureSource: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
         }
     }
 

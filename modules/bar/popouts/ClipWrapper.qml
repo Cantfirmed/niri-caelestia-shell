@@ -19,6 +19,8 @@ Item {
 
     implicitWidth: content.implicitWidth * (1 - offsetScale)
     implicitHeight: content.implicitHeight
+    width: implicitWidth
+    height: implicitHeight
 
     x: content.isDetached ? (parent.width - content.nonAnimWidth) / 2 : 0
     y: {

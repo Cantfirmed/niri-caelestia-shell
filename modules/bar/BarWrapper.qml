@@ -15,13 +15,14 @@ Item {
     required property BarPopouts.Wrapper popouts
     required property bool fullscreen
 
-    readonly property bool disabled: Strings.testRegexList(Config.bar.excludedScreens, screen.name)
+    readonly property bool isPersistent: (GlobalConfig.bar?.persistent ?? Config.bar?.persistent ?? true)
+    readonly property bool disabled: Strings.testRegexList(GlobalConfig.bar?.excludedScreens ?? Config.bar?.excludedScreens ?? [], screen.name)
 
-    readonly property int clampedWidth: Math.max(Config.border.minThickness, implicitWidth)
-    readonly property int padding: Math.max(Tokens.padding.small, Config.border.thickness)
+    readonly property int clampedWidth: Math.max(GlobalConfig.border?.minThickness ?? 1, implicitWidth)
+    readonly property int padding: Math.max(Tokens.padding.small, GlobalConfig.border?.thickness ?? 1)
     readonly property int contentWidth: Tokens.sizes.bar.innerWidth + padding * 2
-    readonly property int exclusiveZone: !disabled && (Config.bar.persistent || screenState.bar) ? contentWidth : Config.border.thickness
-    readonly property bool shouldBeVisible: !fullscreen && !disabled && (Config.bar.persistent || screenState.bar || isHovered)
+    readonly property int exclusiveZone: !disabled && (isPersistent || screenState.bar) ? contentWidth : (GlobalConfig.border?.thickness ?? 0)
+    readonly property bool shouldBeVisible: !fullscreen && !disabled && (isPersistent || screenState.bar || isHovered)
     property bool isHovered
 
     function closeTray(): void {
@@ -44,9 +45,10 @@ Item {
     function getClockHeight(): real { return clockHeight; }
     function isClockAtY(y: real): bool { return (content.item as Bar)?.isClockAtY(y) ?? false; }
 
+    width: implicitWidth
     clip: true
-    visible: width > Config.border.thickness
-    implicitWidth: fullscreen ? 0 : Config.border.thickness
+    visible: width > (GlobalConfig.border?.thickness ?? 0)
+    implicitWidth: fullscreen ? 0 : (shouldBeVisible ? contentWidth : (GlobalConfig.border?.thickness ?? 0))
 
     states: State {
         name: "visible"
@@ -85,11 +87,12 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         anchors.right: parent.right
+        width: root.contentWidth
 
         active: root.shouldBeVisible
 
         sourceComponent: Bar {
-            width: root.contentWidth
+            anchors.fill: parent
             screen: root.screen
             screenState: root.screenState
             popouts: root.popouts // qmllint disable incompatible-type

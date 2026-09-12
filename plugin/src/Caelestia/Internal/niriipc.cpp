@@ -302,33 +302,50 @@ void NiriIpc::onEvent(const QJsonObject& event) {
     if (event.contains(QStringLiteral("WorkspacesChanged"))) {
         handleWorkspacesChanged(event.value(QStringLiteral("WorkspacesChanged")).toObject());
     } else if (event.contains(QStringLiteral("WorkspaceActivated"))) {
-        // WorkspaceActivated is handled within WorkspacesChanged in the new protocol
-        // but may still arrive separately - handle it
         const auto data = event.value(QStringLiteral("WorkspaceActivated")).toObject();
         const int id = data.value(QStringLiteral("id")).toInt();
         const bool focused = data.value(QStringLiteral("focused")).toBool();
-        Q_UNUSED(focused);
-        m_focusedWorkspaceId = id;
+        if (focused) {
+            m_focusedWorkspaceId = id;
+        }
         
         QVariantList currentWs = m_workspacesModel->items();
+        bool found = false;
         for (int i = 0; i < currentWs.size(); ++i) {
             auto ws = currentWs.at(i).toMap();
             if (ws.value(QStringLiteral("id")).toInt() == id) {
-                m_focusedWorkspaceIndex = i;
-                m_focusedMonitorName = ws.value(QStringLiteral("output")).toString();
+                found = true;
+                if (focused) {
+                    m_focusedWorkspaceIndex = i;
+                    m_focusedMonitorName = ws.value(QStringLiteral("output")).toString();
+                }
                 // Update active/focused flags on same output
-                const QString output = m_focusedMonitorName;
+                const QString output = ws.value(QStringLiteral("output")).toString();
                 for (int j = 0; j < currentWs.size(); ++j) {
                     auto w = currentWs.at(j).toMap();
                     if (w.value(QStringLiteral("output")).toString() == output) {
                         w[QStringLiteral("is_active")] = (j == i);
-                        w[QStringLiteral("is_focused")] = (j == i);
+                        w[QStringLiteral("is_focused")] = focused && (j == i);
+                        currentWs[j] = w;
+                        m_workspacesModel->setItem(j, w);
+                    } else if (focused && w.value(QStringLiteral("is_focused")).toBool()) {
+                        w[QStringLiteral("is_focused")] = false;
                         currentWs[j] = w;
                         m_workspacesModel->setItem(j, w);
                     }
                 }
                 break;
             }
+        }
+        if (!found) {
+            // Workspace was newly created by niri without prior WorkspacesChanged event. Fetch full state.
+            m_requestSocket.request("\"Workspaces\"", [this](bool ok, const QJsonObject& resp) {
+                if (!ok) return;
+                const auto result = resp.value(QStringLiteral("result")).toObject();
+                QJsonObject d;
+                d[QStringLiteral("workspaces")] = result.value(QStringLiteral("Workspaces"));
+                handleWorkspacesChanged(d);
+            });
         }
         updateCurrentOutputWorkspaces();
         emit workspacesChanged();
@@ -443,11 +460,17 @@ void NiriIpc::handleWorkspacesChanged(const QJsonObject& data) {
 
     QVariantList wsList = jsonArrayToVariantList(wsArray);
 
-    // Sort by idx
+    // Sort by output, then by idx
     std::sort(wsList.begin(), wsList.end(), [](const QVariant& a, const QVariant& b) {
-        return a.toMap().value(QStringLiteral("idx")).toInt()
-             < b.toMap().value(QStringLiteral("idx")).toInt();
+        const auto mapA = a.toMap();
+        const auto mapB = b.toMap();
+        const QString outA = mapA.value(QStringLiteral("output")).toString();
+        const QString outB = mapB.value(QStringLiteral("output")).toString();
+        if (outA != outB) return outA < outB;
+        return mapA.value(QStringLiteral("idx")).toInt()
+             < mapB.value(QStringLiteral("idx")).toInt();
     });
+
 
     m_workspacesModel->resetData(wsList);
 

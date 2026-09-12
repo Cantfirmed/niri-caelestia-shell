@@ -99,6 +99,22 @@ Searcher {
             }
         }
 
+        function close(): void {
+            const state = ShellState.forActive();
+            if (state)
+                state.launcher = false;
+        }
+
+        function toggle(): void {
+            const state = ShellState.forActive();
+            if (state) {
+                if (state.launcher)
+                    close();
+                else
+                    open();
+            }
+        }
+
         target: "wallpaper"
     }
 

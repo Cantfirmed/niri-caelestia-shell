@@ -23,9 +23,9 @@ ColumnLayout {
     readonly property bool isWorkspace: true // Flag for finding workspace children
     readonly property int size: isWorkspace ? implicitHeight + (hasWindows ? Appearance.padding.xs : 0) : 0
     readonly property int ws: virtualIdx
-    readonly property bool isOccupied: occupied[ws.toString()] ?? false
-    readonly property bool hasWindows: isOccupied && GlobalConfig.bar.workspaces.showWindows
-    readonly property bool isWsFocused: activeWsId === ws
+    readonly property bool isOccupied: workspaceId > 0 && (occupied && (occupied[ws.toString()] ?? false))
+    readonly property bool hasWindows: isOccupied && (GlobalConfig.bar?.workspaces?.showWindows ?? true)
+    readonly property bool isWsFocused: workspaceId > 0 && activeWsId === ws
 
     onIsOccupiedChanged: console.log("Workspace.qml: ws:", ws, "isOccupied:", isOccupied, "occupied keys:", JSON.stringify(Object.keys(occupied || {})))
     onHasWindowsChanged: console.log("Workspace.qml: ws:", ws, "hasWindows:", hasWindows, "showWindows:", GlobalConfig.bar.workspaces.showWindows)

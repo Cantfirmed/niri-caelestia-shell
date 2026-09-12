@@ -133,8 +133,10 @@ QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData
 }
 
 BlobInvertedRect::~BlobInvertedRect() {
-    if (m_group)
+    if (m_group) {
         m_group->clearInvertedRect(this);
+        m_group = nullptr;
+    }
 }
 
 void BlobInvertedRect::setBorderLeft(qreal v) {

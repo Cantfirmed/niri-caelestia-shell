@@ -1,0 +1,65 @@
+# Shared upstream files — files that exist in both caelestia-dots/shell and our niri fork.
+# When porting upstream changes, only diff these files.
+# Lines starting with # are comments. Globs supported.
+
+# Core QML
+shell.qml
+shell.json
+
+# Components
+components/controls/StyledSlider.qml
+components/StateLayer.qml
+components/MaterialIcon.qml
+components/StyledRect.qml
+components/TextButton.qml
+components/IconButton.qml
+components/DrawerVisibilities.qml
+
+# Services
+services/Visibilities.qml
+services/Brightness.qml
+services/Notifs.qml
+services/Recorder.qml
+services/Appearance.qml
+services/BatteryMonitor.qml
+services/IdleInhibitor.qml
+services/LidInhibitor.qml
+services/VPN.qml
+
+# Drawers (panel infrastructure)
+modules/drawers/Drawers.qml
+modules/drawers/ContentWindow.qml
+modules/drawers/Panels.qml
+modules/drawers/Regions.qml
+modules/drawers/Interactions.qml
+modules/drawers/Exclusions.qml
+
+# Panel modules
+modules/dashboard/*
+modules/launcher/*
+modules/session/*
+modules/sidebar/*
+modules/utilities/*
+modules/notifications/*
+modules/osd/*
+modules/soundpanel/*
+modules/displayselect/*
+modules/controlcenter/*
+modules/manga/*
+modules/novel/*
+modules/lock/*
+modules/areapicker/*
+modules/nexus/*
+modules/polkit/*
+modules/Shortcuts.qml
+
+# C++ plugin
+plugin/src/Caelestia/Config/*
+plugin/src/Caelestia/Blobs/*
+plugin/src/Caelestia/Services/*
+plugin/src/Caelestia/Images/*
+
+# Scripts
+scripts/manga/*
+scripts/novel/*
+scripts/areaPicker/*
