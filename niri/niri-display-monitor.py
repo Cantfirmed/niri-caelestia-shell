@@ -48,11 +48,31 @@ def get_drm_status():
     return internal_connected, external_connected
 
 
+def is_session_locked():
+    """Check if session is currently locked via Quickshell IPC or lockscreen."""
+    try:
+        res = subprocess.run(
+            ["qs", "-c", "niri-caelestia-shell", "ipc", "call", "lock", "isLocked"],
+            capture_output=True,
+            text=True,
+            timeout=0.5,
+        )
+        if res.returncode == 0 and res.stdout.strip() == "true":
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def check_and_fix_displays():
     global LAST_REVERT_TIME
     now = time.time()
     # Debounce: avoid running back-to-back within 3 seconds
     if now - LAST_REVERT_TIME < 3.0:
+        return
+
+    # Never trigger display reconfiguration while the session is locked or sleeping
+    if is_session_locked():
         return
 
     res = run_cmd("niri msg --json outputs")
@@ -84,15 +104,18 @@ def check_and_fix_displays():
     should_revert = False
     reason = ""
 
-    if not has_active_display:
-        should_revert = True
-        reason = "All displays are inactive (black screen)."
-    elif not external_connected and not internal_is_active:
+    # Only revert to internal display if the external monitor is physically absent/disconnected
+    # and internal display is not active. Do NOT revert if monitors are physically connected
+    # and merely in DPMS power-saving standby.
+    if not external_connected and not internal_is_active:
         should_revert = True
         reason = "External monitor disconnected in DRM, but internal screen is inactive."
     elif not has_external_niri and not internal_is_active:
         should_revert = True
         reason = "No external monitor found in Niri outputs, but internal screen is inactive."
+    elif not has_active_display and not external_connected:
+        should_revert = True
+        reason = "All displays inactive and external monitor disconnected in DRM."
 
     if should_revert:
         LAST_REVERT_TIME = now

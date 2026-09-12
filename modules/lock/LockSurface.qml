@@ -16,8 +16,8 @@ WlSessionLockSurface {
 
     readonly property alias unlocking: unlockAnim.running
 
-    contentItem.Config.screen: screen.name
-    contentItem.Tokens.screen: screen.name
+    contentItem.Config.screen: screen?.name ?? ""
+    contentItem.Tokens.screen: screen?.name ?? ""
 
     color: "transparent"
 
