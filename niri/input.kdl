@@ -15,3 +15,8 @@ input {
         natural-scroll
     }
 }
+
+switch-events {
+    lid-close { spawn "python3" "/home/patrick/.config/niri/niri-display-monitor.py" "--lid-close"; }
+    lid-open { spawn "python3" "/home/patrick/.config/niri/niri-display-monitor.py" "--lid-open"; }
+}

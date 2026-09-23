@@ -12,9 +12,9 @@ Scope {
         Notifs;
         Players;
         Brightness;
+        NiriBlur.init();
+        NiriTiling.init();
         Weather.reload();
-
-        if (GlobalConfig.utilities.vpn.enabled)
-            VPN;
+        VPN;
     }
 }

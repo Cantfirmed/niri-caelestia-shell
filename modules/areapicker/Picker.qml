@@ -128,10 +128,9 @@ MouseArea {
         } else {
             const tmpfile = Qt.resolvedUrl(`/tmp/caelestia-picker-${Quickshell.processId}-${Date.now()}.png`);
             CUtils.saveItem(screencopy, tmpfile, Qt.rect(Math.ceil(rsx), Math.ceil(rsy), Math.floor(sw), Math.floor(sh)), path => {
-                if (root.loader.clipboardOnly) {
-                    Quickshell.execDetached(["sh", "-c", "wl-copy --type image/png < " + path]);
-                    Quickshell.execDetached(["notify-send", "-a", "caelestia-cli", "-i", path, "Screenshot taken", "Screenshot copied to clipboard"]);
-                } else {
+                Quickshell.execDetached(["sh", "-c", "wl-copy --type image/png < " + path]);
+                Quickshell.execDetached(["notify-send", "-a", "caelestia-cli", "-i", path, "Screenshot taken", "Screenshot copied to clipboard"]);
+                if (!root.loader.clipboardOnly) {
                     Quickshell.execDetached(["swappy", "-f", path]);
                 }
                 closeAnim.start();

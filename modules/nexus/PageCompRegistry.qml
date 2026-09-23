@@ -41,6 +41,14 @@ QtObject {
                 }
             }
         },
+        Component {
+            // Window blur (Niri)
+            StackPage {
+                Component {
+                    NiriBlurPage {}
+                }
+            }
+        },
 
         // Connectivity
         Component {
@@ -66,6 +74,17 @@ QtObject {
                 }
                 Component {
                     SavedNetworksPage {}
+                }
+            }
+        },
+        Component {
+            // VPN
+            StackPage {
+                Component {
+                    VpnPage {}
+                }
+                Component {
+                    AddVpnPage {}
                 }
             }
         },
@@ -155,6 +174,9 @@ QtObject {
                 }
                 Component {
                     AppInfo {}
+                }
+                Component {
+                    TilingApps {}
                 }
             }
         },

@@ -13,6 +13,7 @@ PageBase {
             audio: qsTr("Speakers"),
             microphone: qsTr("Microphone"),
             network: qsTr("Network"),
+            vpn: qsTr("VPN"),
             bluetooth: qsTr("Bluetooth"),
             battery: qsTr("Battery")
         })

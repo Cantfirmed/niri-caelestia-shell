@@ -47,10 +47,14 @@ Singleton {
 
     readonly property var providerInput: {
         const sel = root.selectedProvider;
-        if (sel.length === 0)
+        if (sel.length === 0) {
+            const configs = root.providerConfigs;
+            if (configs.length > 0)
+                return configs[0];
             return "wireguard";
+        }
         const match = GlobalConfig.utilities.vpn.provider.find(p => typeof p === "object" && p.id === sel);
-        return match || "wireguard";
+        return match || (root.providerConfigs.length > 0 ? root.providerConfigs[0] : "wireguard");
     }
 
     // The single point where every configured provider - a built-in name, a
@@ -88,7 +92,7 @@ Singleton {
     readonly property string interfaceName: active.interface
     readonly property var currentConfig: active
 
-    readonly property var adapters: [wireguardAdapter, warpAdapter, netbirdAdapter, tailscaleAdapter]
+    readonly property var adapters: [wireguardAdapter, warpAdapter, netbirdAdapter, tailscaleAdapter, openvpnAdapter, nmcliAdapter]
 
     // Live list of configured providers as QtObjects, one entry per provider
     // with a stable index. Kept in sync with the config below and consumed by
@@ -178,6 +182,10 @@ Singleton {
 
     // Resolve the stable internal id of the provider entry at `index`.
     function providerIdAt(index: int): string {
+        if (index >= 0 && index < root.providers.length && root.providers[index]?.providerId)
+            return root.providers[index].providerId;
+        if (index >= 0 && index < root.providerConfigs.length && root.providerConfigs[index]?.id)
+            return root.providerConfigs[index].id;
         const entry = GlobalConfig.utilities.vpn.provider[index];
         return (entry && typeof entry === "object") ? (entry.id || "") : "";
     }
@@ -186,8 +194,11 @@ Singleton {
     // disconnectCmd[] }. Newly added providers are not selected by default.
     function addProvider(data: var): void {
         const current = GlobalConfig.utilities.vpn.provider.slice();
-        current.push(buildProviderObject(root.generateId(), data));
+        const newId = root.generateId();
+        current.push(buildProviderObject(newId, data));
         writeProviders(current);
+        if (root.selectedProvider.length === 0)
+            applySelectedProvider(newId);
     }
 
     // Update an existing provider (by index), preserving its internal id so the
@@ -226,6 +237,25 @@ Singleton {
         }
     }
 
+    // Select provider at `index` and connect immediately. If already connected
+    // to this provider, disconnects.
+    function selectAndConnect(index: int): void {
+        const id = root.providerIdAt(index);
+        if (id.length === 0)
+            return;
+        if (root.selectedProvider === id && root.connected) {
+            root.disconnect();
+            return;
+        }
+        if (root.connected) {
+            root.pendingSwitchProvider = id;
+            root.disconnect();
+        } else {
+            applySelectedProvider(id);
+            root.connect();
+        }
+    }
+
     function applySelectedProvider(id: string): void {
         GlobalConfig.utilities.vpn.selectedProvider = id;
     }
@@ -235,10 +265,10 @@ Singleton {
     // (or clear it when the list is empty).
     function ensureSelection(): void {
         const configs = root.providerConfigs;
-        if (configs.some(p => p.id === root.selectedProvider))
+        if (configs.some(p => p.id && p.id === root.selectedProvider))
             return;
-        const next = configs.length > 0 ? configs[0].id : "";
-        if (next !== root.selectedProvider)
+        const next = configs.length > 0 ? (configs[0].id || "") : "";
+        if (next.length > 0 && next !== root.selectedProvider)
             GlobalConfig.utilities.vpn.selectedProvider = next;
     }
 
@@ -573,7 +603,12 @@ Singleton {
             result.push(obj);
         }
 
-        if (selectedId !== root.selectedProvider)
+        if (selectedId.length === 0 && result.length > 0) {
+            selectedId = result[0].id;
+            changed = true;
+        }
+
+        if (selectedId !== root.selectedProvider && selectedId.length > 0)
             GlobalConfig.utilities.vpn.selectedProvider = selectedId;
         if (changed)
             writeProviders(result);
@@ -703,6 +738,25 @@ Singleton {
         statusCmd: ["tailscale", "status", "--json"]
         parse: out => root.parseTailscaleStatus(out)
         connectHint: error => error.includes("Access denied") || error.includes("checkprefs access denied") ? "Permission denied. Run in terminal: sudo tailscale set --operator=$USER" : ""
+    }
+
+    Adapter {
+        id: openvpnAdapter
+
+        name: "openvpn"
+        display: iface => iface || "OpenVPN"
+        service: "openvpn"
+        connectCmd: iface => ["pkexec", "systemctl", "start", `openvpn-client@${iface}`]
+        disconnectCmd: iface => ["pkexec", "systemctl", "stop", `openvpn-client@${iface}`]
+    }
+
+    Adapter {
+        id: nmcliAdapter
+
+        name: "nmcli"
+        display: iface => iface || "NetworkManager VPN"
+        connectCmd: iface => ["nmcli", "connection", "up", iface]
+        disconnectCmd: iface => ["nmcli", "connection", "down", iface]
     }
 
     // ── Generic engine ──────────────────────────────────────────────────────

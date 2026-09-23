@@ -72,6 +72,20 @@ PageBase {
             subtext: qsTr("Browse installed apps, set favourites and hidden")
             onClicked: root.nState.openSubPage(1)
         }
+
+        // Window management
+        SectionHeader {
+            text: qsTr("Window management")
+        }
+
+        NavRow {
+            first: true
+            last: true
+            icon: "splitscreen"
+            text: qsTr("Tiling applications")
+            subtext: qsTr("Configure programs that should always start in tiling mode")
+            onClicked: root.nState.openSubPage(3)
+        }
     }
 
     component DefaultRow: PopupRow {

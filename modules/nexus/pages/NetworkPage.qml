@@ -160,11 +160,15 @@ PageBase {
                 implicitHeight: providerLayout.implicitHeight + providerLayout.anchors.margins * 2
 
                 StateLayer {
-                    disabled: provider.isSelected
                     radius: Tokens.rounding.extraSmall
                     onClicked: {
-                        if (!provider.isSelected)
+                        if (!provider.isSelected) {
                             VPN.setActiveProvider(provider.modelData.index);
+                        } else if (!VPN.connected) {
+                            VPN.connect();
+                        } else {
+                            VPN.disconnect();
+                        }
                     }
                 }
 

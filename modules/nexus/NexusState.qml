@@ -8,12 +8,14 @@ QtObject {
     property bool animatingContainer
     property int currentPageIdx
     property list<int> subPageIdxStack
-    property bool searchOpen
+    property string searchQuery: ""
+    property bool searchOpen: searchQuery.trim().length > 0
 
     property string selectedWallpaperCategory
     property BluetoothDevice selectedBtDevice
     property DesktopEntry selectedApp
     property int editingVpnIndex: -1
+    property string vpnPreset: ""
     property string selectedNetworkSsid
     property string selectedEthernetInterface
     property bool networkDetailsFromSaved

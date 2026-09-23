@@ -44,6 +44,7 @@ class UtilitiesCards : public settings::ObjectNode {
     CONFIG_PROPERTY(bool, keepAwake, true)
     CONFIG_PROPERTY(bool, recorder, true)
     CONFIG_PROPERTY(bool, quickToggles, true)
+    CONFIG_PROPERTY(bool, vpn, true)
 };
 
 class UtilitiesConfig : public settings::ObjectNode {

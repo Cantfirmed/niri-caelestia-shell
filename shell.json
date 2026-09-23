@@ -147,6 +147,7 @@
       "showMicrophone": false,
       "showKbLayout": true,
       "showNetwork": true,
+      "showVpn": true,
       "showWifi": true,
       "showBluetooth": true,
       "showBattery": true,
@@ -357,6 +358,7 @@
     "enableFprint": false,
     "showExtras": true,
     "maxFprintTries": 3,
+    "hideNotifContent": true,
     "sizes": {
       "heightMult": 0.7,
       "ratio": 1.7777777777777777,
@@ -373,7 +375,8 @@
     "cards": {
       "keepAwake": true,
       "recorder": true,
-      "quickToggles": true
+      "quickToggles": true,
+      "vpn": true
     },
     "quickToggles": [
       {
@@ -401,7 +404,7 @@
         "id": "dnd"
       },
       {
-        "enabled": false,
+        "enabled": true,
         "id": "vpn"
       }
     ],
@@ -422,8 +425,20 @@
     "vpn": {
       "enabled": false,
       "provider": [
-        "netbird"
-      ]
+        {
+          "displayName": "WireGuard (wg0)",
+          "id": "vpn-wireguard-1",
+          "interface": "wg0",
+          "name": "wireguard"
+        },
+        {
+          "displayName": "NetBird",
+          "id": "vpn-netbird-1",
+          "interface": "wt0",
+          "name": "netbird"
+        }
+      ],
+      "selectedProvider": "vpn-wireguard-1"
     }
   },
   "services": {

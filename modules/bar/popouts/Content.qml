@@ -91,6 +91,13 @@ Item {
         }
 
         Popout {
+            name: "vpn"
+            sourceComponent: Vpn {
+                popouts: root.popouts
+            }
+        }
+
+        Popout {
             name: "bluetooth"
             sourceComponent: Bluetooth {
                 popouts: root.popouts

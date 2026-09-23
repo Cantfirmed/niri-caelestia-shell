@@ -22,6 +22,7 @@ CustomMouseArea {
     property bool dashboardShortcutActive
     property bool osdShortcutActive
     property bool utilitiesShortcutActive
+    property bool utilitiesHoverBlocked: false
     property bool calendarShortcutActive
 
     function withinPanelHeight(panel: Item, x: real, y: real): bool {
@@ -48,7 +49,8 @@ CustomMouseArea {
     }
 
     function inBottomPanel(panel: Item, x: real, y: real, isCorner = false): bool {
-        const panelHeight = panel.height * (1 - (panel.offsetScale ?? 0)); // qmllint disable missing-property
+        const isActive = (panel.shouldBeActive ?? true) && (panel.offsetScale !== 1); // qmllint disable missing-property
+        const panelHeight = isActive ? panel.height * (1 - (panel.offsetScale ?? 0)) : 0; // qmllint disable missing-property
         return y > height - Math.max(Config.border.minThickness, Config.border.thickness + panelHeight) - (isCorner ? Config.border.rounding : 0) && withinPanelWidth(panel, x, y);
     }
 
@@ -246,14 +248,16 @@ CustomMouseArea {
         }
 
         // Show utilities on hover
-        const showUtilities = inBottomPanel(panels.utilities, x, y, true);
+        const inUtilitiesZone = inBottomPanel(panels.utilities, x, y, true);
+        if (!inUtilitiesZone) {
+            utilitiesHoverBlocked = false;
+        }
+
+        const showUtilities = !screenState.sidebar && !utilitiesHoverBlocked && inUtilitiesZone;
 
         // Always update visibility based on hover if not in shortcut mode
         if (!utilitiesShortcutActive) {
             screenState.utilities = showUtilities;
-        } else if (showUtilities) {
-            // If hovering over utilities area while in shortcut mode, transition to hover control
-            utilitiesShortcutActive = false;
         }
 
         // Show popouts on hover
@@ -317,14 +321,18 @@ CustomMouseArea {
 
         function onUtilitiesChanged() {
             if (root.screenState.utilities) {
-                // Utilities became visible, immediately check if this should be shortcut mode
-                const inUtilitiesArea = root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY);
+                root.utilitiesHoverBlocked = false;
+                const inUtilitiesArea = root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY, true);
                 if (!inUtilitiesArea) {
                     root.utilitiesShortcutActive = true;
                 }
             } else {
                 // Utilities hidden, clear shortcut flag
                 root.utilitiesShortcutActive = false;
+                // If cursor is still in the utilities area when closed, block hover re-trigger until cursor exits
+                if (root.inBottomPanel(root.panels.utilities, root.mouseX, root.mouseY, true)) {
+                    root.utilitiesHoverBlocked = true;
+                }
             }
         }
 

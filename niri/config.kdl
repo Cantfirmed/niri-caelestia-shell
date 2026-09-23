@@ -18,6 +18,7 @@ include "rules.kdl"
 include "binds.kdl"
 include "caelestia.kdl"
 include "blur.kdl"
+include "tiling.kdl"
 
 include "colors.kdl"
 

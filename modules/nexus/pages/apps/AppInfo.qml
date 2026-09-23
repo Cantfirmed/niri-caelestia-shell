@@ -103,6 +103,23 @@ PageBase {
             }
         }
 
+        // Window management
+        SectionHeader {
+            text: qsTr("Window management")
+        }
+
+        ToggleRow {
+            first: true
+            last: true
+            text: qsTr("Start in tiling")
+            subtext: qsTr("Force application to open in tiling mode instead of floating")
+            checked: root.app && NiriTiling.isAppTiled(root.app.id)
+            onToggled: {
+                if (root.app)
+                    NiriTiling.setAppTiled(root.app.id, root.app.name, root.app.icon, checked);
+            }
+        }
+
         // Details
         SectionHeader {
             text: qsTr("Details")

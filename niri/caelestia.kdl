@@ -5,7 +5,8 @@ binds {
     Mod+Space repeat=false { spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle launcher"; }
     Mod+D hotkey-overlay-title="Toggle Dashboard" {spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle dashboard";}
     Mod+I hotkey-overlay-title="Toggle Nexus" {spawn-sh "qs -c niri-caelestia-shell ipc call nexus open";}
-    Mod+L allow-when-locked=true hotkey-overlay-title="Lock screen" { spawn-sh "qs -c niri-caelestia-shell ipc call lock lock"; }
+    Mod+L allow-when-locked=true hotkey-overlay-title="Lock screen" { spawn-sh "timeout 3s qs -c niri-caelestia-shell ipc call lock lock"; }
+    Mod+Alt+L allow-when-locked=true hotkey-overlay-title="Emergency Wake & Restore Lock" { spawn-sh "niri msg output HDMI-A-1 on; niri msg output eDP-1 on; niri msg action power-on-monitors; timeout 2s qs -c niri-caelestia-shell ipc call lock lock || (pkill -9 -x quickshell; sleep 0.5; timeout 2s qs -c niri-caelestia-shell ipc call lock lock)"; }
     Mod+V repeat=false hotkey-overlay-title="Toggle Clipboard" { spawn-sh "qs -c niri-caelestia-shell ipc call clipboard toggle"; }
     Mod+W repeat=false hotkey-overlay-title="Change Wallpaper" { spawn-sh "qs -c niri-caelestia-shell ipc call wallpaper toggle"; }
     Ctrl+Alt+Delete {spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle session"; }

@@ -13,6 +13,40 @@ VerticalFadeFlickable {
 
     required property NexusState nState
 
+    readonly property string query: (root.nState.searchQuery ?? "").trim().toLowerCase()
+    readonly property bool isSearching: query.length > 0
+
+    readonly property var allPagesWithIndex: {
+        const pages = PageRegistry.pages;
+        const res = [];
+        for (let i = 0; i < pages.length; i++) {
+            res.push({
+                originalIndex: i,
+                label: pages[i].label,
+                icon: pages[i].icon,
+                description: pages[i].description,
+                category: pages[i].category,
+                noFill: pages[i].noFill ?? false,
+                keywords: pages[i].keywords ?? ""
+            });
+        }
+        return res;
+    }
+
+    readonly property var displayedPages: {
+        if (!isSearching)
+            return allPagesWithIndex;
+        return allPagesWithIndex.filter(p => {
+            const label = (p.label ?? "").toLowerCase();
+            const desc = (p.description ?? "").toLowerCase();
+            const cat = (p.category ?? "").toLowerCase();
+            const kw = (p.keywords ?? "").toLowerCase();
+            return label.includes(query) || desc.includes(query) || cat.includes(query) || kw.includes(query);
+        });
+    }
+
+    readonly property int firstIndex: displayedPages.length > 0 ? displayedPages[0].originalIndex : -1
+
     topMargin: Tokens.padding.large
     bottomMargin: Tokens.padding.large
     contentHeight: content.implicitHeight
@@ -31,7 +65,7 @@ VerticalFadeFlickable {
         Repeater {
             id: list
 
-            model: PageRegistry.pages
+            model: root.displayedPages
 
             StyledRect {
                 id: item
@@ -39,12 +73,12 @@ VerticalFadeFlickable {
                 required property var modelData
                 required property int index
 
-                readonly property bool isCurrentPage: index === root.nState.currentPageIdx
-                readonly property bool isCategoryStart: index === 0 || PageRegistry.pages[index - 1].category !== modelData.category
-                readonly property bool isCategoryEnd: index === list.model.length - 1 || PageRegistry.pages[index + 1].category !== modelData.category
+                readonly property bool isCurrentPage: modelData.originalIndex === root.nState.currentPageIdx
+                readonly property bool isCategoryStart: !root.isSearching && (index === 0 || root.displayedPages[index - 1].category !== modelData.category)
+                readonly property bool isCategoryEnd: !root.isSearching && (index === root.displayedPages.length - 1 || root.displayedPages[index + 1].category !== modelData.category)
 
                 Layout.fillWidth: true
-                Layout.topMargin: index !== 0 && isCategoryStart ? Tokens.spacing.medium : 0
+                Layout.topMargin: root.isSearching ? 0 : (index !== 0 && isCategoryStart ? Tokens.spacing.medium : 0)
                 implicitHeight: {
                     const h = layout.implicitHeight + layout.anchors.margins * 2;
                     return h % 2 === 0 ? h : h + 1;
@@ -52,10 +86,10 @@ VerticalFadeFlickable {
 
                 color: isCurrentPage ? Colours.palette.m3secondaryContainer : Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
 
-                topLeftRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryStart ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
-                topRightRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryStart ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
-                bottomLeftRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryEnd ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
-                bottomRightRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : isCategoryEnd ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
+                topLeftRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : (root.isSearching || isCategoryStart) ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
+                topRightRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : (root.isSearching || isCategoryStart) ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
+                bottomLeftRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : (root.isSearching || isCategoryEnd) ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
+                bottomRightRadius: stateLayer.pressed ? Tokens.rounding.medium : isCurrentPage ? Tokens.rounding.extraLargeIncreased : (root.isSearching || isCategoryEnd) ? Tokens.rounding.extraLarge : Tokens.rounding.extraSmall
 
                 RadiusBehavior on topLeftRadius {}
                 RadiusBehavior on topRightRadius {}
@@ -71,7 +105,7 @@ VerticalFadeFlickable {
                     bottomLeftRadius: parent.bottomLeftRadius
                     bottomRightRadius: parent.bottomRightRadius
 
-                    onClicked: root.nState.currentPageIdx = item.index
+                    onClicked: root.nState.currentPageIdx = item.modelData.originalIndex
                 }
 
                 RowLayout {
@@ -123,6 +157,16 @@ VerticalFadeFlickable {
                     }
                 }
             }
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.large
+            visible: root.isSearching && root.displayedPages.length === 0
+            horizontalAlignment: Text.AlignHCenter
+            text: qsTr("No settings found for \"%1\"").arg(root.nState.searchQuery)
+            color: Colours.palette.m3onSurfaceVariant
+            font: Tokens.font.body.medium
         }
     }
 

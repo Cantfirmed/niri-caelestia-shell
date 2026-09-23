@@ -16,6 +16,8 @@ StyledRect {
 
     required property string modelData
 
+    readonly property bool hideContent: (Config.lock.hideNotifContent ?? true)
+
     readonly property list<var> notifs: Notifs.list.filter(notif => notif.appName === modelData)
     readonly property var props: {
         let img = "";
@@ -38,7 +40,7 @@ StyledRect {
             urgency: hasCritical ? "critical" : hasNormal ? "normal" : "low"
         };
     }
-    readonly property string image: props.img
+    readonly property string image: root.hideContent ? "" : props.img
     readonly property string appIcon: props.icon
     readonly property string urgency: props.urgency
 
@@ -311,8 +313,11 @@ StyledRect {
         required property NotifData modelData
 
         Layout.fillWidth: true
-        textFormat: Text.MarkdownText
+        textFormat: root.hideContent ? Text.PlainText : Text.MarkdownText
         text: {
+            if (root.hideContent)
+                return metrics.elidedText;
+
             const summary = modelData.summary.replace(/\n/g, " ");
             const body = modelData.body.replace(/\n/g, " ");
             const colour = root.urgency === "critical" ? Colours.palette.m3secondary : Colours.palette.m3outline;
@@ -334,7 +339,15 @@ StyledRect {
         TextMetrics {
             id: metrics
 
-            text: `${notifLine.modelData.summary} ${notifLine.modelData.body}`.replace(/\n/g, " ")
+            text: {
+                if (root.hideContent) {
+                    const summary = notifLine.modelData.summary ? notifLine.modelData.summary.replace(/\n/g, " ").trim() : "";
+                    if (summary.length > 0 && summary.toLowerCase() !== root.modelData.trim().toLowerCase())
+                        return summary;
+                    return qsTr("New notification");
+                }
+                return `${notifLine.modelData.summary} ${notifLine.modelData.body}`.replace(/\n/g, " ");
+            }
             font: notifLine.font
             elideWidth: notifLine.width
             elide: Text.ElideRight

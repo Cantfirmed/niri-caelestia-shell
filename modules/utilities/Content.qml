@@ -15,8 +15,8 @@ Item {
     required property BarPopouts.Wrapper popouts
     required property matrix4x4 deformMatrix
 
-    readonly property int enabledCards: (idleInhibit.active ? 1 : 0) + (record.active ? 1 : 0) + (toggles.active ? 1 : 0)
-    readonly property real nonAnimHeight: ((idleInhibit.item as IdleInhibit)?.nonAnimHeight ?? 0) + ((record.item as Record)?.nonAnimHeight ?? 0) + ((toggles.item as Toggles)?.implicitHeight ?? 0) + layout.spacing * Math.max(0, enabledCards - 1)
+    readonly property int enabledCards: (idleInhibit.active ? 1 : 0) + (record.active ? 1 : 0) + (vpnCard.active ? 1 : 0) + (toggles.active ? 1 : 0)
+    readonly property real nonAnimHeight: ((idleInhibit.item as IdleInhibit)?.nonAnimHeight ?? 0) + ((record.item as Record)?.nonAnimHeight ?? 0) + ((vpnCard.item as Vpn)?.nonAnimHeight ?? 0) + ((toggles.item as Toggles)?.implicitHeight ?? 0) + layout.spacing * Math.max(0, enabledCards - 1)
 
     implicitWidth: layout.implicitWidth
     implicitHeight: layout.implicitHeight
@@ -51,6 +51,20 @@ Item {
                 objectName: "utilitiesScreenRecorder"
 
                 props: root.props
+                screenState: root.screenState
+            }
+        }
+
+        Loader {
+            id: vpnCard
+
+            Layout.fillWidth: true
+            active: GlobalConfig.utilities.cards?.vpn ?? true
+            visible: active
+
+            sourceComponent: Vpn {
+                objectName: "utilitiesVpn"
+
                 screenState: root.screenState
             }
         }

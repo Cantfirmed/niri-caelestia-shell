@@ -137,6 +137,21 @@ def main():
         internal = list(outputs.keys())[0] if outputs else "eDP-1"
         
     if not external:
+        import glob
+        for path in glob.glob("/sys/class/drm/card*-*/status"):
+            parts = os.path.basename(os.path.dirname(path)).split("-", 1)
+            if len(parts) > 1:
+                conn = parts[1]
+                if not conn.startswith(("eDP", "LVDS", "DSI")):
+                    try:
+                        with open(path) as f:
+                            if f.read().strip() == "connected":
+                                external = conn
+                                break
+                    except Exception:
+                        pass
+
+    if not external:
         if mode in ("external", "extend", "extend-left", "extend-right", "duplicate"):
             notify("Display Switcher", "No external display detected.", "warn")
             mode = "internal"
@@ -250,6 +265,21 @@ output "{internal}" {{
                 "error"
             )
 
+    # If already in the target state, avoid redundant reloads
+    if os.path.exists(output_kdl_path):
+        try:
+            with open(output_kdl_path, "r") as f:
+                current_content = f.read()
+            if current_content.strip() == kdl_content.strip():
+                if mode == "external" and not outputs.get(internal, {}).get("logical") and outputs.get(external, {}).get("logical"):
+                    return
+                elif mode == "internal" and outputs.get(internal, {}).get("logical") and not outputs.get(external, {}).get("logical"):
+                    return
+                elif mode in ("extend-left", "extend-right", "duplicate") and outputs.get(internal, {}).get("logical") and outputs.get(external, {}).get("logical"):
+                    return
+        except Exception:
+            pass
+
     # Write output.kdl
     try:
         os.makedirs(os.path.dirname(output_kdl_path), exist_ok=True)
@@ -276,9 +306,20 @@ output "{internal}" {{
     try:
         kill_quickshell()
 
-        # Reload niri config (may turn off a display)
+        # Explicitly configure output active states via IPC
         if mode == "internal":
             run_cmd(f"niri msg output {internal} on")
+            if external:
+                run_cmd(f"niri msg output {external} off")
+        elif mode == "external":
+            run_cmd(f"niri msg output {internal} off")
+            if external:
+                run_cmd(f"niri msg output {external} on")
+        elif mode in ("extend-left", "extend-right", "duplicate"):
+            run_cmd(f"niri msg output {internal} on")
+            if external:
+                run_cmd(f"niri msg output {external} on")
+
         res_reload = run_cmd("niri msg action load-config-file")
         if res_reload.returncode != 0:
             notify("Display Switcher", "Failed to reload Niri config", "error")

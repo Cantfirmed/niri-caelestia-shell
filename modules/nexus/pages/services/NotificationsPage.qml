@@ -95,6 +95,27 @@ PageBase {
             onMoved: v => GlobalConfig.notifs.groupPreviewNum = Math.round(v)
         }
 
+        // Lock screen
+        SectionHeader {
+            text: qsTr("Lock screen")
+        }
+
+        ToggleRow {
+            first: true
+            text: qsTr("Hide notifications")
+            subtext: qsTr("Do not show any notifications on the lock screen")
+            checked: GlobalConfig.lock.hideNotifs
+            onToggled: GlobalConfig.lock.hideNotifs = checked
+        }
+
+        ToggleRow {
+            last: true
+            text: qsTr("Hide message content")
+            subtext: qsTr("Hide notification message bodies and show only senders for privacy")
+            checked: GlobalConfig.lock.hideNotifContent
+            onToggled: GlobalConfig.lock.hideNotifContent = checked
+        }
+
         // Toasts
         SectionHeader {
             text: qsTr("Toasts")

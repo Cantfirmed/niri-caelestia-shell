@@ -116,5 +116,15 @@ Refer to [`NIRI-DELTAS.md`](file:///home/patrick/.config/niri_caelestia/NIRI-DEL
 - **DPMS & Display Fallback Daemon:** `niri-display-monitor.py` must check `is_session_locked()` and never trigger display fallbacks when monitors are powered off for DPMS sleep. Reverting to internal screen is only for genuine cable disconnects (`status != "connected"` in DRM).
 - **Preserve `QSG_RENDER_LOOP=threaded`:** Do not downgrade to `basic` for stability workarounds; keep `threaded` for multi-refresh (144Hz + 120Hz) fluid rendering and fix the underlying surface lifecycle instead.
 - **Root-Cause Invariant:** Never propose changing idle/lock timers to "fix" crashes; timers only postpone the trigger.
+- **Sleep Spurious Resume & Wakeup Invariant:**
+  - On this machine (Lenovo IdeaPad AMD Phoenix/Hawk Point), premature wakeups (2–5s after sleep) are caused by hardware wakeup lines (`XHC0..XHC4`, `GPP1..GPP6`, `ELAN06FA:00`), NOT Niri or Quickshell.
+  - **Reciprocal Invariant:** If the user reports that the laptop **cannot be woken up** by external keyboards, mice, or the touchpad, check `disable-spurious-wakeups.service` and `/proc/acpi/wakeup`. When `XHC*` and `ELAN` wakeups are disabled, only the **Power Button** and **Lid** can wake the machine from `s2idle`.
 
+---
 
+## 6. Drawer & Panel Interaction Guidelines
+
+- **Interactive Panels & Shortcut Precedence**: Interactive drawers (`utilities`) must retain shortcut active state while hovered. Never let cursor presence inside an open panel override an explicit close shortcut.
+- **Compound Drawer Coordination**: Attached drawers (`sidebar` and `utilities`) must synchronize dismissals so closing either panel resets both states to prevent ghost/detached panels.
+- **Zero Inactive Hit-Test Height**: Hit-test functions (`inBottomPanel`) must evaluate `panelHeight` as 0 when `!shouldBeActive` to prevent exit animations from re-triggering opens.
+- **Hover Retrigger Guard**: When an interactive panel is closed via keyboard or IPC while the cursor is over its region, hover retriggering must be blocked until the cursor moves out of the region.

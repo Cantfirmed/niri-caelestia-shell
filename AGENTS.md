@@ -108,9 +108,11 @@ dashboardShortcutActive, osdShortcutActive, utilitiesShortcutActive
 ```
 
 - **Hover mode**: Panel shows when mouse enters its zone, hides when mouse leaves.
-- **Shortcut mode**: Panel was opened via keyboard/API call. Stays visible until dismissed (explicit close or entering the hover zone transitions to hover control).
-- Detection: when a visibility property changes, the `Connections` handler checks if the mouse is currently in the panel's hover zone. If not, it sets the shortcut flag.
-- The `onPositionChanged` handler checks the shortcut flag: if active, hover detection is skipped (panel stays open). If the mouse enters the zone, it transitions to hover control.
+- **Shortcut mode**: Panel was opened via keyboard/API call. Stays visible until dismissed explicitly via shortcut/IPC or close action.
+- **Interactive Panel Invariant**: For interactive panels (like `utilities`), hovering inside the panel must **never** clear `*ShortcutActive`. If shortcut mode is revoked while hovering over buttons, any keyboard close attempt will be immediately overridden by the hover detector snaps.
+- **Hover Retrigger Blocking (`*HoverBlocked`)**: When an interactive panel is closed via shortcut/IPC while the cursor is still inside the panel hit zone, hover re-triggering is blocked until the cursor exits the zone (`utilitiesHoverBlocked = false`).
+- **Detection**: When a visibility property changes, the `Connections` handler checks if the mouse is currently at the screen edge threshold. If not, it sets the shortcut flag.
+- The `onPositionChanged` handler checks the shortcut flag: if active, hover detection is skipped (panel stays open). For passive overlays (e.g. OSD), entering the zone may transition to hover control, but interactive control panels must remain in shortcut mode.
 
 #### Panels Layout (right side)
 
@@ -138,8 +140,8 @@ Plus floating/detached panels:
 | `dashboard/` | Top status dashboard — weather, clocks, resource monitors, media player |
 | `launcher/` | App launcher with clipboard, calculator, emoji support |
 | `session/` | Power menu (shutdown, sleep, reboot, logout) |
-| `sidebar/` | Notification dock (NotifDock) |
-| `utilities/` | Idle inhibit + screen recorder + quick toggles (WiFi, BT, mic, game mode, DND, VPN) |
+| `sidebar/` | Notification dock (NotifDock) — [Sidebar Developer Guide](modules/sidebar/AGENTS.md) |
+| `utilities/` | Idle inhibit + screen recorder + quick toggles (WiFi, BT, mic, game mode, DND, VPN) — [Utilities Developer Guide](modules/utilities/AGENTS.md) |
 | `notifications/` | Standalone notification panel at top-right |
 | `osd/` | Volume/brightness OSD sliders |
 | `soundpanel/` | Full overlay with per-app audio controls and MPRIS integration (Mod+A) |
@@ -330,10 +332,49 @@ pkill -9 quickshell; pkill -9 qs
 3. **Render Loop Race Condition:** Under `QSG_RENDER_LOOP=threaded`, destroying layer-shell surfaces mid-flight caused `QQuickWindow::maybeUpdate()` to access deleted window `d_ptr`s.
 
 **Invariants & Best Practices**:
-- **Guard Display Daemon:** `niri-display-monitor.py` must check `is_session_locked()` and verify that external monitors are physically disconnected in DRM (`status != "connected"`) before triggering any display fallback. Never rewrite display configs or kill Quickshell during DPMS sleep.
+- **Guard Display Daemon:** `niri-display-monitor.py` must check `is_session_locked()` and verify that external monitors are physically disconnected in DRM (`status != "connected"`) across multiple consecutive cycles before triggering any display fallback. Never rewrite display configs or kill Quickshell during DPMS sleep.
+- **Clamshell & Unlock Invariant:** When the laptop lid is closed (`/proc/acpi/button/lid/*/state`), never fall back to the internal display. If an external monitor is present with lid closed, enforce external-only layout so windows are never displaced onto the closed laptop screen. Provide a 5s grace period upon unlock for HDMI/DP handshake completion before evaluating any display fallback. Niri `switch-events` (`lid-close`, `lid-open`) in `input.kdl` provide immediate hardware event handling.
+- **Explicit Niri Output Disabling**: Niri does not dynamically disable an already active output simply by reloading `config.kdl` with `off`. Scripts (`niri-display.py`, `niri-display-monitor.py`) must explicitly execute `niri msg output <name> off` (and `on`) via IPC when reconfiguring displays; otherwise, `outputs[name].logical` remains non-null, causing clamshell monitor loops and repeated SIGKILL restarts of Quickshell.
 - **Defensive Screen Property Access:** Always use `screen?.name ?? ""` in `LockSurface.qml` and `StyledWindow.qml`.
 - **Do Not Downgrade Render Loop:** Keep `QSG_RENDER_LOOP=threaded` to maintain 144Hz/120Hz smooth rendering for SDF shaders and glassmorphic blurs; fix the underlying surface lifecycle instead of switching to `basic`.
 - **Never "Fix" Crashes by Changing Timers:** Increasing or disabling timers only postpones the crash until the timer expires. Always resolve the root cause.
+
+### Interactive Panel Hover Hijacking & Close Animation Bounce
+
+**Symptom**: Pressing a shortcut (e.g. `Super+N` for utilities) fails to close the panel or causes it to immediately snap back open while the mouse cursor is hovering over it.
+
+**Root causes**:
+1. **Shortcut Revocation on Hover**: Clearing `*ShortcutActive = false` when the cursor hovers over an interactive panel switches it to hover-controlled mode. When the user hits the shortcut to close, `screenState = false` is toggled, but the cursor is still over the panel, so the very next mouse movement or frame immediately forces `screenState = true`.
+2. **Animation Window Hit-Test**: During panel exit animations (`offsetScale` transitioning from 0 to 1), hit-test functions (`inBottomPanel`) that use `(1 - offsetScale)` evaluate `panelHeight > 0` across several hundred milliseconds, falsely reporting hover inside the closing panel.
+
+**Invariants & Best Practices**:
+- **Preserve Shortcut Mode in Interactive Drawers**: Do not clear `*ShortcutActive` when hovering over interactive panels containing buttons or toggles.
+- **Collapse Inactive Panel Geometry**: Hit-test functions must evaluate `panelHeight = 0` when `!panel.shouldBeActive` or when inactive, ensuring the hover trigger area instantly collapses to the border edge upon close.
+- **Block Hover Re-Trigger on Close**: If a panel is closed while the mouse is still inside its area, set `hoverBlocked = true` until the cursor exits the zone.
+
+### Compound Drawer Coupling (Sidebar + Attached Utilities)
+
+**Symptom**: Pressing `Super+N` while the sidebar is open does not close utilities, or closing sidebar via `Super+Shift+N` leaves utilities floating open.
+
+**Root cause**: `Utilities.Wrapper` has `shouldBeActive: screenState.sidebar || (screenState.utilities && ...)`. When `screenState.sidebar` is `true`, utilities attaches to the bottom. If `screenState.utilities` becomes `true` (via hover or shortcut), closing sidebar only sets `screenState.sidebar = false`, leaving `utilities` open in detached mode. Conversely, toggling `utilities` while sidebar is open leaves `sidebar` active.
+
+**Invariants & Best Practices**:
+- **Coordinated Toggling**: In `Shortcuts.qml` (`CustomShortcut` and `IpcHandler { target: "drawers" }`), toggling or closing either `utilities` or `sidebar` must clear **both** `screenState.utilities = false` and `screenState.sidebar = false` if either is active.
+- **Isolate Hover Across Coupled Drawers**: Guard hover detection (`showUtilities = !screenState.sidebar && ...`) so hovering over the bottom of an open sidebar never leaks `screenState.utilities = true`.
+
+### Sleep Resume After 2–5s vs. Inability to Wake Up (AMD / Lenovo IdeaPad S2idle)
+
+**Premature Resume (2–5s after Sleep with Lid Open):**
+- **Symptom:** Laptop suspends via Caelestia Shell or power button, but wakes up after 2–5 seconds with no user interaction.
+- **Root Cause:** In Modern Standby (`s2idle`), ACPI wakeup devices in `/proc/acpi/wakeup` (`GPP1`, `GPP5`, `GPP6`, `GP11`, `XHC0`, `XHC1`, `NHI0`, `XHC3`, `XHC4`) and the I2C Elan Touchpad (`ELAN06FA:00` / `i2c-ELAN06FA:00`) emit spurious PCIe PME / GPIO interrupts right after sleep entry.
+- **Fix:** Disable spurious wakeups in `/proc/acpi/wakeup` and sysfs (persisted via `disable-spurious-wakeups.service`).
+
+**Reciprocal Gotcha — Inability to Wake the Laptop Up:**
+- **Symptom:** Laptop is suspended and will not wake up when pressing keys on an external keyboard, moving/clicking an external USB mouse, or tapping the touchpad.
+- **Root Cause:** The disabled wakeup devices (`XHC*`, `ELAN06FA:00`) prevent USB peripherals and the touchpad from sending ACPI wake signals. The machine will only wake via the physical **Power Button** (`PNP0C0C:00`) or opening the **Lid** (`PNP0C0D:00`).
+- **Resolution:** If the user wants peripheral or touchpad wake restored, selectively re-enable the relevant device:
+  - External USB keyboard/mouse wake: re-enable the appropriate `XHC*` in `/proc/acpi/wakeup` (e.g. `echo XHC0 | sudo tee /proc/acpi/wakeup`).
+  - Touchpad wake: `echo enabled | sudo tee /sys/devices/platform/AMDI0010:00/i2c-0/*ELAN*/power/wakeup`.
 
 ### Adding a new panel
 

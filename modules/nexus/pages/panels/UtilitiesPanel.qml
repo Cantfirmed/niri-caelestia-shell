@@ -72,11 +72,18 @@ PageBase {
         }
 
         ToggleRow {
-            last: true
             text: qsTr("Quick toggles")
             subtext: qsTr("Show the quick toggles card")
             checked: Config.utilities.cards.quickToggles
             onToggled: GlobalConfig.utilities.cards.quickToggles = checked
+        }
+
+        ToggleRow {
+            last: true
+            text: qsTr("VPN")
+            subtext: qsTr("Show the VPN card")
+            checked: Config.utilities.cards.vpn
+            onToggled: GlobalConfig.utilities.cards.vpn = checked
         }
 
         // Quick toggles
@@ -136,7 +143,7 @@ PageBase {
         ToggleRow {
             last: true
             text: qsTr("VPN")
-            subtext: qsTr("Connect or disconnect the VPN")
+            subtext: qsTr("Show the VPN quick toggle")
             disabled: !Config.utilities.cards.quickToggles
             checked: root.isToggleOn("vpn")
             onToggled: root.setToggleOn("vpn", checked)

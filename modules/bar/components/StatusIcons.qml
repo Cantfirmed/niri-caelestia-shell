@@ -79,6 +79,7 @@ StyledRect {
                         list = [
                             { id: "lockStatus", enabled: true },
                             { id: "network", enabled: true },
+                            { id: "vpn", enabled: true },
                             { id: "bluetooth", enabled: true },
                             { id: "battery", enabled: true }
                         ];
@@ -121,6 +122,7 @@ StyledRect {
                 case "microphone": return micComp;
                 case "kbLayout": return kbLayoutComp;
                 case "network": return networkComp;
+                case "vpn": return vpnComp;
                 case "bluetooth": return bluetoothComp;
                 case "battery": return batteryComp;
                 default: return null;
@@ -180,6 +182,13 @@ StyledRect {
             text: Nmcli.activeEthernet ? "cable" : Nmcli.active ? Icons.getNetworkIcon(Nmcli.active.strength ?? 0) : "wifi_off"
             color: root.colour
             horizontalAlignment: Text.AlignHCenter
+        }
+    }
+
+    Component {
+        id: vpnComp
+        VpnStatus {
+            colour: root.colour
         }
     }
 

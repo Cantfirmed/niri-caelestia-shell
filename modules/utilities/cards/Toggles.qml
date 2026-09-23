@@ -57,9 +57,6 @@ StyledRect {
             if (seenIds.has(item.id))
                 return false;
 
-            if (item.id === "vpn")
-                return (GlobalConfig.utilities?.vpn?.selectedProvider?.length ?? 0) > 0;
-
             seenIds.add(item.id);
             return true;
         });
@@ -198,12 +195,19 @@ StyledRect {
     Component {
         id: vpnComp
         Toggle {
-            icon: "vpn_key"
+            icon: VPN.connected ? "vpn_key" : "vpn_key_off"
             checked: VPN.connected && VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
             enabled: !VPN.connecting && !VPN.disconnecting
             isToggle: VPN.status.state !== "needs-auth" && VPN.status.state !== "error"
             inactiveOnColour: Colours.palette.m3onSurfaceVariant
-            onClicked: VPN.toggle()
+            onClicked: {
+                if (VPN.providers.length === 0) {
+                    root.screenState.utilities = false;
+                    WindowFactory.create();
+                    return;
+                }
+                VPN.toggle();
+            }
         }
     }
 

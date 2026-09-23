@@ -102,8 +102,14 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const screenState = ShellState.forActive();
-            if (screenState)
-                screenState.sidebar = !screenState.sidebar;
+            if (screenState) {
+                if (screenState.sidebar || screenState.utilities) {
+                    screenState.sidebar = false;
+                    screenState.utilities = false;
+                } else {
+                    screenState.sidebar = true;
+                }
+            }
         }
     }
 
@@ -116,8 +122,14 @@ Scope {
             if (root.hasFullscreen)
                 return;
             const screenState = ShellState.forActive();
-            if (screenState)
-                screenState.utilities = !screenState.utilities;
+            if (screenState) {
+                if (screenState.utilities || screenState.sidebar) {
+                    screenState.utilities = false;
+                    screenState.sidebar = false;
+                } else {
+                    screenState.utilities = true;
+                }
+            }
         }
     }
 
@@ -125,8 +137,58 @@ Scope {
         function toggle(drawer: string): void {
             if (list().split("\n").includes(drawer)) {
                 const screenState = ShellState.forActive();
-                if (screenState)
-                    screenState[drawer] = !screenState[drawer];
+                if (screenState) {
+                    if (drawer === "utilities") {
+                        if (screenState.utilities || screenState.sidebar) {
+                            screenState.utilities = false;
+                            screenState.sidebar = false;
+                        } else {
+                            screenState.utilities = true;
+                        }
+                    } else if (drawer === "sidebar") {
+                        if (screenState.sidebar || screenState.utilities) {
+                            screenState.sidebar = false;
+                            screenState.utilities = false;
+                        } else {
+                            screenState.sidebar = true;
+                        }
+                    } else {
+                        screenState[drawer] = !screenState[drawer];
+                    }
+                }
+            } else {
+                console.warn(lc, `Drawer "${drawer}" does not exist`);
+            }
+        }
+
+        function open(drawer: string): void {
+            if (list().split("\n").includes(drawer)) {
+                const screenState = ShellState.forActive();
+                if (screenState) {
+                    if (drawer === "utilities") {
+                        screenState.utilities = true;
+                    } else if (drawer === "sidebar") {
+                        screenState.sidebar = true;
+                    } else {
+                        screenState[drawer] = true;
+                    }
+                }
+            } else {
+                console.warn(lc, `Drawer "${drawer}" does not exist`);
+            }
+        }
+
+        function close(drawer: string): void {
+            if (list().split("\n").includes(drawer)) {
+                const screenState = ShellState.forActive();
+                if (screenState) {
+                    if (drawer === "utilities" || drawer === "sidebar") {
+                        screenState.utilities = false;
+                        screenState.sidebar = false;
+                    } else {
+                        screenState[drawer] = false;
+                    }
+                }
             } else {
                 console.warn(lc, `Drawer "${drawer}" does not exist`);
             }
@@ -316,6 +378,34 @@ Scope {
 
         function getGaps(): int {
             return Niri.gaps;
+        }
+    }
+
+    IpcHandler {
+        target: "vpn"
+
+        function toggle(): void {
+            VPN.toggle();
+        }
+
+        function connect(): void {
+            VPN.connect();
+        }
+
+        function disconnect(): void {
+            VPN.disconnect();
+        }
+
+        function isConnected(): bool {
+            return VPN.connected;
+        }
+
+        function getStatus(): string {
+            return VPN.status.state;
+        }
+
+        function selectProvider(index: int): void {
+            VPN.setActiveProvider(index);
         }
     }
 

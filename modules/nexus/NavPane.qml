@@ -1,4 +1,3 @@
-import "navpane"
 import QtQuick
 import QtQuick.Layouts
 import Caelestia.Config
@@ -6,6 +5,7 @@ import qs.components
 import qs.components.controls
 import qs.services
 import qs.modules.nexus
+import "navpane"
 
 ColumnLayout {
     id: root
@@ -23,7 +23,7 @@ ColumnLayout {
         font: Tokens.font.body.large
 
         bg.color: Colours.tPalette.m3surfaceContainerLowest
-        bg.border.color: Colours.palette.m3outlineVariant
+        bg.border.color: searchField.activeFocus ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
         searchIcon.fontStyle: Tokens.font.icon.medium
         searchIcon.anchors.leftMargin: Tokens.padding.largeIncreased
         clearIcon.font: Tokens.font.icon.medium
@@ -33,14 +33,29 @@ ColumnLayout {
             CAnim {}
         }
 
-        Binding {
+        onTextChanged: {
+            if (root.nState && root.nState.searchQuery !== text)
+                root.nState.searchQuery = text;
+        }
+
+        Connections {
+            function onSearchQueryChanged(): void {
+                if (searchField.text !== (root.nState.searchQuery ?? ""))
+                    searchField.text = root.nState.searchQuery ?? "";
+            }
+
             target: root.nState
-            property: "searchOpen"
-            value: searchField.text.length > 0
+        }
+
+        onAccepted: {
+            if (navLocations.firstIndex >= 0)
+                root.nState.currentPageIdx = navLocations.firstIndex;
         }
     }
 
     NavLocations {
+        id: navLocations
+
         Layout.fillWidth: true
         Layout.fillHeight: true
         Layout.topMargin: -topMargin

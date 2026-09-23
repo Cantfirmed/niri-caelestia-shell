@@ -73,6 +73,53 @@ PageBase {
         nState.closeSubPage();
     }
 
+    function applyPreset(preset: string): void {
+        switch (preset) {
+        case "wireguard":
+            nameField.text = "wireguard";
+            displayField.text = "WireGuard";
+            interfaceField.text = "wg0";
+            connectField.text = "wg-quick up wg0";
+            disconnectField.text = "wg-quick down wg0";
+            break;
+        case "tailscale":
+            nameField.text = "tailscale";
+            displayField.text = "Tailscale";
+            interfaceField.text = "tailscale0";
+            connectField.text = "tailscale up";
+            disconnectField.text = "tailscale down";
+            break;
+        case "warp":
+            nameField.text = "warp";
+            displayField.text = "Cloudflare WARP";
+            interfaceField.text = "cloudflarewarp";
+            connectField.text = "warp-cli connect";
+            disconnectField.text = "warp-cli disconnect";
+            break;
+        case "netbird":
+            nameField.text = "netbird";
+            displayField.text = "NetBird";
+            interfaceField.text = "wt0";
+            connectField.text = "netbird up";
+            disconnectField.text = "netbird down";
+            break;
+        case "openvpn":
+            nameField.text = "openvpn";
+            displayField.text = "OpenVPN";
+            interfaceField.text = "tun0";
+            connectField.text = "openvpn --config /etc/openvpn/client.ovpn";
+            disconnectField.text = "killall openvpn";
+            break;
+        case "custom":
+            nameField.text = "";
+            displayField.text = "";
+            interfaceField.text = "";
+            connectField.text = "";
+            disconnectField.text = "";
+            break;
+        }
+    }
+
     title: editing ? qsTr("Edit VPN provider") : qsTr("Add VPN provider")
     isSubPage: true
 
@@ -83,6 +130,8 @@ PageBase {
             interfaceField.text = existing.iface;
             connectField.text = splitCmd(existing.connectCmd);
             disconnectField.text = splitCmd(existing.disconnectCmd);
+        } else if (nState.vpnPreset) {
+            applyPreset(nState.vpnPreset);
         }
     }
 
@@ -92,10 +141,48 @@ PageBase {
         width: root.cappedWidth
         spacing: Tokens.spacing.large
 
+        RowLayout {
+            Layout.fillWidth: true
+            visible: !root.editing
+            spacing: Tokens.spacing.small
+
+            StyledText {
+                text: qsTr("Preset:")
+                font: Tokens.font.label.medium
+                color: Colours.palette.m3onSurfaceVariant
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: Tokens.spacing.extraSmall
+
+                Repeater {
+                    model: [
+                        { id: "wireguard", label: "WireGuard" },
+                        { id: "tailscale", label: "Tailscale" },
+                        { id: "netbird", label: "NetBird" },
+                        { id: "warp", label: "WARP" },
+                        { id: "openvpn", label: "OpenVPN" },
+                        { id: "custom", label: "Custom" }
+                    ]
+
+                    TextButton {
+                        required property var modelData
+                        isRound: true
+                        type: nameField.text === modelData.id ? TextButton.Filled : TextButton.Tonal
+                        text: modelData.label
+                        horizontalPadding: Tokens.padding.medium
+                        verticalPadding: Tokens.padding.extraSmall
+                        onClicked: root.applyPreset(modelData.id)
+                    }
+                }
+            }
+        }
+
         StyledText {
             Layout.fillWidth: true
             Layout.leftMargin: Tokens.padding.small
-            text: qsTr("Built-in names (wireguard, warp, tailscale, netbird) auto-fill their commands. For others, provide the connect/disconnect commands.")
+            text: qsTr("Built-in names (wireguard, warp, tailscale, netbird, openvpn) auto-fill their commands. For others, provide the connect/disconnect commands.")
             color: Colours.palette.m3onSurfaceVariant
             font: Tokens.font.body.small
             wrapMode: Text.WordWrap
