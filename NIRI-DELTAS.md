@@ -238,7 +238,7 @@ When merging or cherry-picking from upstream `caelestia-dots/shell`:
    - Lock the screen (Super+Escape or lock command) and verify the Sleep, Restart, and Shutdown buttons appear at the bottom of the screen.
    - Click active window on the bar, verify popout appears with app icon and title, and chevron button opens the windowinfo detail drawer.
    - Click the battery icon on the bar, verify all 4 power profiles (Saver, Balanced, Performance, Auto) appear and switching works.
-   - Run `./scripts/verify-deltas.sh` to confirm 10/10 automated checks pass.
+   - Run `./scripts/verify-deltas.sh` to confirm 11/11 automated checks pass.
 
 ---
 
@@ -247,7 +247,7 @@ When merging or cherry-picking from upstream `caelestia-dots/shell`:
 To ensure customizations are never silently lost during future upstream pulls or rebases, the following automated tools are configured:
 
 1. **`scripts/verify-deltas.sh`**:
-   - Programmatically tests all 10 protected features across QML, C++, and config files.
+   - Programmatically tests all 11 protected features across QML, C++, and config files.
    - Exits with return code 1 if any protected feature or file has been overwritten or removed.
    - Can be run at any time via:
      ```bash
@@ -269,5 +269,21 @@ To ensure customizations are never silently lost during future upstream pulls or
      ```bash
      ./scripts/install-hooks.sh
      ```
+
+---
+
+## 5. Display Sanity & Upstream v2.5.0 Architecture
+
+### A. Display Sanity & Black Screen Boot Prevention
+* **Systemd Pre-Start Drop-in:** `~/.config/systemd/user/niri.service.d/display-sanity.conf` executes `ExecStartPre=/usr/bin/python3 ~/.config/niri/niri-display.py --sanity-check` before Niri launches.
+* **Guarantee:** If no external monitor is attached and `output.kdl` has `eDP-1` turned off, the sanity check rewrites `output.kdl` with `output "eDP-1" { scale 1.0 }`, preventing a black screen on standalone boot.
+* **Socket Auto-Discovery:** `niri-display-monitor.py` implements socket auto-discovery across `$XDG_RUNTIME_DIR/niri*.sock` and `/run/user/<uid>/niri*.sock` if `$NIRI_SOCKET` is not exported into user session environment.
+
+### B. Upstream v2.5.0 Framework Alignment
+* **Strict Qt 6.8+ `QChar` Comparison:** In `plugin/src/Caelestia/Internal/niriipc.cpp`, character comparisons must use `c == QLatin1Char('-')` or `c == u'-'` to satisfy strict Qt 6.8+ typing.
+* **`m3shapes` System Package Separation:** Root `CMakeLists.txt` must not declare `m3shapes` in `ENABLE_MODULES`. The system package `qt6-m3shapes-git` provides `/usr/lib/qt6/qml/M3Shapes/`.
+* **`Caelestia.I18n` Translation Engine:** Upstream migrated UI strings and byte formats to `Tr.tr()`, `Tr.trCtx()`, and `Units.formatBytes()`. Custom panels adhere to `Tr.tr()` instead of legacy `qsTr()`.
+* **Typed `ListNode` Properties:** `services/VPN.qml` retains OpenVPN and NMCLI adapters alongside `selectAndConnect()` while adopting upstream's type-safe `GlobalConfig.utilities.vpn.provider` `ListNode` API.
+
 
 

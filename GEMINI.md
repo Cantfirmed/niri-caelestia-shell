@@ -113,6 +113,8 @@ Refer to [`NIRI-DELTAS.md`](file:///home/patrick/.config/niri_caelestia/NIRI-DEL
 
 ## 5. Auto-lock, DPMS, and Display Monitor Guidelines
 
+- **Pre-Start Display Sanity Invariant:** `~/.config/systemd/user/niri.service.d/display-sanity.conf` runs `niri-display.py --sanity-check` via `ExecStartPre=` to guarantee that `eDP-1` is active before Niri starts if no external display is connected, preventing black screens on standalone boot.
+- **Socket Auto-Discovery Invariant:** `niri-display-monitor.py` must discover active sockets by scanning `$XDG_RUNTIME_DIR/niri*.sock` and `/run/user/<uid>/niri*.sock` when `$NIRI_SOCKET` is not exported in the service environment.
 - **DPMS & Display Fallback Daemon:** `niri-display-monitor.py` must check `is_session_locked()` and never trigger display fallbacks when monitors are powered off for DPMS sleep. Reverting to internal screen is only for genuine cable disconnects (`status != "connected"` in DRM).
 - **Preserve `QSG_RENDER_LOOP=threaded`:** Do not downgrade to `basic` for stability workarounds; keep `threaded` for multi-refresh (144Hz + 120Hz) fluid rendering and fix the underlying surface lifecycle instead.
 - **Root-Cause Invariant:** Never propose changing idle/lock timers to "fix" crashes; timers only postpone the trigger.

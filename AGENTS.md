@@ -376,6 +376,40 @@ pkill -9 quickshell; pkill -9 qs
   - External USB keyboard/mouse wake: re-enable the appropriate `XHC*` in `/proc/acpi/wakeup` (e.g. `echo XHC0 | sudo tee /proc/acpi/wakeup`).
   - Touchpad wake: `echo enabled | sudo tee /sys/devices/platform/AMDI0010:00/i2c-0/*ELAN*/power/wakeup`.
 
+### Pre-Start Display Sanity & Standalone Boot Guard
+
+**Symptom**: Powering on or booting the laptop without an external monitor attached results in a permanent black screen after login, because `output.kdl` was saved in an external-only configuration with `eDP-1` disabled.
+
+**Root cause**: If Niri is shut down or powered off while external monitors are active, `output.kdl` retains `output "eDP-1" { off }`. Upon next boot without the monitor, Niri starts with all connected displays turned off. Because no active output exists, user session daemons and Quickshell surfaces never render.
+
+**Fix & Invariants**:
+- **Systemd Pre-Start Drop-in (`display-sanity.conf`)**: Located at `~/.config/systemd/user/niri.service.d/display-sanity.conf`. It executes `ExecStartPre=/usr/bin/python3 ~/.config/niri/niri-display.py --sanity-check` before Niri starts.
+- **Sanity Check Logic**: If `output.kdl` contains no active output, or if all DRM connectors in `/sys/class/drm/card*-*/status` are disconnected except `eDP-1`, the script automatically rewrites `output.kdl` with `output "eDP-1" { scale 1.0 }`.
+- **Socket Auto-Discovery**: If `NIRI_SOCKET` is not exported in the environment, `niri-display-monitor.py` automatically scans `$XDG_RUNTIME_DIR/niri*.sock` and `/run/user/<uid>/niri*.sock` to acquire the active IPC socket.
+
+### Upstream v2.5.0 Migration Invariants & C++ Strict Typing
+
+When tracking or porting upstream releases (`v2.5.0`+):
+
+1. **Strict Qt 6.8+ `QChar` Comparisons**:
+   - `QChar` has no implicit conversion to/from ASCII `char`.
+   - In C++ IPC code (e.g. `niriipc.cpp`), comparing `c == '-'` fails with `no match for operator==`. Always use `c == QLatin1Char('-')` or `c == u'-'`.
+2. **`m3shapes` System Dependency Split**:
+   - Upstream split out the internal `m3shapes` FetchContent git submodule to the system package `qt6-m3shapes-git` (located at `/usr/lib/qt6/qml/M3Shapes/`).
+   - Root `CMakeLists.txt` must declare `set(ENABLE_MODULES "extras;plugin;shell")` and must **not** include `m3shapes`. Top-level `-DQT_NO_CAST_FROM_ASCII` flags will break building legacy embedded `m3shapes` sources.
+3. **`Caelestia.I18n` Translation Framework**:
+   - Upstream introduced the compiled C++ `Caelestia.I18n` plugin module.
+   - All UI labels and unit formatting must use `Tr.tr()`, `Tr.trCtx()`, and `Units.formatBytes()` rather than legacy `qsTr()` or custom string formatters.
+4. **Strongly Typed `ListNode` Settings**:
+   - Config lists (such as `GlobalConfig.utilities.vpn.provider`) are now C++ `ListNode` objects offering `.values`, `.insert()`, `.remove()`, and `.at(index)`. Do not use raw JS array mutations or write-back helpers.
+
+### Biri Compositor Drop-in Compatibility
+
+**`biri`** (`barrulus/biri`, AUR: `biri-git`) is a soft fork of Niri that merges requested community features:
+- **Features**: GPU post-process shaders (global, window, region), GLSL custom animated focus rings with screen-space light spill, portrait monitor vertical scrolling (`main-axis "vertical"`), consolidated carousel multi-monitor overview, and runtime touchpad/DWT toggles.
+- **Compatibility**: Direct drop-in replacement (`Provides: niri`, `Conflicts With: niri`). It uses the exact same command (`/usr/bin/niri`), IPC socket protocol (`$NIRI_SOCKET`), and configuration (`~/.config/niri/config.kdl`).
+- **Caelestia Shell Status**: 100% compatible. The shell's C++ `NiriIpc` plugin and Python display daemons interface seamlessly with `biri`.
+
 ### Adding a new panel
 
 1. Add a boolean property to `DrawerVisibilities.qml`
