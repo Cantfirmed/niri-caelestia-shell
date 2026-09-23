@@ -48,7 +48,7 @@ ColumnLayout {
             return;
 
         for (let i = 0; i < repeater.count; i++) {
-            const tray = repeater.itemAt(i)?.item as Tray;
+            const tray = (repeater.itemAt(i) as EntryWrapper)?.item as Tray;
             if (tray)
                 tray.expanded = false;
         }
@@ -121,11 +121,11 @@ ColumnLayout {
                 else if (angleDelta.y > 0)
                     NiriIpc.action("focus-workspace-up");
             } else if (typeof Hypr !== "undefined") {
-                const mon = (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? Hypr.monitorFor(screen) : Hypr.focusedMonitor);
-                const specialWs = mon?.lastIpcObject.specialWorkspace.name;
+                const mon = Hypr.monitorFor(screen);
+                const specialWs = mon?.lastIpcObject?.specialWorkspace?.name;
                 if (specialWs?.length > 0)
                     Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${specialWs.slice(8)}")` : `togglespecialworkspace ${specialWs.slice(8)}`);
-                else if (angleDelta.y < 0 || (GlobalConfig.bar.workspaces.perMonitorWorkspaces ? mon.activeWorkspace?.id : Hypr.activeWsId) > 1)
+                else if (angleDelta.y < 0 || (mon?.activeWorkspace?.id ?? 0) > 1)
                     Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
             }
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {

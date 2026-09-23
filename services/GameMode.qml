@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
+import Caelestia.I18n
 import qs.services
 
 Singleton {
@@ -31,13 +32,13 @@ Singleton {
         if (enabled) {
             setDynamicConfs();
             if (GlobalConfig.utilities.toasts.gameModeChanged)
-                Toaster.toast(qsTr("Game mode enabled"), qsTr("Optimized performance mode active"), "gamepad");
+                Toaster.toast(Tr.tr("Game mode enabled"), Tr.tr("Optimized performance mode active"), "gamepad");
         } else {
             if (typeof Hypr !== "undefined" && Hypr.extras) {
                 Hypr.extras.message("reload");
             }
             if (GlobalConfig.utilities.toasts.gameModeChanged)
-                Toaster.toast(qsTr("Game mode disabled"), qsTr("Standard settings restored"), "gamepad");
+                Toaster.toast(Tr.tr("Game mode disabled"), Tr.tr("Standard settings restored"), "gamepad");
         }
     }
 

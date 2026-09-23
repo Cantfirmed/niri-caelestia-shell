@@ -6,6 +6,7 @@ import Quickshell.Io
 import Caelestia
 import Caelestia.Config
 import Caelestia.Internal
+import Caelestia.I18n
 
 Item {
     id: model
@@ -113,7 +114,8 @@ Item {
         const lang = m[1].trim();
         const region = m[2].trim();
         const code = (region.split(/[,\s-]/)[0] || region).slice(0, 2).toUpperCase();
-        return `${lang} (${code})`;
+        // TRANSLATORS: %1 = language, %2 = layout code
+        return Tr.trCtx("%1 (%2)", "keyboard layout language and code").arg(lang).arg(code);
     }
 
     function _setLayouts(raw) {
@@ -150,15 +152,17 @@ Item {
             return;
 
         if (layoutsModel.count > 4) {
-            Toaster.toast(qsTr("Keyboard layout limit"), qsTr("XKB supports only 4 layouts at a time"), "warning");
+            Toaster.toast(Tr.tr("Keyboard layout limit"), Tr.tr("XKB supports only 4 layouts at a time"), "warning");
         }
     }
 
     function _pretty(token) {
         const code = token.replace(/\(.*\)$/, "").trim();
         if (_xkbMap[code])
-            return code.toUpperCase() + " - " + _xkbMap[code];
-        return code.toUpperCase() + " - " + code;
+            // TRANSLATORS: %1 = layout code, %2 = layout name
+            return Tr.trCtx("%1 - %2", "keyboard layout code and name").arg(code.toUpperCase()).arg(_xkbMap[code]);
+        // TRANSLATORS: %1 = layout code, %2 = layout name
+        return Tr.trCtx("%1 - %2", "keyboard layout code and name").arg(code.toUpperCase()).arg(code);
     }
 
     visible: false

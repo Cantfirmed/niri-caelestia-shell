@@ -1,5 +1,6 @@
 qml_module(caelestia-core
     URI Caelestia
+    INCLUDE_PREFIX core
     SOURCES
         cutils.cpp
         qalculator.cpp
@@ -31,4 +32,4 @@ add_subdirectory(Models)
 add_subdirectory(Services)
 add_subdirectory(Blobs)
 add_subdirectory(Images)
-
+add_subdirectory(I18n)

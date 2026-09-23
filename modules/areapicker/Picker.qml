@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Caelestia
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.components.effects
 import qs.services
@@ -53,8 +54,9 @@ MouseArea {
         if (typeof Hypr !== "undefined") {
             const mon = Hypr.monitorFor(screen);
             if (!mon) return [];
-            const special = mon.lastIpcObject.specialWorkspace;
-            const wsId = special.name ? special.id : mon.activeWorkspace.id;
+            const special = mon.lastIpcObject?.specialWorkspace;
+            const wsId = special?.name ? special.id : mon.activeWorkspace?.id;
+            if (wsId === undefined) return [];
             return Hypr.toplevelsForWs(wsId);
         }
         return [];
@@ -98,11 +100,13 @@ MouseArea {
                 cy = geom.y;
                 cw = geom.w;
                 ch = geom.h;
-            } else if (client.lastIpcObject) {
+            } else if (client.lastIpcObject?.at && client.lastIpcObject?.size) {
                 cx = client.lastIpcObject.at[0] - screen.x;
                 cy = client.lastIpcObject.at[1] - screen.y;
                 cw = client.lastIpcObject.size[0];
                 ch = client.lastIpcObject.size[1];
+            } else {
+                continue;
             }
             if (cx <= x && cy <= y && cx + cw >= x && cy + ch >= y) {
                 onClient = true;
@@ -129,7 +133,7 @@ MouseArea {
             const tmpfile = Qt.resolvedUrl(`/tmp/caelestia-picker-${Quickshell.processId}-${Date.now()}.png`);
             CUtils.saveItem(screencopy, tmpfile, Qt.rect(Math.ceil(rsx), Math.ceil(rsy), Math.floor(sw), Math.floor(sh)), path => {
                 Quickshell.execDetached(["sh", "-c", "wl-copy --type image/png < " + path]);
-                Quickshell.execDetached(["notify-send", "-a", "caelestia-cli", "-i", path, "Screenshot taken", "Screenshot copied to clipboard"]);
+                Quickshell.execDetached(["notify-send", "-a", "caelestia-cli", "-i", path, Tr.tr("Screenshot taken"), Tr.tr("Screenshot copied to clipboard")]);
                 if (!root.loader.clipboardOnly) {
                     Quickshell.execDetached(["swappy", "-f", path]);
                 }
@@ -171,7 +175,7 @@ MouseArea {
                     ex = screen.width / 2 + 100;
                     ey = screen.height / 2 + 100;
                 }
-            } else if (c.lastIpcObject) {
+            } else if (c.lastIpcObject?.at && c.lastIpcObject?.size) {
                 const cx = c.lastIpcObject.at[0] - screen.x;
                 const cy = c.lastIpcObject.at[1] - screen.y;
                 onClient = true;

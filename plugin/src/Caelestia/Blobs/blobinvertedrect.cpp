@@ -1,17 +1,21 @@
 #include "blobinvertedrect.hpp"
-#include "blobgroup.hpp"
-#include "blobmaterial.hpp"
 
 #include <qsggeometry.h>
 #include <qsgnode.h>
 
-#include <algorithm>
 #include <cstring>
+
+#include "blobgroup.hpp"
+#include "blobmaterial.hpp"
+
+namespace caelestia::blobs {
 
 BlobInvertedRect::BlobInvertedRect(QQuickItem* parent)
     : BlobShape(parent) {}
 
-static void setFrameIndices(quint16* idx) {
+namespace {
+
+void setFrameIndices(quint16* idx) {
     // Top strip: 0-1-4, 1-5-4
     idx[0] = 0;
     idx[1] = 1;
@@ -42,13 +46,17 @@ static void setFrameIndices(quint16* idx) {
     idx[23] = 7;
 }
 
-QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
+} // namespace
+
+QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData* data) {
+    Q_UNUSED(data);
+
     if (!m_group) {
         delete oldNode;
         return nullptr;
     }
 
-    const float pad = static_cast<float>(m_group->smoothing());
+    const auto pad = static_cast<float>(m_group->smoothing());
 
     // Compute inner hole boundary in local coords
     // Inset past the inner border edge by 2x smoothing to cover the blend zone
@@ -85,8 +93,8 @@ QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData
     }
 
     // Outer bounds (local coords)
-    const float x0 = static_cast<float>(m_localPaddedRect.x());
-    const float y0 = static_cast<float>(m_localPaddedRect.y());
+    const auto x0 = static_cast<float>(m_localPaddedRect.x());
+    const auto y0 = static_cast<float>(m_localPaddedRect.y());
     const float x1 = x0 + static_cast<float>(m_localPaddedRect.width());
     const float y1 = y0 + static_cast<float>(m_localPaddedRect.height());
     const float w = x1 - x0;
@@ -122,7 +130,7 @@ QSGNode* BlobInvertedRect::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData
     memcpy(material->m_invertedOuter, m_cachedInvertedOuter, sizeof(m_cachedInvertedOuter));
     memcpy(material->m_invertedInner, m_cachedInvertedInner, sizeof(m_cachedInvertedInner));
 
-    const int count = static_cast<int>(qMin(m_cachedRects.size(), qsizetype(16)));
+    const int count = static_cast<int>(m_cachedRects.size());
     material->m_rectCount = count;
     for (int i = 0; i < count; ++i)
         material->m_rects[i] = m_cachedRects[i];
@@ -139,6 +147,10 @@ BlobInvertedRect::~BlobInvertedRect() {
     }
 }
 
+qreal BlobInvertedRect::borderLeft() const {
+    return m_borderLeft;
+}
+
 void BlobInvertedRect::setBorderLeft(qreal v) {
     if (qFuzzyCompare(m_borderLeft, v))
         return;
@@ -146,6 +158,10 @@ void BlobInvertedRect::setBorderLeft(qreal v) {
     emit borderLeftChanged();
     if (m_group)
         m_group->markDirty();
+}
+
+qreal BlobInvertedRect::borderRight() const {
+    return m_borderRight;
 }
 
 void BlobInvertedRect::setBorderRight(qreal v) {
@@ -157,6 +173,10 @@ void BlobInvertedRect::setBorderRight(qreal v) {
         m_group->markDirty();
 }
 
+qreal BlobInvertedRect::borderTop() const {
+    return m_borderTop;
+}
+
 void BlobInvertedRect::setBorderTop(qreal v) {
     if (qFuzzyCompare(m_borderTop, v))
         return;
@@ -164,6 +184,10 @@ void BlobInvertedRect::setBorderTop(qreal v) {
     emit borderTopChanged();
     if (m_group)
         m_group->markDirty();
+}
+
+qreal BlobInvertedRect::borderBottom() const {
+    return m_borderBottom;
 }
 
 void BlobInvertedRect::setBorderBottom(qreal v) {
@@ -175,6 +199,10 @@ void BlobInvertedRect::setBorderBottom(qreal v) {
         m_group->markDirty();
 }
 
+bool BlobInvertedRect::isInvertedRect() const {
+    return true;
+}
+
 void BlobInvertedRect::registerWithGroup() {
     if (m_group)
         m_group->setInvertedRect(this);
@@ -184,3 +212,5 @@ void BlobInvertedRect::unregisterFromGroup() {
     if (m_group)
         m_group->clearInvertedRect(this);
 }
+
+} // namespace caelestia::blobs

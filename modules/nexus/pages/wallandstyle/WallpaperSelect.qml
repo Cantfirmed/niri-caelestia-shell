@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import Caelestia.Components
 import Caelestia.Config
+import Caelestia.I18n
 import Caelestia.Models
 import qs.components
 import qs.components.controls
@@ -54,7 +55,7 @@ PageBase {
         deleteProcess.running = true;
     }
 
-    title: qsTr("Wallpapers")
+    title: Tr.tr("Wallpapers")
     isSubPage: true
 
     onVisibleChanged: {
@@ -86,7 +87,7 @@ PageBase {
 
                 IconTextButton {
                     icon: "photo_library"
-                    text: qsTr("Browse")
+                    text: Tr.tr("Browse")
                     font: Tokens.font.body.large
                     isRound: true
                     shapeMorph: true
@@ -97,8 +98,8 @@ PageBase {
                     FileDialog {
                         id: browseDialog
 
-                        title: qsTr("Select an image")
-                        filterLabel: qsTr("Image files")
+                        title: Tr.tr("Select an image")
+                        filterLabel: Tr.tr("Image files")
                         filters: Images.validImageExtensions
                         onAccepted: path => {
                             Wallpapers.setWallpaper(path);
@@ -109,7 +110,7 @@ PageBase {
 
                 IconTextButton {
                     icon: "travel_explore"
-                    text: qsTr("Search Online")
+                    text: Tr.tr("Search Online")
                     font: Tokens.font.body.large
                     isRound: true
                     shapeMorph: true
@@ -123,7 +124,7 @@ PageBase {
 
                 IconTextButton {
                     icon: "shuffle"
-                    text: qsTr("Random")
+                    text: Tr.tr("Random")
                     font: Tokens.font.body.large
                     isRound: true
                     shapeMorph: true
@@ -141,7 +142,7 @@ PageBase {
                 imgHeight: Math.round(width * 0.3)
                 radius: Tokens.rounding.extraLarge
                 source: Quickshell.shellPath("assets/wallpaper.webp")
-                text: qsTr("Featured wallpaper")
+                text: Tr.tr("Featured wallpaper")
                 fillLabel: false
                 onClicked: {
                     Wallpapers.setWallpaper(Quickshell.shellPath("assets/wallpaper.webp"));
@@ -151,7 +152,7 @@ PageBase {
 
             StyledText {
                 Layout.topMargin: Tokens.spacing.large
-                text: qsTr("Local wallpapers")
+                text: Tr.tr("Local wallpapers")
                 font: Tokens.font.title.small
             }
 
@@ -377,7 +378,7 @@ PageBase {
 
                         StyledText {
                             Layout.alignment: Qt.AlignHCenter
-                            text: qsTr("No local wallpapers found")
+                            text: Tr.tr("No local wallpapers found")
                             color: Colours.palette.m3outline
                             font: Tokens.font.title.small
                         }
@@ -426,7 +427,7 @@ PageBase {
                     StyledText {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("Delete Wallpaper?")
+                        text: Tr.tr("Delete Wallpaper?")
                         font: Tokens.font.title.medium
                         color: Colours.palette.m3onSurface
                     }
@@ -434,7 +435,7 @@ PageBase {
                     StyledText {
                         Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        text: qsTr("Are you sure you want to delete this wallpaper from your local storage? This action cannot be undone.")
+                        text: Tr.tr("Are you sure you want to delete this wallpaper from your local storage? This action cannot be undone.")
                         font: Tokens.font.body.medium
                         color: Colours.palette.m3onSurfaceVariant
                         wrapMode: Text.WordWrap
@@ -448,7 +449,7 @@ PageBase {
                         IconTextButton {
                             Layout.fillWidth: true
                             icon: "close"
-                            text: qsTr("Cancel")
+                            text: Tr.tr("Cancel")
                             type: IconTextButton.Tonal
                             onClicked: {
                                 deleteDialog.visible = false;
@@ -458,7 +459,7 @@ PageBase {
                         IconTextButton {
                             Layout.fillWidth: true
                             icon: "delete"
-                            text: qsTr("Delete")
+                            text: Tr.tr("Delete")
                             activeColour: Colours.palette.m3error
                             inactiveColour: Colours.palette.m3error
                             activeOnColour: Colours.palette.m3onError
