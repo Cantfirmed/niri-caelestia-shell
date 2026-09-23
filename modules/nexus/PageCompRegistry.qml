@@ -50,6 +50,14 @@ QtObject {
                 }
             }
         },
+        Component {
+            // Biri Shaders & FX
+            StackPage {
+                Component {
+                    BiriShadersPage {}
+                }
+            }
+        },
 
         // Connectivity
         Component {

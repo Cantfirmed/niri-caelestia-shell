@@ -22,6 +22,13 @@ QtObject {
             category: "appearance",
             keywords: "blur transparency opacity effects window rules rounded corners compositor"
         },
+        {
+            label: Tr.tr("Biri Shaders & FX"),
+            icon: "auto_awesome",
+            description: Tr.tr("Animated borders, light spill, screen/cursor shaders"),
+            category: "appearance",
+            keywords: "shaders biri focus ring glow lightning rainbow ripple cursor crt effects light spill"
+        },
 
         // Connectivity
         {

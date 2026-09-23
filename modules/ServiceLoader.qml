@@ -14,6 +14,7 @@ Scope {
         Brightness;
         NiriBlur.init();
         NiriTiling.init();
+        BiriShaders.init();
         Weather.reload();
         VPN;
     }
