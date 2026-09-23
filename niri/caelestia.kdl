@@ -13,6 +13,7 @@ binds {
     Mod+Escape {spawn-sh "qs -c niri-caelestia-shell ipc call drawers toggle session"; }
     Mod+P repeat=false hotkey-overlay-title="Display Switcher" { spawn-sh "qs -c niri-caelestia-shell ipc call display toggle"; }
     Mod+A repeat=false hotkey-overlay-title="Toggle Sound Panel" { spawn-sh "qs -c niri-caelestia-shell ipc call soundPanel toggle"; }
+    Mod+B repeat=false hotkey-overlay-title="Shader Hotmenu" { spawn-sh "qs -c niri-caelestia-shell ipc call shaderSelect toggle"; }
 
     // Region picker
     Mod+Shift+S hotkey-overlay-title="Screenshot" { spawn-sh "qs -c niri-caelestia-shell ipc call picker openFreeze"; }

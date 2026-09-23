@@ -352,6 +352,33 @@ Scope {
         }
     }
 
+    IpcHandler {
+        target: "shaderSelect"
+
+        function open(): void {
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.shaderSelect = true;
+        }
+
+        function close(): void {
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.shaderSelect = false;
+        }
+
+        function toggle(): void {
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.shaderSelect = !screenState.shaderSelect;
+        }
+
+        function preset(name: string): void {
+            BiriShaders.applyPreset(name);
+        }
+
+        function toggleAll(): void {
+            BiriShaders.toggleAll();
+        }
+    }
+
     // Helper property to check for external monitors
     readonly property bool hasExternalMonitor: {
         const outputs = Niri.outputs;

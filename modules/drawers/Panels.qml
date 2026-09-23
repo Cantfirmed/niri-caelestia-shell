@@ -17,6 +17,7 @@ import qs.modules.manga as MangaModule
 import qs.modules.novel as NovelModule
 import qs.modules.displayselect as DisplaySelect
 import qs.modules.soundpanel as SoundPanel
+import qs.modules.shaderselect as ShaderSelect
 
 Item {
     id: root
@@ -42,6 +43,7 @@ Item {
     readonly property alias novel: novel
     readonly property alias displayselect: displayselect
     readonly property alias soundpanel: soundpanel
+    readonly property alias shaderselect: shaderselect
     readonly property alias calendar: calendar
 
     anchors.fill: parent
@@ -188,6 +190,12 @@ Item {
     SoundPanel.Wrapper {
         id: soundpanel
         visibilities: root.screenState
+    }
+
+    ShaderSelect.Wrapper {
+        id: shaderselect
+        visibilities: root.screenState
+        anchors.fill: parent
     }
 
     BarCalendar.CalendarPanel {

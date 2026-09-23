@@ -106,6 +106,12 @@ Region {
     }
 
     R {
+        panel: root.panels.shaderselect
+        width: panel.visible ? panel.width : 0
+        height: panel.visible ? panel.height : 0
+    }
+
+    R {
         panel: root.panels.calendar
         width: panel.visible ? panel.width * (1 - root.panels.calendar.offsetScale) : 0
         height: panel.visible ? panel.height : 0

@@ -42,6 +42,22 @@ Singleton {
     // Shader Animation Max FPS (0 = monitor refresh rate)
     property int shaderMaxFps: 0
 
+    readonly property string activePreset: {
+        if (!focusRingEnabled && !windowAnimEnabled && !globalShaderEnabled)
+            return "off";
+        if (focusRingEnabled && focusRingPreset === "rainbow-ripple" && windowAnimEnabled && windowAnimPreset === "whirlpool" && globalShaderEnabled && globalShaderPreset === "comet-glow")
+            return "cyberpunk";
+        if (focusRingEnabled && focusRingPreset === "lightning" && windowAnimEnabled && windowAnimPreset === "lightning" && globalShaderEnabled && globalShaderPreset === "shockwave")
+            return "electric";
+        if (focusRingEnabled && focusRingPreset === "pulse" && windowAnimEnabled && windowAnimPreset === "melt" && globalShaderEnabled && globalShaderPreset === "crt")
+            return "retro";
+        if (focusRingEnabled && focusRingPreset === "pulse" && windowAnimEnabled && windowAnimPreset === "ripple" && !globalShaderEnabled)
+            return "minimal";
+        if (focusRingEnabled && focusRingPreset === "rainbow-ripple" && windowAnimEnabled && windowAnimPreset === "whirlpool" && globalShaderEnabled && globalShaderPreset === "rainbow-tunnel")
+            return "tunnel";
+        return "custom";
+    }
+
     function requestSave(): void {
         if (!root.loaded)
             return;
@@ -52,6 +68,118 @@ Singleton {
         console.log("[BiriShaders] Initializing service...");
         if (!root.loaded)
             initTimer.start();
+    }
+
+    function applyPreset(name: string): void {
+        if (name === "off") {
+            root.focusRingEnabled = false;
+            root.windowAnimEnabled = false;
+            root.globalShaderEnabled = false;
+        } else if (name === "cyberpunk") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "rainbow-ripple";
+            root.focusRingWidth = 4;
+            root.focusRingPadding = 14;
+            root.lightSpillEnabled = true;
+            root.lightSpread = 80;
+            root.lightIntensity = 1.0;
+            root.lightThreshold = 0.5;
+            root.windowAnimEnabled = true;
+            root.windowAnimPreset = "whirlpool";
+            root.globalShaderEnabled = true;
+            root.globalShaderPreset = "comet-glow";
+        } else if (name === "electric") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "lightning";
+            root.focusRingWidth = 4;
+            root.focusRingPadding = 24;
+            root.lightSpillEnabled = true;
+            root.lightSpread = 80;
+            root.lightIntensity = 1.0;
+            root.lightThreshold = 0.5;
+            root.windowAnimEnabled = true;
+            root.windowAnimPreset = "lightning";
+            root.globalShaderEnabled = true;
+            root.globalShaderPreset = "shockwave";
+        } else if (name === "retro") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 3;
+            root.focusRingPadding = 4;
+            root.lightSpillEnabled = false;
+            root.windowAnimEnabled = true;
+            root.windowAnimPreset = "melt";
+            root.globalShaderEnabled = true;
+            root.globalShaderPreset = "crt";
+        } else if (name === "minimal") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 3;
+            root.focusRingPadding = 4;
+            root.lightSpillEnabled = true;
+            root.lightSpread = 60;
+            root.lightIntensity = 0.7;
+            root.lightThreshold = 0.6;
+            root.windowAnimEnabled = true;
+            root.windowAnimPreset = "ripple";
+            root.globalShaderEnabled = false;
+        } else if (name === "tunnel") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "rainbow-ripple";
+            root.focusRingWidth = 4;
+            root.focusRingPadding = 14;
+            root.lightSpillEnabled = true;
+            root.windowAnimEnabled = true;
+            root.windowAnimPreset = "whirlpool";
+            root.globalShaderEnabled = true;
+            root.globalShaderPreset = "rainbow-tunnel";
+        }
+        root.saveImmediately();
+    }
+
+    function selectFocusRing(preset: string): void {
+        if (preset === "none") {
+            root.focusRingEnabled = false;
+        } else if (root.focusRingPreset === preset && root.focusRingEnabled) {
+            root.focusRingEnabled = false;
+        } else {
+            root.focusRingPreset = preset;
+            root.focusRingEnabled = true;
+        }
+        root.saveImmediately();
+    }
+
+    function selectWindowAnim(preset: string): void {
+        if (preset === "none") {
+            root.windowAnimEnabled = false;
+        } else if (root.windowAnimPreset === preset && root.windowAnimEnabled) {
+            root.windowAnimEnabled = false;
+        } else {
+            root.windowAnimPreset = preset;
+            root.windowAnimEnabled = true;
+        }
+        root.saveImmediately();
+    }
+
+    function selectGlobalShader(preset: string): void {
+        if (preset === "none") {
+            root.globalShaderEnabled = false;
+        } else if (root.globalShaderPreset === preset && root.globalShaderEnabled) {
+            root.globalShaderEnabled = false;
+        } else {
+            root.globalShaderPreset = preset;
+            root.globalShaderEnabled = true;
+        }
+        root.saveImmediately();
+    }
+
+    function toggleAll(): void {
+        const anyOn = root.focusRingEnabled || root.windowAnimEnabled || root.globalShaderEnabled;
+        if (anyOn) {
+            applyPreset("off");
+        } else {
+            applyPreset("cyberpunk");
+        }
     }
 
     function saveImmediately(): void {
