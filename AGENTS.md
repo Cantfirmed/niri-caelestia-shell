@@ -133,11 +133,20 @@ Plus floating/detached panels:
 - `session` (power menu) — right edge
 - `popouts` (tray menus, control center)
 
+#### Checklist when adding a new Drawer / Modal Overlay
+1. **State Definition:** Add `property bool <name>` to **both** `components/ScreenState.qml` and `components/DrawerVisibilities.qml`. If `ScreenState.qml` is omitted, `ShellState.forActive()` throws `Cannot assign to non-existent property "<name>"`.
+2. **Panels Layout:** In `modules/drawers/Panels.qml`, instantiate `<Module>.Wrapper { id: <name>; visibilities: root.screenState }` and export `readonly property alias <name>: <name>`.
+3. **Wayland Mask Hole-Punching:** In `modules/drawers/Regions.qml`, add `R { panel: root.panels.<name>; width: panel.visible ? panel.width : 0; height: panel.visible ? panel.height : 0 }`. Without this, layer-shell masks out the panel completely, leaving it invisible.
+4. **Window Focus & Life Cycle:** In `modules/drawers/ContentWindow.qml`, add `screenState.<name>` to `hasOpenPanels`, `WlrLayershell.keyboardFocus` (use `Exclusive` if keyboard input is required), and reset to `false` in `onHasFullscreenChanged`.
+5. **IPC Registration:** In `modules/Shortcuts.qml`, declare `IpcHandler { target: "<name>" ... }`.
+6. **Keybinding & Fallback:** In `niri/caelestia.kdl`, bind using the fallback pattern: `spawn-sh "qs -c niri-caelestia-shell ipc call <name> toggle || niri msg action <native-fallback>"`.
+
 ### `modules/` — Panel Modules
 
 | Module | Description |
 |--------|-------------|
 | `dashboard/` | Top status dashboard — weather, clocks, resource monitors, media player |
+| `dashboard/dev/` | Developer tab — local web servers + docker containers (backed by `services/Dev.qml`, toggled by `Config.dashboard.showDeveloper`) |
 | `launcher/` | App launcher with clipboard, calculator, emoji support |
 | `session/` | Power menu (shutdown, sleep, reboot, logout) |
 | `sidebar/` | Notification dock (NotifDock) — [Sidebar Developer Guide](modules/sidebar/AGENTS.md) |
@@ -151,7 +160,7 @@ Plus floating/detached panels:
 | `manga/` / `novel/` | Reader modules (IPC toggle via `mangaReader` / `novelReader`) |
 | `lock/` | Lock screen |
 | `areapicker/` | Screenshot region picker and OCR |
-| `nexus/` | Settings/config UI (the "Nexus" control panel) |
+| `nexus/` | Settings/config UI (the "Nexus" control panel). System → **Plugins** (`pages/PluginsPage.qml` + `common/PluginRow.qml`) lists the Manga/Novel readers with enable/disable toggles. |
 | `polkit/` | Polkit authentication agent |
 | `windowinfo/` | Ported to Niri — Active window detail view showing client info (PID, floating, workspace, position, size) and action buttons (move workspace, maximize, float, kill) |
 
@@ -252,6 +261,11 @@ With `Exclusive`, the compositor automatically grants keyboard focus to the shel
 3. In the panel's content, call `forceActiveFocus()` on the target control
 4. Belt-and-suspenders: also call `win.requestActivate()` if available
 
+### Modal Sizing and Event Capture in Centered Overlays
+- **Explicit Width/Height:** When centering custom modals in a fullscreen `Wrapper.qml` via `anchors.centerIn: parent`, define explicit `width` and `height` on `root`. Relying solely on `implicitWidth` causes child `RowLayout` headers and spacers to collapse horizontally.
+- **Prevent Event Stealing:** Avoid placing a catch-all `MouseArea { anchors.fill: parent }` across the entire modal surface; use `TapHandler { onTapped: root.focus = true }` instead so child controls (`Chip`, `IconButton`, `SearchBar`) receive pointer clicks cleanly.
+- **Button Rows:** Prefer `Flow { Layout.fillWidth: true }` over horizontal `Flickable` for chip/button toolbars to prevent gesture stealing.
+
 ### Hover zones not working on occupied workspaces
 
 **Root cause**: `dragMaskPadding` in `ContentWindow.qml` had early-return checks that returned `0` when windows existed on the workspace (both Hyprland `windows > 0` and Niri `NiriIpc.windows.some(...)`). This zeroed out the mask padding, collapsing the hover zones.
@@ -268,6 +282,17 @@ The `onPositionChanged` handler in `Interactions.qml` normally hides panels when
 ### New panel not responding to IPC calls
 
 Check that the `IpcHandler` component is actually **instantiated** in the QML tree. A `.qml` file sitting in a directory isn't enough — it needs to be loaded as a child component somewhere.
+
+### Nexus page shows "Page under construction" after an upstream merge
+
+**Symptom**: Clicking a Nexus page (e.g. **System → Plugins**) renders the `PlaceholderComp` "Page under construction" text, even though `modules/nexus/pages/<Page>.qml` exists and is correct.
+
+**Root cause**: Nexus pages are only reachable through the `pageComps` array in `modules/nexus/PageCompRegistry.qml`, which must stay index-aligned with the `pages` array in `modules/nexus/PageRegistry.qml`. Upstream merges of `PageCompRegistry.qml` have silently reset fork entries back to `PlaceholderComp {}` (e.g. the Plugins entry was lost in the v2.5.0 merge without a conflict).
+
+**Rule**:
+- When adding or restoring a Nexus page, wire it as `StackPage { Component { <Page> {} } }` at the same index as its `PageRegistry.pages` entry — a page file alone is never reachable.
+- Keep the System → Plugins entry pointing at `PluginsPage` (manga/novel reader toggles).
+- After any upstream merge, run `scripts/verify-deltas.sh`; it asserts (check #12) that the Plugins page stays registered.
 
 ### Session & Lockscreen controls (Sleep button vs upstream Hibernate)
 
@@ -307,6 +332,28 @@ pkill -9 quickshell; pkill -9 qs
 
 `PersistentProperties` saves state to disk and restores it on restart. If a property was `true` when the shell was killed, it'll start `true` on next launch. This can cause unexpected panel visibility. Clear saved state or handle initial state explicitly.
 
+### Quickshell Watchdog & Defunct Process Traps
+
+**Symptom**: Quickshell repeatedly restarts in rapid loops (e.g. every ~8.6 seconds) without generating a coredump.
+
+**Root cause**: A watchdog checking `ps -eo ppid,stat | grep Z` kills Quickshell with `SIGKILL` because transient child processes (`asdbctl`, `ddcutil`, `brightnessctl`, `niri msg`) naturally enter zombie state `Z` between exit and being reaped by the Qt/Quickshell event loop. Under heavy startup load (QML compilation, shaders), children linger in `Z` for milliseconds or ticks, triggering immediate, cascading watchdog kills.
+
+**Rule**:
+- Never kill Quickshell based on zombie/defunct child processes.
+- Watchdogs must rely solely on consecutive IPC ping timeouts (`qs -c niri-caelestia-shell ipc call lock isLocked`) after a startup grace period of at least 15 seconds.
+- Wrapper daemons (`launch-quickshell.sh`) must redirect stdout/stderr to a persistent log (`~/.local/state/caelestia/quickshell-wrapper.log`) rather than `/dev/null`.
+
+### Services Generating External Configs (BiriShaders, NiriTiling, NiriBlur)
+
+**Symptom**: Niri reloads its configuration multiple times during shell startup, flooding IPC with `ConfigLoaded` and window layout events.
+
+**Root cause**: Services reading their state files on boot called `saveImmediately()`, which rewrote `shaders.kdl` / `tiling.kdl` on disk and invoked `niri msg action load-config-file`.
+
+**Rule**:
+- When reading existing valid state from disk during `onLoaded`, do not re-save or call `reloadNiriConfig()`.
+- Only save and reload when settings are explicitly changed by user action.
+- Use `Quickshell.execDetached(["niri", "msg", "action", "load-config-file"])` rather than dynamic `Qt.createQmlObject` Process instances.
+
 ### Multi-monitor workspace indexing and cross-output window leakage
 
 **Symptom**: On an external monitor, workspace slots appear occupied or active (and may show window icons from other monitors) even if those workspaces don't exist on that monitor or have no windows.
@@ -321,6 +368,20 @@ pkill -9 quickshell; pkill -9 qs
 - **Never fall back across outputs:** Do not fall back to global `allWorkspaces` when searching by `idx`. If a workspace does not exist in `outputWorkspaces`, return empty.
 - **Guard non-existent slots:** When rendering fixed workspace slots (e.g., `GlobalConfig.bar.workspaces.shown = 4`), ensure slots beyond `outputWorkspaces.length` have `workspaceId = -1` and require `workspaceId > 0` before applying active or occupied styling.
 - **Use `outputActiveWs` instead of global focus:** Determine the active workspace for a bar using the output's `is_active` workspace, not global `is_focused`.
+
+### Niri IPC Event Stream Throttling & Disconnect Prevention
+
+**Symptom**: Window icons in the workspace bar or sidebar disappear when switching windows or scrolling workspaces, and reappear after a ~5-second delay. Shell logs report `disconnecting IPC event stream client because it is reading events too slowly`.
+
+**Root causes**:
+1. **Viewport Animation Flood**: During window focus changes or workspace scrolling, Niri emits high-frequency `WindowLayoutsChanged` events (at 60–144Hz) where only `tile_pos_in_workspace_view` updates sub-pixel camera coordinates while window slots (`pos_in_scrolling_layout`) and sizes (`window_size`) remain identical.
+2. **Main Thread Saturation**: Rebuilding QML models (`resetData()`) and destroying/recreating icon delegates on every animation frame blocks Qt's event loop and the Unix domain socket read loop.
+3. **Bounded IPC Channel Overflow**: Niri's IPC server enforces a strict 64-item channel buffer (`EVENT_STREAM_BUFFER_SIZE = 64`). If socket reads stall for even ~100–200ms, the buffer overflows and Niri forcibly drops the event stream client. Quickshell then enters an exponential backoff reconnect cycle (taking ~5s to restore state).
+
+**Invariants & Best Practices**:
+- **Filter Viewport Scroll Updates**: In `niriipc.cpp` (`handleWindowLayoutsChanged` and similar IPC listeners), check whether structural properties (`pos_in_scrolling_layout`, `window_size`) actually changed before calling `m_windowsModel->resetData()` or emitting notification signals. Discard pure animation frame updates (`tile_pos_in_workspace_view`).
+- **Enlarge Socket Receive Buffer**: Configure `SO_RCVBUF` to at least 1MB (`1024 * 1024`) on the Unix domain socket descriptor in `NiriSocket::onConnected()` to absorb burst events without stalling Niri's sender thread.
+- **Cap Reconnect Backoff**: Keep `m_reconnectDelay` capped to a reasonable maximum (e.g. 5000ms instead of 30000ms) to ensure rapid recovery if a transient disconnect occurs.
 
 ### Auto-lock, DPMS Power-Off, and Display Monitor Conflicts
 
@@ -387,6 +448,45 @@ pkill -9 quickshell; pkill -9 qs
 - **Sanity Check Logic**: If `output.kdl` contains no active output, or if all DRM connectors in `/sys/class/drm/card*-*/status` are disconnected except `eDP-1`, the script automatically rewrites `output.kdl` with `output "eDP-1" { scale 1.0 }`.
 - **Socket Auto-Discovery**: If `NIRI_SOCKET` is not exported in the environment, `niri-display-monitor.py` automatically scans `$XDG_RUNTIME_DIR/niri*.sock` and `/run/user/<uid>/niri*.sock` to acquire the active IPC socket.
 
+### File-Watcher / Watchdog Lock State Persistence (Random Desktop Locking)
+
+**Symptom**: The desktop randomly locks itself while the user is actively typing, browsing, or working, or locks immediately after unlocking.
+
+**Root cause**: Attempting to persist the lockscreen state across Quickshell restarts or crashes by writing a marker file (e.g. `~/.cache/quickshell-locked`) and binding QML `FileView` or `launch-quickshell.sh` watchdog loops to `lock lock`. File watchers in QML and bash loops re-trigger on stale timestamps, race conditions, or unhandled file unlocks, causing unintended re-locks.
+
+**Invariants & Best Practices**:
+- Lock activation must remain purely edge-triggered: keybinding IPC, idle timeout, or systemd logind signals (`AboutToSleep`).
+- Never use filesystem marker files or external watchdog loops to assert `lock.locked = true`.
+
+### Emergency Lockscreen Recovery Death-Loop (`Super+Alt+L`)
+
+**Symptom**: Quickshell crashes while locked or on resume, and pressing `Super+Alt+L` fails to restore the lockscreen even after multiple presses.
+
+**Root cause**: Quickshell requires ~3.5s to initialize its C++ plugins, shaders, and Wayland layer-shell surfaces. Inline shell keybindings like:
+```bash
+timeout 2s qs -c niri-caelestia-shell ipc call lock lock || (pkill -9 quickshell; ...; timeout 2s qs ...)
+```
+fail because the 2-second timeout expires while the newly spawned Quickshell is still booting. Each successive press of `Super+Alt+L` executes `pkill -9`, killing the booting instance in a perpetual loop.
+
+**Invariants & Best Practices**:
+- Delegate emergency rescue actions to `scripts/rescue-lock.sh`.
+- The rescue script must check process elapsed time (`ps -o etimes= -p $PID`). If Quickshell was started less than 8 seconds ago, it must **never** `pkill -9`, but instead wait and poll the IPC socket until ready.
+- Always un-blank/power-on monitors (`niri msg action power-on-monitors`) before invoking the lock IPC to ensure displays receive the new surface.
+
+### Defensive Screen Null-Guards Across Drawer Wrappers
+
+**Symptom**: Quickshell crashes with `TypeError: Cannot read property of undefined` or `null` during multi-monitor hotplugging or sleep resume.
+
+**Root cause**: During display connection handshakes, `Quickshell.screens` can momentarily empty or contain transient screen instances where `screenState` or `screen.name` is null. Unprotected drawer wrappers referencing `visibilities: root.screenState` or properties on `screenState` throw errors that tear down the QML engine.
+
+**Invariants & Best Practices**:
+- In all drawer `Wrapper.qml` files, guard visibility and state references:
+  ```qml
+  visibilities: root.screenState ?? null
+  shouldBeActive: root.screenState ? root.screenState.panelName : false
+  ```
+- Always access `screen?.name ?? ""` safely when reading monitor names.
+
 ### Upstream v2.5.0 Migration Invariants & C++ Strict Typing
 
 When tracking or porting upstream releases (`v2.5.0`+):
@@ -403,12 +503,63 @@ When tracking or porting upstream releases (`v2.5.0`+):
 4. **Strongly Typed `ListNode` Settings**:
    - Config lists (such as `GlobalConfig.utilities.vpn.provider`) are now C++ `ListNode` objects offering `.values`, `.insert()`, `.remove()`, and `.at(index)`. Do not use raw JS array mutations or write-back helpers.
 
-### Biri Compositor Drop-in Compatibility
+### Biri Compositor Drop-in Compatibility & Shell Integration Architecture
 
-**`biri`** (`barrulus/biri`, AUR: `biri-git`) is a soft fork of Niri that merges requested community features:
-- **Features**: GPU post-process shaders (global, window, region), GLSL custom animated focus rings with screen-space light spill, portrait monitor vertical scrolling (`main-axis "vertical"`), consolidated carousel multi-monitor overview, and runtime touchpad/DWT toggles.
-- **Compatibility**: Direct drop-in replacement (`Provides: niri`, `Conflicts With: niri`). It uses the exact same command (`/usr/bin/niri`), IPC socket protocol (`$NIRI_SOCKET`), and configuration (`~/.config/niri/config.kdl`).
+**`biri`** (`barrulus/biri`, AUR: `biri-git`) is a soft fork of Niri providing GPU post-processing shaders, live per-window/output filters, dynamic overview zoom stages, portrait vertical scrolling, isolated displays, and runtime input toggles.
+- **Compatibility**: Direct drop-in replacement (`Provides: niri`, `Conflicts With: niri`). It uses the exact same binary (`/usr/bin/niri`), IPC socket protocol (`$NIRI_SOCKET`), and configuration (`~/.config/niri/config.kdl`).
 - **Caelestia Shell Status**: 100% compatible. The shell's C++ `NiriIpc` plugin and Python display daemons interface seamlessly with `biri`.
+
+#### 1. Architecture & Settings Pages in Caelestia Nexus
+Biri settings are cleanly bifurcated into two separate Nexus pages under the `biri` category:
+- **Biri Compositor (`BiriPage.qml` & `services/Biri.qml`)**:
+  - Manages normal layout, displays, input toggles, and window rules.
+  - Persists state to `~/.local/state/caelestia/biri_settings.json`.
+  - Dynamically compiles and writes `~/.config/niri/niri/biri.kdl` (included in `~/.config/niri/config.kdl`).
+- **Biri Shaders & FX (`BiriShadersPage.qml` & `services/BiriShaders.qml`)**:
+  - Manages focus ring shaders, screen-space light spill, window dissolve animations, cursor/global shaders, in-flight window shaders, and output color filters.
+  - Persists state to `~/.local/state/caelestia/biri_shaders.json`.
+  - Dynamically compiles and writes `~/.config/niri/niri/shaders.kdl` (included in `~/.config/niri/config.kdl`).
+
+#### 2. Implemented Features & Config Invariants
+1. **Picture-in-Picture (PiP) Floating Videos**:
+   - Uses window rule `match title="^Picture[- ]in[- ][Pp]icture$"` (configurable regex).
+   - Supports `open-floating true`, `float-above-fullscreen true`, and `open-sticky true` (sticky pinning across workspaces).
+   - Configurable default floating proportions (width/height).
+2. **Vertical Scrolling for Portrait Monitors**:
+   - Written inside `output "<name>" { layout { main-axis "vertical"; default-row-height { proportion <val>; }; }; }`.
+3. **Dynamic Multi-Stage Overview Zoom**:
+   - `overview { zoom-presets 0.5 0.25 0.1; }`.
+   - Wired to `Mod+WheelScrollDown` (`zoom-overview-out`) and `Mod+WheelScrollUp` (`zoom-overview-in`).
+4. **Isolated Presentation Displays**:
+   - **Syntax Invariant**: `isolated;` in `output "<name>" {}` must be a **bare boolean flag**, NEVER `isolated true` (which triggers a fatal parse error).
+5. **`shaders-in-capture` Toggle**:
+   - **Syntax Invariant**: Top-level bare flag `shaders-in-capture;` controls whether screen capture/OBS captures active shaders.
+6. **Per-Window Shaders & In-Flight Cycler**:
+   - Defined via top-level `window-shaders { preset "name" { path "..."; } ... }`.
+   - Keybinds: `Mod+Shift+B` (`cycle-window-shader`) and `Mod+Alt+B` (`toggle-window-shader`).
+7. **Per-Output Color Filters & Cycler**:
+   - Defined via top-level `output-shaders { preset "name" { preset "..." ...; } ... }`.
+   - Keybinds: `Mod+Shift+C` (`cycle-output-shader`) and `Mod+Alt+C` (`toggle-output-shader`).
+8. **Runtime Input Toggles**:
+   - Live IPC calls via `niri msg action toggle-touchpad` and `niri msg action toggle-touchpad-dwt`.
+
+#### 3. Focus Ring Shaders & Dynamic Background Color Synchronization
+- **Screen-Space Light Spill**:
+  - Added via `shader { path "..."; light spread=X intensity=Y threshold=Z; padding W; }` inside `focus-ring {}`.
+  - **Color Derivation**: Biri's light spill calculates spilled illumination **directly from the RGBA pixels emitted by `ring_color()`**. Changing shader RGB immediately tints the light spill.
+- **Dynamic Wallpaper Theme Matching**:
+  - `BiriShaders.qml` reactively monitors `Colours.palette.m3primary`, `m3secondary`, and `m3tertiary`.
+  - When wallpaper or theme changes, `BiriShaders` rewrites `~/.config/niri/shaders/focus-ring/pulse.frag` with RGB values computed from the active wallpaper palette.
+  - Supports dual-tone breathing shift (`mix(colA, colB, ...)`), pure primary accent, tri-tone wallpaper spectrum cycle, and classic cyan.
+- **Inotify Live Reloading**:
+  - Biri watches `.frag` files with inotify. Saving or overwriting a shader file on disk hot-reloads it in real time without restarting Niri or Quickshell.
+
+#### 4. Critical KDL Syntax Gotchas
+- **Single `binds {}` Node per File**:
+  - Multiple top-level `binds {}` blocks in the same `.kdl` file cause a fatal parse error: `duplicate node binds, single node expected`.
+  - All generated keybindings (e.g. window-shader cycler, output-shader cycler, overview zoom wheel) must be concatenated into a single `binds {}` block.
+- **Validation**:
+  - Always verify generated configurations using `niri validate --config ~/.config/niri/config.kdl`.
 
 ### Adding a new panel
 

@@ -17,6 +17,7 @@ StyledRect {
     required property color accent
     required property real usage
     required property real temperature
+    property real frequency: 0
 
     color: Colours.tPalette.m3surfaceContainer
     radius: Tokens.rounding.extraLarge
@@ -84,19 +85,40 @@ StyledRect {
 
         RowLayout {
             Layout.leftMargin: -Tokens.padding.extraSmall
-            spacing: Tokens.spacing.extraSmall
+            spacing: Tokens.spacing.medium
 
-            MaterialIcon {
-                Layout.topMargin: Math.round(fontInfo.pointSize * 0.08)
-                text: root.temperature > 90 ? "thermometer_alert" : "thermometer"
-                color: root.temperature > 90 ? Colours.palette.m3error : root.accent
-                fontStyle: Tokens.font.icon.medium
-                fill: 1
+            RowLayout {
+                spacing: Tokens.spacing.extraSmall
+
+                MaterialIcon {
+                    Layout.topMargin: Math.round(fontInfo.pointSize * 0.08)
+                    text: root.temperature > 90 ? "thermometer_alert" : "thermometer"
+                    color: root.temperature > 90 ? Colours.palette.m3error : root.accent
+                    fontStyle: Tokens.font.icon.medium
+                    fill: 1
+                }
+
+                StyledText {
+                    text: Units.formatSensorTemp(root.temperature)
+                    font: Tokens.font.body.builders.medium.build()
+                }
             }
 
-            StyledText {
-                text: Units.formatSensorTemp(root.temperature)
-                font: Tokens.font.body.builders.medium.build()
+            RowLayout {
+                visible: root.frequency > 0
+                spacing: Tokens.spacing.extraSmall
+
+                MaterialIcon {
+                    Layout.topMargin: Math.round(fontInfo.pointSize * 0.08)
+                    text: "speed"
+                    color: root.accent
+                    fontStyle: Tokens.font.icon.medium
+                }
+
+                StyledText {
+                    text: Units.formatGhz(root.frequency)
+                    font: Tokens.font.body.builders.medium.build()
+                }
             }
         }
 

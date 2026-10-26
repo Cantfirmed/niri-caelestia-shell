@@ -46,7 +46,7 @@ Item {
         Loader {
             Layout.topMargin: -(((item as StyledText)?.font.pointSize ?? 0) * 0.4)
             Layout.alignment: Qt.AlignHCenter
-            asynchronous: true
+            asynchronous: false
             active: Config.dashboard.showClockSeconds
             visible: active
 
@@ -59,7 +59,7 @@ Item {
         Loader {
             Layout.topMargin: -(((item as StyledText)?.font.pointSize ?? 0) * 0.4)
             Layout.alignment: Qt.AlignHCenter
-            asynchronous: true
+            asynchronous: false
             active: Config.dashboard.showClockSeconds
             visible: active
 
@@ -71,7 +71,7 @@ Item {
         }
 
         Loader {
-            asynchronous: true
+            asynchronous: false
             Layout.alignment: Qt.AlignHCenter
 
             active: Units.twelveHourClock

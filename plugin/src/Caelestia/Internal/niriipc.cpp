@@ -592,35 +592,63 @@ void NiriIpc::handleWindowFocusChanged(const QJsonObject& data) {
     }
 
     updateFocusedWindowFields();
-    emit focusedWindowChanged();
 }
 
 void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
     const QJsonArray changes = data.value(QStringLiteral("changes")).toArray();
     if (changes.isEmpty()) return;
 
+    bool structuralChange = false;
+    bool sizeChange = false;
+
     for (const auto& change : changes) {
         const QJsonArray pair = change.toArray();
         if (pair.size() != 2) continue;
 
         const qint64 id = pair.at(0).toInteger();
-        const auto layout = pair.at(1).toObject().toVariantMap();
+        const auto newLayout = pair.at(1).toObject().toVariantMap();
 
         // O(1) lookup via hash index
         const int idx = findWindowIndexById(id);
         if (idx >= 0) {
             auto w = m_windowsModel->items().at(idx).toMap();
-            w[QStringLiteral("layout")] = layout;
-            m_windowsModel->setItem(idx, w);
+            const auto oldLayout = w.value(QStringLiteral("layout")).toMap();
+
+            const auto oldPos = oldLayout.value(QStringLiteral("pos_in_scrolling_layout")).toList();
+            const auto newPos = newLayout.value(QStringLiteral("pos_in_scrolling_layout")).toList();
+            if (oldPos != newPos) {
+                structuralChange = true;
+            }
+
+            const auto oldSize = oldLayout.value(QStringLiteral("window_size")).toList();
+            const auto newSize = newLayout.value(QStringLiteral("window_size")).toList();
+            if (oldSize != newSize) {
+                sizeChange = true;
+            }
+
+            if (oldPos != newPos || oldSize != newSize) {
+                w[QStringLiteral("layout")] = newLayout;
+                m_windowsModel->setItem(idx, w);
+            }
         }
     }
 
-    sortWindowsList();
-    rebuildWindowIndex();
+    if (!structuralChange && !sizeChange) {
+        // Viewport scroll updates (tile_pos_in_workspace_view changes) are emitted
+        // continuously at high frequency (up to 144Hz) during window scrolling animations.
+        // Neither pos_in_scrolling_layout nor window_size changed, so skip model reset
+        // and signal emissions to prevent saturating the Qt event loop and overflowing Niri's IPC buffer.
+        return;
+    }
 
-    // Re-find focused index after sort via hash
-    if (!m_focusedWindowId.isEmpty()) {
-        m_focusedWindowIndex = findWindowIndexById(m_focusedWindowId.toLongLong());
+    if (structuralChange) {
+        sortWindowsList();
+        rebuildWindowIndex();
+
+        // Re-find focused index after sort via hash
+        if (!m_focusedWindowId.isEmpty()) {
+            m_focusedWindowIndex = findWindowIndexById(m_focusedWindowId.toLongLong());
+        }
     }
 
     updateFocusedWindowFields();

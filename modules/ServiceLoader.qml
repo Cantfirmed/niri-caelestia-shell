@@ -15,7 +15,10 @@ Scope {
         NiriBlur.init();
         NiriTiling.init();
         BiriShaders.init();
+        Biri.init();
         Weather.reload();
         VPN;
+        Tailscale;
+        BluetoothAudio;
     }
 }

@@ -24,7 +24,7 @@ Item {
     readonly property int currMonth: dashState.currentDate.getMonth()
     readonly property int currYear: dashState.currentDate.getFullYear()
 
-    readonly property bool shouldBeActive: visibilities.calendar
+    readonly property bool shouldBeActive: visibilities?.calendar ?? false
     property real offsetScale: shouldBeActive ? 0 : 1
     clip: true
     visible: offsetScale < 1

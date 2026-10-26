@@ -14,6 +14,8 @@ import qs.utils
 Item {
     id: root
 
+    property ScreenState screenState
+
     property real playerProgress: {
         const active = Players.active;
         return active?.length ? (active.position % active.length) / active.length : 0;
@@ -40,7 +42,7 @@ Item {
     }
 
     ServiceRef {
-        service: Audio.beatTracker
+        service: (root.screenState?.dashboard && (Players.active?.isPlaying ?? false)) ? Audio.beatTracker : null
     }
 
     CircularProgress {

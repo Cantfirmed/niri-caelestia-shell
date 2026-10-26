@@ -6,6 +6,7 @@ import Quickshell.Io
 import Caelestia
 import Caelestia.Config
 import Caelestia.I18n
+import qs.services
 import qs.utils
 
 Singleton {
@@ -44,8 +45,12 @@ Singleton {
 
         if (configLocation) {
             if (configLocation.indexOf(",") !== -1 && !isNaN(parseFloat(configLocation.split(",")[0]))) {
+                const changed = (loc !== configLocation);
                 loc = configLocation;
                 fetchCityFromCoords(configLocation);
+                if (!changed) {
+                    fetchWeatherData();
+                }
             } else {
                 fetchCoordsFromCity(configLocation);
             }
@@ -66,6 +71,7 @@ Singleton {
                     response = JSON.parse(text);
                 } catch (error) {
                     console.warn(lc, `Unable to parse response from ip-api: ${error}`);
+                    weatherRetryTimer.restart();
                     return;
                 }
 
@@ -74,18 +80,28 @@ Singleton {
 
                 if (response.status !== "success" || !Number.isFinite(lat) || !Number.isFinite(lon)) {
                     console.warn(lc, `ip-api lookup failed: ${response.message ?? "invalid response"}`);
+                    weatherRetryTimer.restart();
                     return;
                 }
 
                 city = fixCityName(response.city ?? "");
                 timer.restart();
-                loc = `${lat},${lon}`;
+                const newLoc = `${lat},${lon}`;
+                const changed = (loc !== newLoc);
+                loc = newLoc;
+                if (!changed) {
+                    fetchWeatherData();
+                }
             }, (error, metadata) => {
                 ipApiRequestPending = false;
 
-                if (!recordIpApiRateLimit(metadata))
+                if (!recordIpApiRateLimit(metadata)) {
                     console.warn(lc, `ip-api request failed: ${error}`);
+                    weatherRetryTimer.restart();
+                }
             });
+        } else if (loc && !cc) {
+            fetchWeatherData();
         }
     }
 
@@ -215,15 +231,30 @@ Singleton {
         const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=${lang}&format=json`;
 
         Requests.get(url, text => {
-            const json = JSON.parse(text);
+            let json;
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                console.warn(lc, `Failed to parse geocoding response: ${e}`);
+                weatherRetryTimer.restart();
+                return;
+            }
             if (json.results && json.results.length > 0) {
                 const result = json.results[0];
-                loc = result.latitude + "," + result.longitude;
+                const newLoc = result.latitude + "," + result.longitude;
+                const changed = (loc !== newLoc);
+                loc = newLoc;
                 city = fixCityName(result.name);
+                if (!changed) {
+                    fetchWeatherData();
+                }
             } else {
                 loc = "";
                 reload();
             }
+        }, error => {
+            console.warn(lc, `Geocoding request failed: ${error}`);
+            weatherRetryTimer.restart();
         });
     }
 
@@ -233,9 +264,18 @@ Singleton {
             return;
 
         Requests.get(url, text => {
-            const json = JSON.parse(text);
-            if (!json.current || !json.daily)
+            let json;
+            try {
+                json = JSON.parse(text);
+            } catch (e) {
+                console.warn(lc, `Failed to parse weather json: ${e}`);
+                weatherRetryTimer.restart();
                 return;
+            }
+            if (!json.current || !json.daily) {
+                weatherRetryTimer.restart();
+                return;
+            }
 
             cc = {
                 weatherCode: json.current.weather_code,
@@ -261,22 +301,27 @@ Singleton {
 
             const hourlyList = [];
             const now = new Date();
-            for (let i = 0; i < json.hourly.time.length; i++) {
-                const time = new Date(json.hourly.time[i].replace("T", " "));
+            if (json.hourly && json.hourly.time) {
+                for (let i = 0; i < json.hourly.time.length; i++) {
+                    const time = new Date(json.hourly.time[i].replace("T", " "));
 
-                if (time < now)
-                    continue;
+                    if (time < now)
+                        continue;
 
-                hourlyList.push({
-                    timestamp: json.hourly.time[i],
-                    hour: time.getHours(),
-                    tempC: Math.round(json.hourly.temperature_2m[i]),
-                    precipChance: json.hourly.precipitation_probability[i],
-                    weatherCode: json.hourly.weather_code[i],
-                    icon: Icons.getWeatherIcon(json.hourly.weather_code[i])
-                });
+                    hourlyList.push({
+                        timestamp: json.hourly.time[i],
+                        hour: time.getHours(),
+                        tempC: Math.round(json.hourly.temperature_2m[i]),
+                        precipChance: json.hourly.precipitation_probability[i],
+                        weatherCode: json.hourly.weather_code[i],
+                        icon: Icons.getWeatherIcon(json.hourly.weather_code[i])
+                    });
+                }
             }
             hourlyForecast = hourlyList;
+        }, error => {
+            console.warn(lc, `Weather request failed: ${error}`);
+            weatherRetryTimer.restart();
         });
     }
 
@@ -337,6 +382,10 @@ Singleton {
 
     Connections {
         function onWeatherLocationChanged(): void {
+            if (!GlobalConfig.services.weatherLocation) {
+                root.loc = "";
+                root.city = "";
+            }
             root.reload();
         }
 
@@ -381,6 +430,32 @@ Singleton {
         }
     }
 
+    Timer {
+        id: weatherRetryTimer
+
+        interval: 15000 // 15 seconds
+        repeat: false
+        onTriggered: {
+            if (!root.cc || !root.loc) {
+                root.reload();
+            }
+        }
+    }
+
+    Connections {
+        target: Nmcli
+        function onIsConnectedChanged(): void {
+            if (Nmcli.isConnected && (!root.cc || !root.loc)) {
+                root.reload();
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        timer.restart();
+        root.reload();
+    }
+
     ElapsedTimer {
         id: timer
     }
@@ -416,5 +491,27 @@ Singleton {
 
         name: "caelestia.qml.services.weather"
         defaultLogLevel: LoggingCategory.Info
+    }
+
+    IpcHandler {
+        target: "weather"
+
+        function getStatus(): string {
+            return JSON.stringify({
+                city: root.city,
+                loc: root.loc,
+                configLoc: GlobalConfig.services.weatherLocation,
+                hasCc: !!root.cc,
+                temp: root.temp,
+                desc: root.description,
+                ipApiBlockedUntil: root.ipApiBlockedUntil,
+                ipApiRequestPending: root.ipApiRequestPending,
+                timerElapsed: timer.elapsed()
+            });
+        }
+
+        function reload(): void {
+            root.reload();
+        }
     }
 }

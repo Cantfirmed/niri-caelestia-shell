@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Caelestia.Internal
+import qs.services
 import qs.utils
 
 Singleton {
@@ -17,13 +18,20 @@ Singleton {
 
     // Focus Ring / Border Shader
     property bool focusRingEnabled: false
-    property string focusRingPreset: "rainbow-ripple"
-    property int focusRingWidth: 4
-    property int focusRingPadding: 14
+    property string focusRingPreset: "pulse"
+    property int focusRingWidth: 2
+    property int focusRingPadding: 3
     property bool lightSpillEnabled: true
-    property int lightSpread: 80
-    property real lightIntensity: 1.0
-    property real lightThreshold: 0.5
+    property int lightSpread: 14
+    property real lightIntensity: 0.65
+    property real lightThreshold: 0.55
+
+    // Pulse Focus Ring Theme / Background Color Matching
+    property bool pulseMatchTheme: true
+    property string pulseColorMode: "blend" // "blend" (primary + tertiary), "primary", "spectrum", "cyan"
+    readonly property color currentThemePrimary: Colours.palette.m3primary
+    readonly property color currentThemeSecondary: Colours.palette.m3secondary
+    readonly property color currentThemeTertiary: Colours.palette.m3tertiary
 
     // Window Open/Close Animation Shader
     property bool windowAnimEnabled: false
@@ -32,7 +40,7 @@ Singleton {
 
     // Global / Screen / Cursor Shader
     property bool globalShaderEnabled: false
-    property string globalShaderPreset: "comet-glow"
+    property string globalShaderPreset: "locator"
 
     // Consolidated Carousel Overview
     property bool carouselEnabled: false
@@ -42,19 +50,37 @@ Singleton {
     // Shader Animation Max FPS (0 = monitor refresh rate)
     property int shaderMaxFps: 0
 
+    // Per-Window Shaders & In-Flight Cycler
+    property bool windowShadersEnabled: true
+
+    // Per-Output Colour Filters & Cycler
+    property bool outputShadersEnabled: true
+
+    readonly property list<string> cursorPresets: [
+        "locator", "spotlight", "blueglow", "trail", "comet-glow", "rainbow-tunnel", "ripple", "shockwave"
+    ]
+    readonly property list<string> screenPresets: [
+        "crt", "vignette", "grayscale", "warmtint"
+    ]
+
+    readonly property bool isCursorShaderActive: globalShaderEnabled && cursorPresets.includes(globalShaderPreset)
+    readonly property bool isScreenFilterActive: globalShaderEnabled && screenPresets.includes(globalShaderPreset)
+    readonly property string activeCursorPreset: isCursorShaderActive ? globalShaderPreset : "none"
+    readonly property string activeScreenPreset: isScreenFilterActive ? globalShaderPreset : "none"
+
     readonly property string activePreset: {
         if (!focusRingEnabled && !windowAnimEnabled && !globalShaderEnabled)
             return "off";
-        if (focusRingEnabled && focusRingPreset === "rainbow-ripple" && windowAnimEnabled && windowAnimPreset === "whirlpool" && globalShaderEnabled && globalShaderPreset === "comet-glow")
-            return "cyberpunk";
-        if (focusRingEnabled && focusRingPreset === "lightning" && windowAnimEnabled && windowAnimPreset === "lightning" && globalShaderEnabled && globalShaderPreset === "shockwave")
-            return "electric";
+        if (focusRingEnabled && focusRingPreset === "pulse" && !windowAnimEnabled && !globalShaderEnabled)
+            return "focus";
+        if (focusRingEnabled && focusRingPreset === "pulse" && !windowAnimEnabled && globalShaderEnabled && globalShaderPreset === "locator")
+            return "locator";
+        if (focusRingEnabled && focusRingPreset === "pulse" && !windowAnimEnabled && globalShaderEnabled && globalShaderPreset === "spotlight")
+            return "presentation";
         if (focusRingEnabled && focusRingPreset === "pulse" && windowAnimEnabled && windowAnimPreset === "melt" && globalShaderEnabled && globalShaderPreset === "crt")
             return "retro";
-        if (focusRingEnabled && focusRingPreset === "pulse" && windowAnimEnabled && windowAnimPreset === "ripple" && !globalShaderEnabled)
-            return "minimal";
-        if (focusRingEnabled && focusRingPreset === "rainbow-ripple" && windowAnimEnabled && windowAnimPreset === "whirlpool" && globalShaderEnabled && globalShaderPreset === "rainbow-tunnel")
-            return "tunnel";
+        if (focusRingEnabled && focusRingPreset === "rainbow-ripple" && windowAnimEnabled && windowAnimPreset === "whirlpool" && globalShaderEnabled && globalShaderPreset === "comet-glow")
+            return "cyberpunk";
         return "custom";
     }
 
@@ -75,64 +101,64 @@ Singleton {
             root.focusRingEnabled = false;
             root.windowAnimEnabled = false;
             root.globalShaderEnabled = false;
-        } else if (name === "cyberpunk") {
+        } else if (name === "focus") {
             root.focusRingEnabled = true;
-            root.focusRingPreset = "rainbow-ripple";
-            root.focusRingWidth = 4;
-            root.focusRingPadding = 14;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 2;
+            root.focusRingPadding = 3;
             root.lightSpillEnabled = true;
-            root.lightSpread = 80;
-            root.lightIntensity = 1.0;
-            root.lightThreshold = 0.5;
-            root.windowAnimEnabled = true;
-            root.windowAnimPreset = "whirlpool";
-            root.globalShaderEnabled = true;
-            root.globalShaderPreset = "comet-glow";
-        } else if (name === "electric") {
+            root.lightSpread = 14;
+            root.lightIntensity = 0.65;
+            root.lightThreshold = 0.55;
+            root.windowAnimEnabled = false;
+            root.globalShaderEnabled = false;
+        } else if (name === "locator") {
             root.focusRingEnabled = true;
-            root.focusRingPreset = "lightning";
-            root.focusRingWidth = 4;
-            root.focusRingPadding = 24;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 2;
+            root.focusRingPadding = 3;
             root.lightSpillEnabled = true;
-            root.lightSpread = 80;
-            root.lightIntensity = 1.0;
-            root.lightThreshold = 0.5;
-            root.windowAnimEnabled = true;
-            root.windowAnimPreset = "lightning";
+            root.lightSpread = 12;
+            root.lightIntensity = 0.6;
+            root.lightThreshold = 0.55;
+            root.windowAnimEnabled = false;
             root.globalShaderEnabled = true;
-            root.globalShaderPreset = "shockwave";
+            root.globalShaderPreset = "locator";
+        } else if (name === "presentation") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 2;
+            root.focusRingPadding = 3;
+            root.lightSpillEnabled = true;
+            root.lightSpread = 14;
+            root.lightIntensity = 0.7;
+            root.lightThreshold = 0.5;
+            root.windowAnimEnabled = false;
+            root.globalShaderEnabled = true;
+            root.globalShaderPreset = "spotlight";
         } else if (name === "retro") {
             root.focusRingEnabled = true;
             root.focusRingPreset = "pulse";
-            root.focusRingWidth = 3;
-            root.focusRingPadding = 4;
+            root.focusRingWidth = 2;
+            root.focusRingPadding = 2;
             root.lightSpillEnabled = false;
             root.windowAnimEnabled = true;
             root.windowAnimPreset = "melt";
             root.globalShaderEnabled = true;
             root.globalShaderPreset = "crt";
-        } else if (name === "minimal") {
-            root.focusRingEnabled = true;
-            root.focusRingPreset = "pulse";
-            root.focusRingWidth = 3;
-            root.focusRingPadding = 4;
-            root.lightSpillEnabled = true;
-            root.lightSpread = 60;
-            root.lightIntensity = 0.7;
-            root.lightThreshold = 0.6;
-            root.windowAnimEnabled = true;
-            root.windowAnimPreset = "ripple";
-            root.globalShaderEnabled = false;
-        } else if (name === "tunnel") {
+        } else if (name === "cyberpunk") {
             root.focusRingEnabled = true;
             root.focusRingPreset = "rainbow-ripple";
-            root.focusRingWidth = 4;
-            root.focusRingPadding = 14;
+            root.focusRingWidth = 3;
+            root.focusRingPadding = 8;
             root.lightSpillEnabled = true;
+            root.lightSpread = 22;
+            root.lightIntensity = 0.85;
+            root.lightThreshold = 0.5;
             root.windowAnimEnabled = true;
             root.windowAnimPreset = "whirlpool";
             root.globalShaderEnabled = true;
-            root.globalShaderPreset = "rainbow-tunnel";
+            root.globalShaderPreset = "comet-glow";
         }
         root.saveImmediately();
     }
@@ -161,6 +187,30 @@ Singleton {
         root.saveImmediately();
     }
 
+    function selectCursorShader(preset: string): void {
+        if (preset === "none" || (root.globalShaderPreset === preset && root.globalShaderEnabled)) {
+            if (root.cursorPresets.includes(root.globalShaderPreset)) {
+                root.globalShaderEnabled = false;
+            }
+        } else {
+            root.globalShaderPreset = preset;
+            root.globalShaderEnabled = true;
+        }
+        root.saveImmediately();
+    }
+
+    function selectScreenFilter(preset: string): void {
+        if (preset === "none" || (root.globalShaderPreset === preset && root.globalShaderEnabled)) {
+            if (root.screenPresets.includes(root.globalShaderPreset)) {
+                root.globalShaderEnabled = false;
+            }
+        } else {
+            root.globalShaderPreset = preset;
+            root.globalShaderEnabled = true;
+        }
+        root.saveImmediately();
+    }
+
     function selectGlobalShader(preset: string): void {
         if (preset === "none") {
             root.globalShaderEnabled = false;
@@ -180,6 +230,22 @@ Singleton {
         } else {
             applyPreset("cyberpunk");
         }
+    }
+
+    function cycleWindowShader(): void {
+        Quickshell.execDetached(["niri", "msg", "action", "cycle-window-shader"]);
+    }
+
+    function toggleWindowShader(): void {
+        Quickshell.execDetached(["niri", "msg", "action", "toggle-window-shader"]);
+    }
+
+    function cycleOutputShader(): void {
+        Quickshell.execDetached(["niri", "msg", "action", "cycle-output-shader"]);
+    }
+
+    function toggleOutputShader(): void {
+        Quickshell.execDetached(["niri", "msg", "action", "toggle-output-shader"]);
     }
 
     function saveImmediately(): void {
@@ -207,11 +273,18 @@ Singleton {
             carouselRevealZoom: root.carouselRevealZoom,
             carouselAssembledZoom: root.carouselAssembledZoom,
 
-            shaderMaxFps: root.shaderMaxFps
+            shaderMaxFps: root.shaderMaxFps,
+            windowShadersEnabled: root.windowShadersEnabled,
+            outputShadersEnabled: root.outputShadersEnabled,
+
+            pulseMatchTheme: root.pulseMatchTheme,
+            pulseColorMode: root.pulseColorMode
         };
 
         const jsonStr = JSON.stringify(stateObj, null, 2);
         stateWriter.setText(jsonStr);
+
+        updatePulseShader();
 
         const kdl = generateKdl();
         shadersKdlWriter.setText(kdl);
@@ -220,9 +293,7 @@ Singleton {
     }
 
     function reloadNiriConfig(): void {
-        const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["niri", "msg", "action", "load-config-file"] }', root);
-        proc.exited.connect(() => proc.destroy());
-        proc.running = true;
+        Quickshell.execDetached(["niri", "msg", "action", "load-config-file"]);
     }
 
     function generateKdl(): string {
@@ -283,12 +354,10 @@ Singleton {
         // 4. Global / Screen / Cursor Shader
         if (root.globalShaderEnabled && root.globalShaderPreset !== "none") {
             let shaderFile = "";
-            const cursorPresets = ["comet-glow", "blueglow", "rainbow-tunnel", "ripple", "shockwave", "spotlight", "trail"];
-            const screenPresets = ["crt", "warmtint", "grayscale", "vignette"];
 
-            if (cursorPresets.includes(root.globalShaderPreset)) {
+            if (root.cursorPresets.includes(root.globalShaderPreset)) {
                 shaderFile = `${root.shadersDir}/cursor/${root.globalShaderPreset}.kdl`;
-            } else if (screenPresets.includes(root.globalShaderPreset)) {
+            } else if (root.screenPresets.includes(root.globalShaderPreset)) {
                 shaderFile = `${root.shadersDir}/screen/${root.globalShaderPreset}.kdl`;
             }
 
@@ -311,31 +380,73 @@ Singleton {
             kdl += "}\n\n";
         }
 
+        // 6. Per-Window Shaders & In-Flight Cycler
+        if (root.windowShadersEnabled) {
+            kdl += "// ---------------- Per-Window Shader Presets ----------------\n";
+            kdl += "window-shaders {\n";
+            kdl += `    preset "crt" { path "${root.shadersDir}/window/crt.frag"; }\n`;
+            kdl += `    preset "parchment" { path "${root.shadersDir}/window/parchment.frag"; }\n`;
+            kdl += `    preset "pixel-mosaic" { path "${root.shadersDir}/window/pixel-mosaic.frag"; }\n`;
+            kdl += `    preset "mercury" { path "${root.shadersDir}/window/mercury-sheen.frag"; }\n`;
+            kdl += `    preset "shimmer" { path "${root.shadersDir}/window/rgb-shimmer.frag"; }\n`;
+            kdl += `    preset "ripple-drops" { path "${root.shadersDir}/window/ripple-drops.frag"; }\n`;
+            kdl += `    preset "rorschach" { path "${root.shadersDir}/window/rorschach2.frag"; }\n`;
+            kdl += "}\n\n";
+        }
+
+        // 7. Per-Output Colour Filter Presets
+        if (root.outputShadersEnabled) {
+            kdl += "// ---------------- Per-Output Colour Filter Presets ----------------\n";
+            kdl += "output-shaders {\n";
+            kdl += "    preset \"grayscale\" { preset \"grayscale\"; }\n";
+            kdl += "    preset \"invert\" { preset \"invert\"; }\n";
+            kdl += "    preset \"warm\" { preset \"temperature\" kelvin=4000; }\n";
+            kdl += "    preset \"vivid\" { preset \"saturation\" amount=1.4; }\n";
+            kdl += "}\n\n";
+        }
+
+        let bindsKdl = "";
+        if (root.windowShadersEnabled) {
+            bindsKdl += "    Mod+Shift+B { cycle-window-shader; }\n";
+            bindsKdl += "    Mod+Alt+B { toggle-window-shader; }\n";
+        }
+        if (root.outputShadersEnabled) {
+            bindsKdl += "    Mod+Shift+C { cycle-output-shader; }\n";
+            bindsKdl += "    Mod+Alt+C { toggle-output-shader; }\n";
+        }
+        if (bindsKdl.length > 0) {
+            kdl += "// ---------------- Shader Keybindings ----------------\n";
+            kdl += "binds {\n" + bindsKdl + "}\n\n";
+        }
+
         return kdl;
     }
 
     function resetToDefaults(): void {
         root.focusRingEnabled = false;
-        root.focusRingPreset = "rainbow-ripple";
-        root.focusRingWidth = 4;
-        root.focusRingPadding = 14;
+        root.focusRingPreset = "pulse";
+        root.focusRingWidth = 2;
+        root.focusRingPadding = 3;
         root.lightSpillEnabled = true;
-        root.lightSpread = 80;
-        root.lightIntensity = 1.0;
-        root.lightThreshold = 0.5;
+        root.lightSpread = 14;
+        root.lightIntensity = 0.65;
+        root.lightThreshold = 0.55;
 
         root.windowAnimEnabled = false;
         root.windowAnimPreset = "whirlpool";
         root.windowAnimDuration = 400;
 
         root.globalShaderEnabled = false;
-        root.globalShaderPreset = "comet-glow";
+        root.globalShaderPreset = "locator";
 
         root.carouselEnabled = false;
         root.carouselRevealZoom = 0.7;
         root.carouselAssembledZoom = 0.5;
 
         root.shaderMaxFps = 0;
+
+        root.pulseMatchTheme = true;
+        root.pulseColorMode = "blend";
 
         saveImmediately();
     }
@@ -349,6 +460,18 @@ Singleton {
     onLightIntensityChanged: requestSave()
     onLightThresholdChanged: requestSave()
 
+    onPulseMatchThemeChanged: {
+        updatePulseShader();
+        requestSave();
+    }
+    onPulseColorModeChanged: {
+        updatePulseShader();
+        requestSave();
+    }
+    onCurrentThemePrimaryChanged: updatePulseShader()
+    onCurrentThemeSecondaryChanged: updatePulseShader()
+    onCurrentThemeTertiaryChanged: updatePulseShader()
+
     onWindowAnimEnabledChanged: requestSave()
     onWindowAnimPresetChanged: requestSave()
     onWindowAnimDurationChanged: requestSave()
@@ -361,6 +484,8 @@ Singleton {
     onCarouselAssembledZoomChanged: requestSave()
 
     onShaderMaxFpsChanged: requestSave()
+    onWindowShadersEnabledChanged: requestSave()
+    onOutputShadersEnabledChanged: requestSave()
 
     Timer {
         id: saveDebounceTimer
@@ -413,12 +538,16 @@ Singleton {
                         if (data.carouselAssembledZoom !== undefined) root.carouselAssembledZoom = data.carouselAssembledZoom;
 
                         if (data.shaderMaxFps !== undefined) root.shaderMaxFps = data.shaderMaxFps;
+                        if (data.windowShadersEnabled !== undefined) root.windowShadersEnabled = data.windowShadersEnabled;
+                        if (data.outputShadersEnabled !== undefined) root.outputShadersEnabled = data.outputShadersEnabled;
+
+                        if (data.pulseMatchTheme !== undefined) root.pulseMatchTheme = data.pulseMatchTheme;
+                        if (data.pulseColorMode !== undefined) root.pulseColorMode = data.pulseColorMode;
                     }
                 } catch (e) {
                     console.warn("[BiriShaders] Failed to parse state file:", e);
                 }
                 root.loaded = true;
-                root.saveImmediately();
             } else {
                 root.loaded = true;
                 root.saveImmediately();
@@ -442,5 +571,61 @@ Singleton {
 
         path: root.statePath
         printErrors: true
+    }
+
+    FileView {
+        id: pulseFragWriter
+
+        path: `${root.shadersDir}/focus-ring/pulse.frag`
+        printErrors: true
+    }
+
+    function toVec3(c: color): string {
+        if (!c) return "vec3(1.0, 0.7, 0.8)";
+        const r = Math.max(0, Math.min(1, c.r)).toFixed(3);
+        const g = Math.max(0, Math.min(1, c.g)).toFixed(3);
+        const b = Math.max(0, Math.min(1, c.b)).toFixed(3);
+        return `vec3(${r}, ${g}, ${b})`;
+    }
+
+    function generatePulseFrag(): string {
+        let glsl = "// Biri Focus Ring - Dynamic Background / Theme Pulse Shader\n";
+        glsl += "// Generated automatically by Caelestia Biri Shaders to match desktop wallpaper.\n";
+        glsl += "vec4 ring_color(vec2 coords) {\n";
+        glsl += "    float d = ring_distance(coords);\n";
+        glsl += "    float half_px = 0.5 / niri_scale;\n";
+        glsl += "    float coverage = smoothstep(-half_px, half_px, d)\n";
+        glsl += "        * (1.0 - smoothstep(ring_width - half_px, ring_width + half_px, d));\n";
+        glsl += "    float pulse = 0.65 + 0.35 * sin(niri_time * 2.0);\n";
+
+        if (!root.pulseMatchTheme || root.pulseColorMode === "cyan") {
+            glsl += "    vec3 col = vec3(0.15, 0.8, 1.0);\n";
+        } else if (root.pulseColorMode === "primary") {
+            const c1 = Colours.palette.m3primary;
+            glsl += `    vec3 col = ${toVec3(c1)};\n`;
+        } else if (root.pulseColorMode === "spectrum") {
+            const c1 = Colours.palette.m3primary;
+            const c2 = Colours.palette.m3secondary;
+            const c3 = Colours.palette.m3tertiary;
+            glsl += `    vec3 colA = ${toVec3(c1)};\n`;
+            glsl += `    vec3 colB = ${toVec3(c2)};\n`;
+            glsl += `    vec3 colC = ${toVec3(c3)};\n`;
+            glsl += "    float t = fract(niri_time * 0.25);\n";
+            glsl += "    vec3 col = (t < 0.333) ? mix(colA, colB, t * 3.0) : ((t < 0.666) ? mix(colB, colC, (t - 0.333) * 3.0) : mix(colC, colA, (t - 0.666) * 3.0));\n";
+        } else { // "blend" (default)
+            const c1 = Colours.palette.m3primary;
+            const c2 = Colours.palette.m3tertiary;
+            glsl += `    vec3 colA = ${toVec3(c1)}; // Background Primary\n`;
+            glsl += `    vec3 colB = ${toVec3(c2)}; // Background Tertiary\n`;
+            glsl += "    vec3 col = mix(colA, colB, 0.5 + 0.5 * sin(niri_time * 1.2));\n";
+        }
+
+        glsl += "    return vec4(col * pulse, coverage);\n";
+        glsl += "}\n";
+        return glsl;
+    }
+
+    function updatePulseShader(): void {
+        pulseFragWriter.setText(generatePulseFrag());
     }
 }

@@ -126,6 +126,31 @@ ColumnLayout {
             }
 
             StyledRect {
+                readonly property var btCard: BluetoothAudio.getCardForDevice(device.modelData)
+                visible: device.modelData.state === BluetoothDeviceState.Connected && !!btCard && !!btCard.activeCodecName
+
+                radius: Tokens.rounding.small
+                color: Qt.alpha(Colours.palette.m3primary, 0.15)
+                border.color: Qt.alpha(Colours.palette.m3primary, 0.4)
+                border.width: 1
+                implicitWidth: codecLabel.implicitWidth + Tokens.padding.small
+                implicitHeight: codecLabel.implicitHeight + 2
+
+                StateLayer {
+                    radius: parent.radius
+                    onClicked: root.popouts.currentName = "btcodec"
+                }
+
+                StyledText {
+                    id: codecLabel
+                    anchors.centerIn: parent
+                    text: parent.btCard?.activeCodecName ?? ""
+                    font: Tokens.font.label.small
+                    color: Colours.palette.m3primary
+                }
+            }
+
+            StyledRect {
                 id: connectBtn
 
                 implicitWidth: implicitHeight

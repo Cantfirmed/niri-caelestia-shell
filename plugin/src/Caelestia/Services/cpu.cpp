@@ -1,5 +1,6 @@
 #include "cpu.hpp"
 
+#include <qdir.h>
 #include <qfile.h>
 #include <qregularexpression.h>
 
@@ -14,6 +15,7 @@ using Qt::StringLiterals::operator""_s;
 Cpu::Cpu(QObject* parent)
     : TickingService(parent) {
     readNameOnce();
+    refreshFrequency();
 }
 
 QString Cpu::name() const {
@@ -28,12 +30,17 @@ qreal Cpu::temperature() const {
     return m_temperature;
 }
 
+qreal Cpu::frequency() const {
+    return m_frequency;
+}
+
 void Cpu::tick() {
     if (!m_nameLoaded) {
         readNameOnce();
     }
     refreshPercentage();
     refreshTemperature();
+    refreshFrequency();
 }
 
 void Cpu::readNameOnce() {
@@ -103,6 +110,85 @@ void Cpu::refreshTemperature() {
     if (std::abs(newTemp - m_temperature) > 0.05) {
         m_temperature = newTemp;
         emit temperatureChanged();
+    }
+}
+
+void Cpu::refreshFrequency() {
+    qreal maxMhz = 0.0;
+    int count = 0;
+
+    QFile f(u"/proc/cpuinfo"_s);
+    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        while (!f.atEnd()) {
+            const QByteArray line = f.readLine();
+            if (line.startsWith("cpu MHz")) {
+                const auto colon = line.indexOf(':');
+                if (colon != -1) {
+                    bool ok = false;
+                    const double mhz = line.mid(colon + 1).trimmed().toDouble(&ok);
+                    if (ok && mhz > 0.0) {
+                        if (mhz > maxMhz) {
+                            maxMhz = mhz;
+                        }
+                        count++;
+                    }
+                }
+            }
+        }
+        f.close();
+    }
+
+    if (count > 0 && maxMhz > 0.0) {
+        const qreal newGhz = maxMhz / 1000.0;
+        if (std::abs(newGhz - m_frequency) > 0.01) {
+            m_frequency = newGhz;
+            emit frequencyChanged();
+        }
+        return;
+    }
+
+    // Fallback: sysfs scaling_cur_freq (for ARM or kernels without cpu MHz in cpuinfo)
+    if (m_freqSysfsFiles.isEmpty()) {
+        QDir cpufreqDir(u"/sys/devices/system/cpu/cpufreq"_s);
+        const auto policies = cpufreqDir.entryList({ u"policy*"_s }, QDir::Dirs);
+        for (const auto& policy : policies) {
+            const QString path = cpufreqDir.filePath(policy) + u"/scaling_cur_freq"_s;
+            if (QFile::exists(path)) {
+                m_freqSysfsFiles.append(path);
+            }
+        }
+        if (m_freqSysfsFiles.isEmpty()) {
+            QDir cpuDir(u"/sys/devices/system/cpu"_s);
+            const auto cpus = cpuDir.entryList({ u"cpu[0-9]*"_s }, QDir::Dirs);
+            for (const auto& cpu : cpus) {
+                const QString path = cpuDir.filePath(cpu) + u"/cpufreq/scaling_cur_freq"_s;
+                if (QFile::exists(path)) {
+                    m_freqSysfsFiles.append(path);
+                }
+            }
+        }
+    }
+
+    quint64 maxKhz = 0;
+    for (const auto& path : m_freqSysfsFiles) {
+        QFile freqFile(path);
+        if (freqFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            const QByteArray data = freqFile.readAll().trimmed();
+            freqFile.close();
+            bool ok = false;
+            const quint64 khz = data.toULongLong(&ok);
+            if (ok && khz > maxKhz) {
+                maxKhz = khz;
+            }
+        }
+    }
+
+    if (maxKhz > 0) {
+        const qreal newGhz = static_cast<qreal>(maxKhz) / 1000000.0;
+        if (std::abs(newGhz - m_frequency) > 0.01) {
+            m_frequency = newGhz;
+            emit frequencyChanged();
+        }
     }
 }
 

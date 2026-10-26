@@ -71,10 +71,17 @@ PageBase {
         }
 
         ToggleRow {
-            last: true
             text: Tr.tr("Weather")
             checked: Config.dashboard.showWeather
             onToggled: GlobalConfig.dashboard.showWeather = checked
+        }
+
+        ToggleRow {
+            last: true
+            text: Tr.tr("Developer")
+            subtext: Tr.tr("Local web servers and docker containers")
+            checked: Config.dashboard.showDeveloper
+            onToggled: GlobalConfig.dashboard.showDeveloper = checked
         }
 
         // Performance widgets

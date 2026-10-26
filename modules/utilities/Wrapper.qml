@@ -24,7 +24,7 @@ Item {
 
         reloadableId: "utilities"
     }
-    readonly property bool shouldBeActive: screenState.sidebar || (screenState.utilities && Config.utilities.enabled && !(screenState.session && Config.session.enabled))
+    readonly property bool shouldBeActive: (screenState?.sidebar ?? false) || ((screenState?.utilities ?? false) && (Config.utilities?.enabled ?? false) && !((screenState?.session ?? false) && (Config.session?.enabled ?? false)))
     readonly property real totalPadding: content.anchors.margins + CUtils.clamp(content.anchors.margins - Config.border.thickness, 0, content.anchors.margins)
     readonly property real nonAnimHeight: ((content.item as Content)?.nonAnimHeight ?? 0) + totalPadding
     property real offsetScale: shouldBeActive ? 0 : 1
@@ -38,7 +38,7 @@ Item {
 
     states: State {
         name: "attachedToSidebar"
-        when: root.screenState.sidebar
+        when: root.screenState?.sidebar ?? false
 
         PropertyChanges {
             root.sidebarLerp: 1
@@ -66,6 +66,15 @@ Item {
         }
     ]
 
+    property bool hasBeenActive: false
+
+    onShouldBeActiveChanged: {
+        if (shouldBeActive)
+            hasBeenActive = true;
+    }
+
+    Component.onCompleted: Qt.callLater(() => root.hasBeenActive = true)
+
     Behavior on offsetScale {
         Anim {}
     }
@@ -77,8 +86,8 @@ Item {
         anchors.left: parent.left
         anchors.margins: Tokens.padding.large
 
-        asynchronous: true
-        active: root.shouldBeActive || root.visible
+        asynchronous: false
+        active: root.hasBeenActive || root.shouldBeActive || root.visible
 
         sourceComponent: Content {
             implicitWidth: root.implicitWidth - root.totalPadding

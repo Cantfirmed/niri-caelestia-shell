@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Caelestia.Config
 import Caelestia.I18n
 
 Singleton {
@@ -717,6 +718,68 @@ Singleton {
                 }
             });
         });
+    }
+
+    // Adds and connects to a WPA-Enterprise / 802.1X network (e.g. university or corporate Wi-Fi).
+    function addEnterpriseNetwork(ssid: string, identity: string, password: string, caCert: string, anonIdentity: string, hidden: bool, callback: var): void {
+        if (!ssid || ssid.length === 0) {
+            if (callback)
+                callback({
+                    success: false,
+                    output: "",
+                    error: "No SSID specified",
+                    exitCode: -1
+                });
+            return;
+        }
+
+        checkAndDeleteConnection(ssid, () => {
+            let cmd = [
+                root.nmcliCommandConnection, "add",
+                root.connectionParamType, root.deviceTypeWifi,
+                root.connectionParamConName, ssid,
+                root.connectionParamIfname, "*",
+                root.connectionParamSsid, ssid,
+                root.connectionParamHidden, hidden ? "yes" : "no",
+                "wifi-sec.key-mgmt", "wpa-eap",
+                "802-1x.eap", "peap",
+                "802-1x.phase2-auth", "mschapv2",
+                "802-1x.identity", identity,
+                "802-1x.password", password,
+                "802-1x.password-flags", "0"
+            ];
+
+            if (caCert && caCert.trim().length > 0) {
+                cmd.push("802-1x.ca-cert", caCert.trim());
+            }
+            if (anonIdentity && anonIdentity.trim().length > 0) {
+                cmd.push("802-1x.anonymous-identity", anonIdentity.trim());
+            }
+
+            executeCommand(cmd, result => {
+                if (result.success) {
+                    loadSavedConnections(() => {});
+                    activateConnection(ssid, callback);
+                } else {
+                    const hasDuplicateWarning = result.error && (result.error.includes("another connection with the name") || result.error.includes("Reference the connection by its uuid"));
+
+                    if (hasDuplicateWarning) {
+                        loadSavedConnections(() => {});
+                        activateConnection(ssid, callback);
+                    } else if (callback) {
+                        callback(result);
+                    }
+                }
+            });
+        });
+    }
+
+    // Launches an advanced connection editor (nm-connection-editor GUI if available, or nmtui in terminal).
+    function openAdvancedEditor(): void {
+        const term = (GlobalConfig.general.apps.terminal && GlobalConfig.general.apps.terminal.length > 0)
+            ? GlobalConfig.general.apps.terminal[0]
+            : "foot";
+        Quickshell.execDetached(["sh", "-c", `which nm-connection-editor >/dev/null 2>&1 && exec nm-connection-editor || exec ${term} -e nmtui`]);
     }
 
     // Reads whether a saved connection auto-connects.
@@ -1809,9 +1872,11 @@ Singleton {
         readonly property string bssid: lastIpcObject.bssid
         readonly property int strength: lastIpcObject.strength
         readonly property int frequency: lastIpcObject.frequency
+        readonly property string band: frequency >= 5925 ? "6G" : (frequency >= 4900 ? "5G" : (frequency >= 2400 ? "2.4G" : ""))
         readonly property bool active: lastIpcObject.active
         readonly property string security: lastIpcObject.security
         readonly property bool isSecure: security.length > 0
+        readonly property bool isEnterprise: security.includes("802.1X") || security.toLowerCase().includes("eap")
     }
 
     component EthernetDevice: QtObject {

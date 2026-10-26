@@ -9,7 +9,7 @@ IconImage {
 
     required property color colour
 
-    asynchronous: true
+    asynchronous: false
 
     layer.enabled: true
     layer.effect: Colouriser {
@@ -30,6 +30,6 @@ IconImage {
     ImageAnalyser {
         id: analyser
 
-        sourceItem: root
+        sourceItem: root.layer.enabled ? root : null
     }
 }

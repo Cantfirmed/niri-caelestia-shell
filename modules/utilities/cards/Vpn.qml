@@ -62,7 +62,7 @@ StyledRect {
                     anchors.centerIn: parent
                     text: VPN.connected ? "vpn_key" : "vpn_key_off"
                     color: VPN.connected ? Colours.palette.m3onSecondary : Colours.palette.m3onSecondaryContainer
-                    fontStyle: Tokens.font.icon.large
+                    fontStyle: Tokens.font.icon.builders.large.scale(1.15).build()
                     animate: true
                 }
             }

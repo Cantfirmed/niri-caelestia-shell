@@ -16,4 +16,5 @@ PersistentProperties {
     property bool manga
     property bool novel
     property bool calendar
+    property bool hotkeys
 }

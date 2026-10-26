@@ -51,6 +51,14 @@ QtObject {
             }
         },
         Component {
+            // Biri compositor
+            StackPage {
+                Component {
+                    BiriPage {}
+                }
+            }
+        },
+        Component {
             // Biri Shaders & FX
             StackPage {
                 Component {
@@ -128,7 +136,12 @@ QtObject {
             PlaceholderComp {}
         },
         Component {
-            PlaceholderComp {}
+            // Plugins
+            StackPage {
+                Component {
+                    PluginsPage {}
+                }
+            }
         },
 
         // Shell
@@ -205,6 +218,9 @@ QtObject {
             StackPage {
                 Component {
                     LanguageAndRegion {}
+                }
+                Component {
+                    WeatherLocationPage {}
                 }
             }
         },

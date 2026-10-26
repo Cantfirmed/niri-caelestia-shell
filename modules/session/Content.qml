@@ -88,6 +88,8 @@ Column {
         function exec(): void {
             root.screenState.session = false;
             if (command && command.length > 0) {
+                if (button === reboot || button === shutdown)
+                    Notifs.clearRebootNotifs();
                 if (!SessionManager.exec(command))
                     Quickshell.execDetached(command);
             }

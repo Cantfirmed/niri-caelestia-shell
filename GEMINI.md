@@ -121,6 +121,12 @@ Refer to [`NIRI-DELTAS.md`](file:///home/patrick/.config/niri_caelestia/NIRI-DEL
 - **Sleep Spurious Resume & Wakeup Invariant:**
   - On this machine (Lenovo IdeaPad AMD Phoenix/Hawk Point), premature wakeups (2–5s after sleep) are caused by hardware wakeup lines (`XHC0..XHC4`, `GPP1..GPP6`, `ELAN06FA:00`), NOT Niri or Quickshell.
   - **Reciprocal Invariant:** If the user reports that the laptop **cannot be woken up** by external keyboards, mice, or the touchpad, check `disable-spurious-wakeups.service` and `/proc/acpi/wakeup`. When `XHC*` and `ELAN` wakeups are disabled, only the **Power Button** and **Lid** can wake the machine from `s2idle`.
+- **Strict Edge-Triggered Lock Invariant:** Session locking (`lock.locked = true`) must **always** be strictly edge-triggered: driven only by explicit user keybindings, systemd logind events (`AboutToSleep`, `LockRequested`), or system idle timeouts. **Never** attempt to track or restore lock state using filesystem marker files, `FileView` watchers, or watchdog poll loops (`launch-quickshell.sh`). Marker files and polling loops cause self-reinforcing feedback loops and random desktop re-locking.
+- **Suspend-Resume Handshake Grace Period Invariant:** When waking from system suspend (`s2idle` / `deep`), external display link training (HDMI / DisplayPort) takes 1–3 seconds, during which DRM connectors may transiently drop or report no active outputs. Display monitoring daemons (`niri-display-monitor.py`) must detect sleep resume (e.g. `time.time() - last_tick > 3.5s` in a 1.5s select loop) and grant an **8-second grace period** before evaluating display fallbacks or triggering display reconfigurations.
+- **Boot-Aware Rescue Shortcuts Invariant:** Quickshell takes ~3–4 seconds to boot and register Wayland IPC handlers. Emergency recovery shortcuts (such as `Super+Alt+L`) must **never** use inline short-timeout cascades (`timeout 2s ... || pkill -9 ...`). They must invoke a dedicated rescue script (e.g. `scripts/rescue-lock.sh`) that checks daemon process age (`ps -o etimes=`) and polls until IPC is available, ensuring newly spawned booting instances are never killed.
+- **Quickshell Watchdog & Process Reaping Invariant:** Never kill or restart Quickshell in watchdog loops based on transient child processes in zombie/defunct state (`ps -eo ppid,stat | grep Z`). Subprocesses naturally linger in state `Z` until reaped by the Qt/Quickshell event loop; killing the shell for transient zombies causes an 8.6-second restart loop. Watchdogs must rely solely on consecutive IPC ping timeouts and grant a startup grace period of at least 15 seconds.
+- **Persistent Wrapper Logging Invariant:** `scripts/launch-quickshell.sh` must always redirect stdout and stderr to `~/.local/state/caelestia/quickshell-wrapper.log` with timestamps rather than discarding output to `/dev/null`, ensuring all watchdog actions and exit codes remain auditable.
+- **No Startup Config Reload Invariant:** Services generating compositor configuration files (`BiriShaders.qml`, `NiriTiling.qml`, `NiriBlur.qml`) must never call `saveImmediately()` or reload compositor configuration (`niri msg action load-config-file`) when successfully loading existing valid state from disk. Always use `Quickshell.execDetached()` for one-shot commands instead of dynamically created `Qt.createQmlObject` Process instances.
 
 ---
 
@@ -130,3 +136,14 @@ Refer to [`NIRI-DELTAS.md`](file:///home/patrick/.config/niri_caelestia/NIRI-DEL
 - **Compound Drawer Coordination**: Attached drawers (`sidebar` and `utilities`) must synchronize dismissals so closing either panel resets both states to prevent ghost/detached panels.
 - **Zero Inactive Hit-Test Height**: Hit-test functions (`inBottomPanel`) must evaluate `panelHeight` as 0 when `!shouldBeActive` to prevent exit animations from re-triggering opens.
 - **Hover Retrigger Guard**: When an interactive panel is closed via keyboard or IPC while the cursor is over its region, hover retriggering must be blocked until the cursor moves out of the region.
+- **New Panel Registration Invariant:** Any new panel or modal overlay MUST be registered in both `components/ScreenState.qml` and `components/DrawerVisibilities.qml`, aliased in `Panels.qml`, and punched through the surface mask in `Regions.qml`.
+- **Modal Layout Sizing:** Modals centered in `Wrapper.qml` must declare explicit `width` and `height` to prevent horizontal layout collapse.
+- **Shell-to-Compositor Fallback Invariant:** Keybindings invoking shell IPC should chain a fallback to the compositor's built-in equivalent via `||` (e.g. `qs ... || niri msg action ...`) to ensure essential functions remain operable when Quickshell is stopped or recovering.
+
+---
+
+## 7. Niri IPC Event Stream & Animation Invariants
+
+- **Filter Viewport Animations**: Niri emits `WindowLayoutsChanged` on every frame of horizontal camera scrolling (`tile_pos_in_workspace_view`). Event handlers in `niriipc.cpp` must filter out sub-pixel animation updates and only trigger model resets (`resetData()`) when structural layout (`pos_in_scrolling_layout`) or dimensions (`window_size`) change.
+- **Prevent Socket Buffer Starvation**: Niri's IPC server enforces a strict 64-item event stream channel buffer. Blocking the Qt main thread during event bursts causes buffer overflow and forced client disconnection. Maintain socket receive buffer (`SO_RCVBUF`) at 1MB and avoid heavy synchronous operations in IPC callbacks.
+

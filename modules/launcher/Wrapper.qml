@@ -13,11 +13,11 @@ Item {
     required property ScreenState screenState
     required property var panels
 
-    readonly property bool shouldBeActive: screenState.launcher && Config.launcher.enabled
+    readonly property bool shouldBeActive: (screenState?.launcher ?? false) && (Config.launcher?.enabled ?? false)
 
     readonly property real maxHeight: {
-        let max = screen.height - Config.border.thickness * 2 + Tokens.padding.extraLarge;
-        if (screenState.dashboard)
+        let max = (screen?.height ?? 1080) - (Config.border?.thickness ?? 0) * 2 + Tokens.padding.extraLarge;
+        if (screenState?.dashboard)
             max -= panels.dashboard.nonAnimHeight;
         return max;
     }

@@ -54,6 +54,9 @@ QtObject {
     property bool hasActionIcons
     property list<var> actions
 
+    readonly property bool isNetwork: Notifs.isNetworkNotif(notif)
+    readonly property bool isReboot: Notifs.isRebootNotif(notif)
+
     readonly property bool hasFullscreen: {
         if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
             const wsId = NiriIpc.focusedWorkspaceId;
@@ -74,11 +77,19 @@ QtObject {
 
     readonly property Timer timer: Timer {
         running: true
-        interval: notif.expireTimeout > 0 ? notif.expireTimeout : notif.hasFullscreen ? GlobalConfig.notifs.fullscreenExpireTimeout : GlobalConfig.notifs.defaultExpireTimeout
+        interval: {
+            if (notif.isNetwork) {
+                return notif.expireTimeout > 0 && notif.expireTimeout <= 10000 ? notif.expireTimeout : GlobalConfig.notifs.defaultExpireTimeout;
+            }
+            return notif.expireTimeout > 0 ? notif.expireTimeout : notif.hasFullscreen ? GlobalConfig.notifs.fullscreenExpireTimeout : GlobalConfig.notifs.defaultExpireTimeout;
+        }
         onTriggered: {
             // Always expire if the active workspace has a fullscreen window
             if (GlobalConfig.notifs.expire || notif.hasFullscreen)
                 notif.popup = false;
+
+            if (notif.isNetwork)
+                notif.close();
         }
     }
 

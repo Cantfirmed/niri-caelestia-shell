@@ -19,9 +19,9 @@ LazyListView {
     implicitHeight: contentHeight
 
     spacing: Tokens.spacing.small
-    readyDelay: 1
+    readyDelay: 0
     cacheBuffer: 400
-    asynchronous: true
+    asynchronous: false
 
     onViewportAdjustNeeded: d => {
         if (contentYAnim.running)

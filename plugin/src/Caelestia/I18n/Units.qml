@@ -50,6 +50,13 @@ QtObject {
         return formatTemp(Math.round(toTemperature(celsius, unit)), unit);
     }
 
+    // Formats a frequency given in GHz
+    function formatGhz(ghz: real): string {
+        if (!isFinite(ghz) || ghz <= 0)
+            return "...";
+        return Tr.trCtx("%1 GHz", "frequency").arg(ghz.toFixed(2));
+    }
+
     // Formats an already scaled value with the given data unit suffix
     function withDataUnit(value: var, unit: string): string {
         const formats = {

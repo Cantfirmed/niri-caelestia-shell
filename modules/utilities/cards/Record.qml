@@ -41,7 +41,7 @@ StyledRect {
             StyledRect {
                 implicitWidth: implicitHeight
                 implicitHeight: {
-                    const h = icon.implicitHeight + Tokens.padding.small * 2;
+                    const h = icon.implicitHeight + Tokens.padding.large;
                     return h - (h % 2);
                 }
 
@@ -55,7 +55,7 @@ StyledRect {
                     anchors.verticalCenterOffset: 1
                     text: "screen_record"
                     color: Recorder.running ? Colours.palette.m3onSecondary : Colours.palette.m3onSecondaryContainer
-                    fontStyle: Tokens.font.icon.large
+                    fontStyle: Tokens.font.icon.builders.large.scale(1.15).build()
                 }
             }
 

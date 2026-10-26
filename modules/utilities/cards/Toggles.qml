@@ -47,7 +47,8 @@ StyledRect {
                 { id: "settings", enabled: true },
                 { id: "gameMode", enabled: true },
                 { id: "dnd", enabled: true },
-                { id: "vpn", enabled: false }
+                { id: "vpn", enabled: false },
+                { id: "tailscale", enabled: true }
             ];
         }
 
@@ -115,6 +116,7 @@ StyledRect {
                     case "gameMode": return gameModeComp;
                     case "dnd": return dndComp;
                     case "vpn": return vpnComp;
+                    case "tailscale": return tailscaleComp;
                     default: return null;
                     }
                 }
@@ -212,11 +214,23 @@ StyledRect {
         }
     }
 
+    Component {
+        id: tailscaleComp
+        Toggle {
+            icon: "hub"
+            checked: Tailscale.connected
+            enabled: !Tailscale.connecting && !Tailscale.disconnecting
+            inactiveOnColour: Colours.palette.m3onSurfaceVariant
+            onClicked: Tailscale.toggle()
+        }
+    }
+
     component Toggle: IconButton {
         inactiveColour: Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
         fillWidth: true
         isToggle: true
         isRound: true
         shapeMorph: true
+        font: Tokens.font.icon.builders.large.scale(1.1).build()
     }
 }

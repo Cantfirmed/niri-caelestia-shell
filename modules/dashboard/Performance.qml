@@ -11,6 +11,8 @@ import qs.services
 Item {
     id: root
 
+    property ScreenState screenState
+
     implicitWidth: placeholder.active ? Tokens.sizes.dashboard.perfPlaceholderWidth : content.implicitWidth
     implicitHeight: placeholder.active ? placeholder.implicitHeight + Tokens.padding.extraLarge * 2 : content.implicitHeight
 
@@ -77,10 +79,11 @@ Item {
                         subLabel: Cpu.name
                         usage: Cpu.percentage
                         temperature: Cpu.temperature
+                        frequency: Cpu.frequency
                         accent: Colours.palette.m3primary
 
                         ServiceRef {
-                            service: Cpu
+                            service: root.screenState?.dashboard ? Cpu : null
                         }
                     }
                 }
@@ -99,7 +102,7 @@ Item {
                         accent: Colours.palette.m3secondary
 
                         ServiceRef {
-                            service: Gpu
+                            service: root.screenState?.dashboard ? Gpu : null
                         }
                     }
                 }
@@ -113,21 +116,27 @@ Item {
                     id: storageCard
 
                     active: Config.dashboard.performance.showStorage
-                    sourceComponent: StorageCard {}
+                    sourceComponent: StorageCard {
+                        screenState: root.screenState
+                    }
                 }
 
                 WrappedLoader {
                     id: networkCard
 
                     active: Config.dashboard.performance.showNetwork
-                    sourceComponent: NetworkCard {}
+                    sourceComponent: NetworkCard {
+                        screenState: root.screenState
+                    }
                 }
 
                 WrappedLoader {
                     id: memoryCard
 
                     active: Config.dashboard.performance.showMemory
-                    sourceComponent: MemoryCard {}
+                    sourceComponent: MemoryCard {
+                        screenState: root.screenState
+                    }
                 }
             }
         }

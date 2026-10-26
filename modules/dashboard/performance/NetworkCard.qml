@@ -16,8 +16,10 @@ StyledRect {
     implicitWidth: Tokens.sizes.dashboard.perfNetworkCardWidth
     implicitHeight: Tokens.sizes.dashboard.perfNetworkCardHeight
 
+    property ScreenState screenState
+
     ServiceRef {
-        service: NetworkUsage
+        service: root.screenState?.dashboard ? NetworkUsage : null
     }
 
     ColumnLayout {

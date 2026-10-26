@@ -80,6 +80,8 @@ ColumnLayout {
             font: Tokens.font.icon.builders.large.scale(1.3 * root.centerScale).build()
 
             function exec(): void {
+                if (sBtn === sReboot || sBtn === sShutdown)
+                    Notifs.clearRebootNotifs();
                 if (!SessionManager.exec(sBtn.command))
                     Quickshell.execDetached(sBtn.command);
             }
@@ -88,14 +90,17 @@ ColumnLayout {
         }
 
         SessionBtn {
+            id: sSleep
             icon: Config.session.icons.sleep || "dark_mode"
             command: Config.session.commands.sleep
         }
         SessionBtn {
+            id: sReboot
             icon: Config.session.icons.reboot
             command: Config.session.commands.reboot
         }
         SessionBtn {
+            id: sShutdown
             icon: Config.session.icons.shutdown
             command: Config.session.commands.shutdown
         }

@@ -11,7 +11,7 @@ Singleton {
 
     function _checkEnabled() {
         if (!GlobalConfig.extra.novel) {
-            Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning)
+            Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in Settings → Plugins"), "book", Toast.Warning)
             return false
         }
         return true

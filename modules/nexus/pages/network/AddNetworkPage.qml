@@ -2,6 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
@@ -9,13 +11,15 @@ import qs.components.controls
 import qs.services
 import qs.modules.nexus.common
 
-// Sub-page for manually adding a (typically hidden) Wi-Fi network. Reached from
+// Sub-page for manually adding a (hidden or enterprise) Wi-Fi network. Reached from
 // the "Add network" row on NetworkPage via nState.openSubPage.
 PageBase {
     id: root
 
-    // Security model: index 0 = none, 1 = WPA/WPA2/WPA3 personal.
-    readonly property bool secured: securitySelect.active !== noneItem
+    // Security model: Personal, Enterprise (802.1X), or None (open).
+    readonly property bool isEnterprise: securitySelect.active === enterpriseItem
+    readonly property bool isPersonal: securitySelect.active === personalItem
+    readonly property bool secured: isPersonal || isEnterprise
     property bool connecting: false
     property bool failed: false
     property bool success: false
@@ -27,32 +31,95 @@ PageBase {
             ssidField.forceActiveFocus();
             return;
         }
-        if (root.secured && passwordField.text.length < 8) {
-            passwordField.isError = true;
-            passwordField.forceActiveFocus();
-            return;
+
+        if (root.isEnterprise) {
+            if (identityField.text.trim().length === 0) {
+                identityField.isError = true;
+                identityField.forceActiveFocus();
+                return;
+            }
+            if (passwordField.text.length === 0) {
+                passwordField.isError = true;
+                passwordField.forceActiveFocus();
+                return;
+            }
+        } else if (root.isPersonal) {
+            if (passwordField.text.length < 8) {
+                passwordField.isError = true;
+                passwordField.forceActiveFocus();
+                return;
+            }
         }
 
         root.failed = false;
         root.connecting = true;
 
-        Nmcli.addHiddenNetwork(ssid, root.secured ? passwordField.text : "", root.secured ? "wpa" : "none", hiddenToggle.checked, result => {
-            root.connecting = false;
-            if (result && result.success) {
-                root.success = true;
-                root.nState.closeSubPage();
-            } else {
-                root.failed = true;
-                if (root.secured)
-                    passwordField.isError = true;
-                // Clean up the half-created profile so a retry starts fresh.
-                Nmcli.forgetNetwork(ssid);
-            }
-        });
+        if (root.isEnterprise) {
+            Nmcli.addEnterpriseNetwork(
+                ssid,
+                identityField.text.trim(),
+                passwordField.text,
+                caCertField.text.trim(),
+                anonIdentityField.text.trim(),
+                hiddenToggle.checked,
+                result => {
+                    root.connecting = false;
+                    if (result && result.success) {
+                        root.success = true;
+                        root.nState.closeSubPage();
+                    } else {
+                        root.failed = true;
+                        passwordField.isError = true;
+                        Nmcli.forgetNetwork(ssid);
+                    }
+                }
+            );
+        } else {
+            Nmcli.addHiddenNetwork(
+                ssid,
+                root.isPersonal ? passwordField.text : "",
+                root.isPersonal ? "wpa" : "none",
+                hiddenToggle.checked,
+                result => {
+                    root.connecting = false;
+                    if (result && result.success) {
+                        root.success = true;
+                        root.nState.closeSubPage();
+                    } else {
+                        root.failed = true;
+                        if (root.isPersonal)
+                            passwordField.isError = true;
+                        Nmcli.forgetNetwork(ssid);
+                    }
+                }
+            );
+        }
     }
 
     title: Tr.tr("Add network")
     isSubPage: true
+
+    Component.onCompleted: {
+        if (root.nState?.selectedNetworkSsid) {
+            const ap = Nmcli.findNetwork(root.nState.selectedNetworkSsid);
+            if (ap && ap.isEnterprise) {
+                securitySelect.active = enterpriseItem;
+            }
+        }
+    }
+
+    property Process certPickerProc: Process {
+        id: certPickerProc
+
+        command: ["zenity", "--file-selection", "--file-filter=Certificates (*.crt *.pem *.cer) | *.crt *.pem *.cer", "--title=Select CA Certificate"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (text && text.trim().length > 0) {
+                    caCertField.text = text.trim();
+                }
+            }
+        }
+    }
 
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -65,9 +132,11 @@ PageBase {
                 if (root.success)
                     return;
 
-                const ssid = ssidField.text.trim();
-                if (ssid)
-                    Nmcli.forgetNetwork(ssid);
+                if (root.failed) {
+                    const ssid = ssidField.text.trim();
+                    if (ssid)
+                        Nmcli.forgetNetwork(ssid);
+                }
             }
 
             target: root.nState
@@ -89,13 +158,20 @@ PageBase {
             Layout.topMargin: Tokens.spacing.extraSmall
             // TRANSLATORS: SSID is a protocol term, leave it untranslated
             placeholderText: Tr.tr("Network name (SSID)")
-            // TRANSLATORS: sample network name, translate the e.g. but the name is a placeholder
             supportingText: Tr.tr("e.g. MyHiddenNetwork")
             leadingIcon: "wifi"
             errorText: Tr.tr("Network name is required")
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
+            text: root.nState?.selectedNetworkSsid || ""
 
-            onAccepted: root.secured ? passwordField.forceActiveFocus() : root.submit()
+            onAccepted: {
+                if (root.isEnterprise)
+                    identityField.forceActiveFocus();
+                else if (root.isPersonal)
+                    passwordField.forceActiveFocus();
+                else
+                    root.submit();
+            }
         }
 
         ToggleRow {
@@ -104,7 +180,7 @@ PageBase {
             first: true
             text: Tr.tr("Hidden network")
             subtext: Tr.tr("Actively probe for a network that doesn't broadcast its name")
-            checked: true
+            checked: !root.nState?.selectedNetworkSsid
         }
 
         SelectRow {
@@ -113,15 +189,22 @@ PageBase {
             Layout.topMargin: Tokens.spacing.extraSmall / 2 - parent.spacing
             last: !root.secured
             label: Tr.tr("Security")
-            // TRANSLATORS: WPA/WPA2/WPA3 are protocol names, leave them untranslated
             fallbackText: Tr.tr("WPA/WPA2/WPA3 Personal")
             fallbackIcon: "lock"
 
             menuItems: [
                 MenuItem {
+                    id: personalItem
+
                     icon: "lock"
                     // TRANSLATORS: WPA/WPA2/WPA3 are protocol names, leave them untranslated
                     text: Tr.tr("WPA/WPA2/WPA3 Personal")
+                },
+                MenuItem {
+                    id: enterpriseItem
+
+                    icon: "badge"
+                    text: Tr.tr("WPA/WPA2 Enterprise (802.1X)")
                 },
                 MenuItem {
                     id: noneItem
@@ -140,6 +223,84 @@ PageBase {
             Behavior on bottomRightRadius {
                 Anim {
                     type: Anim.DefaultEffects
+                }
+            }
+        }
+
+        // Enterprise fields (Username, CA cert, Anonymous identity)
+        Item {
+            Layout.fillWidth: true
+            Layout.bottomMargin: root.isEnterprise ? 0 : -parent.spacing
+            implicitHeight: root.isEnterprise ? enterpriseColumn.implicitHeight : 0
+            opacity: root.isEnterprise ? 1 : 0
+
+            Behavior on Layout.bottomMargin {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            Behavior on implicitHeight {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            Behavior on opacity {
+                Anim {
+                    type: Anim.DefaultEffects
+                }
+            }
+
+            ColumnLayout {
+                id: enterpriseColumn
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: Tokens.spacing.large
+
+                StyledTextField {
+                    id: identityField
+
+                    Layout.fillWidth: true
+                    placeholderText: Tr.tr("Username / Identity")
+                    leadingIcon: "person"
+                    supportingText: Tr.tr("e.g. username@institution.edu or username")
+                    errorText: Tr.tr("Username is required")
+                    inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
+                    onAccepted: passwordField.forceActiveFocus()
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    StyledTextField {
+                        id: caCertField
+
+                        Layout.fillWidth: true
+                        placeholderText: Tr.tr("CA certificate path (.crt / .pem)")
+                        leadingIcon: "verified_user"
+                        supportingText: Tr.tr("Path to CA certificate file, e.g. /home/.../cert.crt")
+                        inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
+                    }
+
+                    IconButton {
+                        Layout.alignment: Qt.AlignVCenter
+                        type: IconButton.Tonal
+                        icon: "folder_open"
+                        onClicked: certPickerProc.running = true
+                    }
+                }
+
+                StyledTextField {
+                    id: anonIdentityField
+
+                    Layout.fillWidth: true
+                    placeholderText: Tr.tr("Anonymous identity (optional)")
+                    leadingIcon: "visibility_off"
+                    supportingText: Tr.tr("e.g. anonymous@institution.edu")
+                    inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText
                 }
             }
         }
@@ -178,9 +339,8 @@ PageBase {
                 placeholderText: Tr.tr("Password")
                 leadingIcon: "key"
                 echoMode: TextInput.Password
-                // TRANSLATORS: WPA is a protocol name, leave it untranslated
-                supportingText: Tr.tr("WPA passwords are at least 8 characters")
-                errorText: root.failed ? Tr.tr("Connection failed — check the password") : Tr.tr("Password must be at least 8 characters")
+                supportingText: root.isEnterprise ? Tr.tr("Account password") : Tr.tr("WPA passwords are at least 8 characters")
+                errorText: root.failed ? Tr.tr("Connection failed — check credentials") : (root.isEnterprise ? Tr.tr("Password is required") : Tr.tr("Password must be at least 8 characters"))
 
                 onAccepted: root.submit()
             }

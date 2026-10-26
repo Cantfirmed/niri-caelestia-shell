@@ -112,43 +112,20 @@ PageBase {
             text: Tr.tr("Weather")
         }
 
-        // Placeholder until the map-based location picker lands
-        ConnectedRect {
-            Layout.fillWidth: true
+        NavRow {
             first: true
             last: true
-            implicitHeight: comingSoon.implicitHeight + Tokens.padding.extraLarge * 2
-
-            ColumnLayout {
-                id: comingSoon
-
-                anchors.centerIn: parent
-                width: parent.width - Tokens.padding.largeIncreased * 2
-                spacing: Tokens.padding.extraSmall
-
-                MaterialIcon {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "map"
-                    color: Colours.palette.m3outlineVariant
-                    fontStyle: Tokens.font.icon.extraLarge
+            icon: GlobalConfig.services.weatherLocation ? "location_on" : "my_location"
+            text: Tr.tr("Weather location")
+            subtext: {
+                if (GlobalConfig.services.weatherLocation) {
+                    if (Weather.city)
+                        return Tr.tr("%1 (%2)").arg(Weather.city).arg(GlobalConfig.services.weatherLocation);
+                    return GlobalConfig.services.weatherLocation;
                 }
-
-                StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: Tr.tr("Location picker coming soon")
-                    color: Colours.palette.m3outlineVariant
-                    font: Tokens.font.title.small
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    text: Tr.tr("Choose your weather location on a map in a future update")
-                    color: Colours.palette.m3outlineVariant
-                    font: Tokens.font.body.small
-                }
+                return Tr.tr("Automatic (detected: %1)").arg(Weather.city || Tr.tr("Locating..."));
             }
+            onClicked: root.nState.openSubPage(1)
         }
 
         // Units

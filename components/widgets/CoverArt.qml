@@ -46,8 +46,7 @@ Item {
             color: Qt.alpha(root.fallbackColour, 1)
 
             Anim on rotation {
-                running: true
-                paused: !Players.active?.isPlaying
+                running: Players.active?.isPlaying ?? false
                 from: 360
                 to: 0
                 duration: 23500
@@ -76,7 +75,7 @@ Item {
 
     Loader {
         anchors.centerIn: parent
-        asynchronous: true
+        asynchronous: false
         active: opacity > 0
         opacity: image.status === Image.Loading ? 1 : 0
 

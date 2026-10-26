@@ -43,7 +43,7 @@ StyledWindow {
         return false;
     }
 
-    readonly property bool hasOpenPanels: screenState ? (screenState.launcher || screenState.dashboard || screenState.session || screenState.sidebar || screenState.utilities || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.shaderSelect || screenState.osd || screenState.calendar || (panels?.popouts?.hasCurrent ?? false)) : false
+    readonly property bool hasOpenPanels: screenState ? (screenState.launcher || screenState.dashboard || screenState.session || screenState.sidebar || screenState.utilities || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.shaderSelect || screenState.hotkeys || screenState.osd || screenState.calendar || (panels?.popouts?.hasCurrent ?? false)) : false
 
     property real fsTransitionProg: hasFullscreen ? 1 : 0
     readonly property real sdfBorderOffset: 2 * fsTransitionProg // SDFs joins are not exact, so offset by 2px to ensure nothing shows
@@ -72,6 +72,7 @@ StyledWindow {
             screenState.launcher = false;
             screenState.session = false;
             screenState.dashboard = false;
+            screenState.hotkeys = false;
         }
         panels.popouts.close();
     }
@@ -80,7 +81,7 @@ StyledWindow {
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: fsTransitionProg > 0 && contentItem.Config.general.showOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     // Modal panels (launcher, session) MUST use Exclusive keyboard focus on Wayland.
-    WlrLayershell.keyboardFocus: (screenState && (screenState.launcher || screenState.session || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.shaderSelect)) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (screenState && (screenState.launcher || screenState.session || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.shaderSelect || screenState.hotkeys)) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     mask: (hasFullscreen && !hasOpenPanels) ? emptyRegion : regions
 

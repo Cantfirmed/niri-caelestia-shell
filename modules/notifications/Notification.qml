@@ -68,10 +68,13 @@ StyledRect {
             if (!containsMouse)
                 root.modelData.timer.start();
 
-            if (Math.abs(root.x) < root.implicitWidth * Config.notifs.clearThreshold)
+            if (Math.abs(root.x) < root.implicitWidth * Config.notifs.clearThreshold) {
                 root.x = 0;
-            else
+            } else {
                 root.modelData.popup = false;
+                if (root.modelData.isNetwork)
+                    root.modelData.close();
+            }
         }
         onPositionChanged: event => {
             if (pressed) {
@@ -84,9 +87,18 @@ StyledRect {
             if (!GlobalConfig.notifs.actionOnClick || event.button !== Qt.LeftButton)
                 return;
 
-            const actions = root.modelData.actions;
-            if (actions.length === 1)
-                actions[0].invoke();
+            const actions = root.modelData.actions ?? [];
+            const defaultAction = actions.find(a => a.identifier === "default") || (actions.length > 0 ? actions[0] : null);
+            if (defaultAction?.invoke) {
+                defaultAction.invoke();
+            } else {
+                Notifs.focusAppWindow(root.modelData);
+            }
+
+            if (!root.modelData.resident)
+                root.modelData.close();
+            else
+                root.modelData.popup = false;
         }
 
         Item {

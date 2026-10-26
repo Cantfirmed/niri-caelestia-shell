@@ -5,6 +5,7 @@
 #include <qjsonobject.h>
 #include <qlocalsocket.h>
 #include <QProcessEnvironment>
+#include <sys/socket.h>
 
 #include <memory>
 
@@ -59,6 +60,11 @@ bool NiriEventSocket::isConnected() const {
 
 void NiriEventSocket::onConnected() {
     qDebug() << "NiriEventSocket: Connected, starting event stream";
+    const qintptr fd = m_socket->socketDescriptor();
+    if (fd >= 0) {
+        int rcvbuf = 1024 * 1024; // 1MB buffer to prevent overflows during event bursts
+        ::setsockopt(static_cast<int>(fd), SOL_SOCKET, SO_RCVBUF, &rcvbuf, static_cast<socklen_t>(sizeof(rcvbuf)));
+    }
     m_socket->write("\"EventStream\"\n");
     m_socket->flush();
 }
@@ -126,7 +132,7 @@ void NiriEventSocket::scheduleReconnect() {
     if (!m_reconnectTimer.isActive()) {
         qDebug() << "NiriEventSocket: Reconnecting in" << m_reconnectDelay << "ms";
         m_reconnectTimer.start(m_reconnectDelay);
-        m_reconnectDelay = qMin(m_reconnectDelay * 2, 30000);
+        m_reconnectDelay = qMin(m_reconnectDelay * 2, 5000);
     }
 }
 

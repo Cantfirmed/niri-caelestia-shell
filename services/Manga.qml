@@ -11,7 +11,7 @@ Singleton {
 
     function _checkEnabled() {
         if (!GlobalConfig.extra.manga) {
-            Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning)
+            Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in Settings → Plugins"), "manga", Toast.Warning)
             return false
         }
         return true

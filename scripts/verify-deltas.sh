@@ -193,9 +193,25 @@ else
     fail "File missing: $LAUNCHER_CONTENT" "File does not exist."
 fi
 
+# 12. Nexus Plugins page (manga/novel reader toggles)
+NEXUS_REGISTRY="modules/nexus/PageCompRegistry.qml"
+NEXUS_PLUGINS_PAGE="modules/nexus/pages/PluginsPage.qml"
+if [ -f "$NEXUS_REGISTRY" ] && [ -f "$NEXUS_PLUGINS_PAGE" ]; then
+    if grep -q 'PluginsPage {}' "$NEXUS_REGISTRY" && \
+       grep -q 'GlobalConfig.extra.manga' "$NEXUS_PLUGINS_PAGE" && \
+       grep -q 'GlobalConfig.extra.novel' "$NEXUS_PLUGINS_PAGE"; then
+        pass "Nexus Plugins page wired to manga/novel reader toggles ($NEXUS_REGISTRY)"
+    else
+        fail "Nexus Plugins page lost its registration or reader toggles" \
+             "Upstream merges reset the System/Plugins entry to PlaceholderComp. Check NIRI-DELTAS.md Section 6."
+    fi
+else
+    fail "File missing: $NEXUS_PLUGINS_PAGE" "File does not exist."
+fi
+
 echo "===================================================="
 if [ "$FAILED" -eq 0 ]; then
-    echo -e "${GREEN}All 11 delta verification checks passed!${NC}"
+    echo -e "${GREEN}All 12 delta verification checks passed!${NC}"
     exit 0
 else
     echo -e "${RED}Verification failed with $FAILED error(s).${NC}"

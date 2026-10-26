@@ -62,6 +62,11 @@ ItemList {
 
         onClicked: {
             if (!modelData.active) {
+                if (modelData.isEnterprise && !Nmcli.hasSavedProfile(modelData.ssid)) {
+                    root.nState.selectedNetworkSsid = modelData.ssid;
+                    root.nState.openSubPage(2);
+                    return;
+                }
                 NetworkConnection.handleConnect(modelData);
                 currentSelected = true;
                 root.networkSelected(modelData);
@@ -134,10 +139,16 @@ ItemList {
                             status = Tr.trCtx("Connected", "network connected");
                         else if (Nmcli.hasSavedProfile(net.ssid))
                             status = Tr.trCtx("Saved", "network saved");
+
+                        const band = net.band ? net.band : "";
+                        const sec = net.security ? net.security : "";
+                        const details = [band, sec].filter(Boolean).join(" • ");
+
+                        if (status && details)
+                            return `${details} • ${status}`;
                         if (status)
-                            // TRANSLATORS: %1 = security type, %2 = connection status
-                            return Tr.trCtx("Security: %1 • %2", "network security and status").arg(net.security).arg(status);
-                        return Tr.trCtx("Security: %1", "network security").arg(net.security);
+                            return status;
+                        return details;
                     }
                     color: Colours.palette.m3outline
                     font: Tokens.font.label.small

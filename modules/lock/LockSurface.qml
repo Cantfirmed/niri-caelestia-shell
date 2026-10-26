@@ -253,8 +253,8 @@ WlSessionLockSurface {
             id: content
 
             anchors.centerIn: parent
-            width: (root.screen?.height ?? 0) * Tokens.sizes.lock.heightMult * Tokens.sizes.lock.ratio - Tokens.padding.extraLargeIncreased
-            height: (root.screen?.height ?? 0) * Tokens.sizes.lock.heightMult - Tokens.padding.extraLargeIncreased
+            width: (root.screen?.height ?? 0) * (Tokens.sizes?.lock?.heightMult ?? 0.8) * (Tokens.sizes?.lock?.ratio ?? 1.6) - (Tokens.padding?.extraLargeIncreased ?? 24)
+            height: (root.screen?.height ?? 0) * (Tokens.sizes?.lock?.heightMult ?? 0.8) - (Tokens.padding?.extraLargeIncreased ?? 24)
 
             lock: root
             opacity: 0

@@ -14,8 +14,8 @@ Item {
     required property bool sidebarOrSessionVisible
 
     property bool hovered
-    readonly property Brightness.Monitor monitor: Brightness.getMonitorForScreen(root.screen)
-    readonly property bool shouldBeActive: screenState.osd && Config.osd.enabled && !(screenState.utilities && Config.utilities.enabled)
+    readonly property Brightness.Monitor monitor: root.screen ? Brightness.getMonitorForScreen(root.screen) : null
+    readonly property bool shouldBeActive: (screenState?.osd ?? false) && (Config.osd?.enabled ?? false) && !((screenState?.utilities ?? false) && (Config.utilities?.enabled ?? false))
     property real offsetScale: shouldBeActive ? 0 : 1
     property real sidebarOffset: sidebarOrSessionVisible ? 12 : 0
 

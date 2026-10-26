@@ -188,9 +188,7 @@ Singleton {
     }
 
     function reloadNiriConfig(): void {
-        const proc = Qt.createQmlObject('import Quickshell.Io; Process { command: ["niri", "msg", "action", "load-config-file"] }', root);
-        proc.exited.connect(() => proc.destroy());
-        proc.running = true;
+        Quickshell.execDetached(["niri", "msg", "action", "load-config-file"]);
     }
 
     function generateKdl(): string {

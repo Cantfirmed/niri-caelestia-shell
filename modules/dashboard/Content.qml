@@ -41,6 +41,12 @@ Item {
                 iconName: "cloud",
                 text: Tr.tr("Weather"),
                 enabled: Config.dashboard.showWeather
+            },
+            {
+                component: devComponent,
+                iconName: "code",
+                text: Tr.tr("Dev"),
+                enabled: Config.dashboard.showDeveloper
             }
         ];
         return allTabs.filter(tab => tab.enabled);
@@ -51,6 +57,32 @@ Item {
 
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
+
+    property bool preloadAll: false
+
+    Timer {
+        id: preloadTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+            if (root.screenState.dashboard)
+                root.preloadAll = true;
+        }
+    }
+
+    Connections {
+        target: root.screenState
+        function onDashboardChanged() {
+            if (root.screenState.dashboard) {
+                preloadTimer.restart();
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (root.screenState.dashboard)
+            preloadTimer.restart();
+    }
 
     Tabs {
         id: tabs
@@ -138,17 +170,19 @@ Item {
                         required property int index
                         required property var modelData
 
+                        property bool loaded: false
+
                         Layout.alignment: Qt.AlignTop
 
                         sourceComponent: modelData.component
 
-                        Component.onCompleted: active = Qt.binding(() => {
-                            if (index === view.currentIndex)
-                                return true;
-                            const vx = Math.floor(view.visibleArea.xPosition * view.contentWidth);
-                            const vex = Math.floor(vx + view.visibleArea.widthRatio * view.contentWidth);
-                            return (vx >= x && vx <= x + implicitWidth) || (vex >= x && vex <= x + implicitWidth);
-                        })
+                        active: loaded || (index === view.currentIndex) || root.preloadAll
+                        asynchronous: index !== view.currentIndex
+
+                        onStatusChanged: {
+                            if (status === Loader.Ready)
+                                loaded = true;
+                        }
                     }
                 }
             }
@@ -173,13 +207,25 @@ Item {
             Component {
                 id: performanceComponent
 
-                Performance {}
+                Performance {
+                    screenState: root.screenState
+                }
             }
 
             Component {
                 id: weatherComponent
 
-                WeatherTab {}
+                WeatherTab {
+                    screenState: root.screenState
+                }
+            }
+
+            Component {
+                id: devComponent
+
+                Dev {
+                    screenState: root.screenState
+                }
             }
 
             Behavior on contentX {

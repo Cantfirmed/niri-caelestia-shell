@@ -24,6 +24,9 @@ This document tracks all intentional divergences from upstream [caelestia-dots/s
 | `modules/bar/popouts/Battery.qml` | UI | Retains 4th power profile button (`auto_mode`) and integration with `services/PowerManagement.qml` (`autoBalance`, `setAutoBalance`, `setManualProfile`). |
 | `modules/launcher/Content.qml` | UI | Retains `checkLauncherState()` on component completion so Super+W (`>wallpaper `) and Super+V (`>clip `) initialize properly when launcher loads dynamically. |
 | `services/Wallpapers.qml` | Service | Retains IPC `toggle()` and `close()` in addition to `open()`. |
+| `modules/nexus/pages/PluginsPage.qml` | UI | Fork-specific Nexus **Plugins** page: Manga / Novel readers as enable/disable plugin cards (`GlobalConfig.extra.manga` / `.novel`). Does not exist upstream. |
+| `modules/nexus/common/PluginRow.qml` | UI | Fork-specific plugin card row (icon, title, description, status, open button, enable switch) used by the Plugins page. |
+| `modules/nexus/PageCompRegistry.qml` | UI | System → **Plugins** must stay wired to `PluginsPage` (upstream merges silently reset it to `PlaceholderComp`). |
 | `modules/bar/*` | Custom | Entire Niri workspaces panel and status bar (completely custom, replaces Hyprland bar). |
 | `modules/windowinfo/*` | Custom | Active window detail drawer ported to Niri IPC. |
 | `services/Niri.qml` | Service | Custom Niri compositor integration. |
@@ -285,5 +288,35 @@ To ensure customizations are never silently lost during future upstream pulls or
 * **`Caelestia.I18n` Translation Engine:** Upstream migrated UI strings and byte formats to `Tr.tr()`, `Tr.trCtx()`, and `Units.formatBytes()`. Custom panels adhere to `Tr.tr()` instead of legacy `qsTr()`.
 * **Typed `ListNode` Properties:** `services/VPN.qml` retains OpenVPN and NMCLI adapters alongside `selectAndConnect()` while adopting upstream's type-safe `GlobalConfig.utilities.vpn.provider` `ListNode` API.
 
+### C. Dynamic Output Toggling via Runtime IPC
+* **Symptom:** Quickshell trapped in a 2-second crash/restart loop when clamshell mode or display switching is triggered.
+* **Root Cause:** Niri's `load-config-file` action does not turn off outputs that are already logically mapped. Display switching scripts (`niri-display.py`) must issue explicit IPC calls (`niri msg output <name> off` / `on`). Without this, `outputs[name].logical` persists, causing `niri-display-monitor.py` to continuously re-trigger `niri-display.py external`, repeatedly sending `SIGKILL` to Quickshell via the display change crash guard.
+* **Fix & Guarantee:**
+  - `niri-display.py` calls `niri msg output {internal} off` when switching to external-only mode, `niri msg output {external} off` when switching to internal-only mode, and `on` for both when extending/mirroring.
+  - Early-return checks in `niri-display.py` verify that `outputs[name].logical` matches the desired layout before initiating surface teardown and Quickshell termination.
+  - `niri-display-monitor.py` invokes `niri msg output {internal_name} off` directly as a fallback defense-in-depth measure.
 
+### D. High-Frequency Viewport Scroll Throttling & IPC Event Stream Buffer Safeguard
+* **Symptom:** Switching windows causes window icons in the workspace bar (left sidebar) to turn invisible and reappear after a ~5s delay. Niri logs `WARN niri::ipc::server: disconnecting IPC event stream client because it is reading events too slowly`.
+* **Root Cause:** During window switching and scrolling navigation, Niri emits continuous `WindowLayoutsChanged` events at high display refresh rates (60–144Hz) to animate viewport offsets (`tile_pos_in_workspace_view`). Previously, `NiriIpc::handleWindowLayoutsChanged` ran `sortWindowsList()`, `m_windowsModel->resetData()`, and `emit windowsChanged()` for every single frame event. This triggered hundreds of complete model resets and delegate recreations in QML per second, completely saturating the Qt GUI thread. The Unix domain socket buffer overflowed, causing Niri's bounded internal channel (size 64) to fill up and forcibly disconnect Quickshell. Quickshell's exponential reconnect timer then took several seconds before reconnecting and fetching initial state.
+* **Fix & Guarantee:**
+  - In `plugin/src/Caelestia/Internal/niriipc.cpp` (`handleWindowLayoutsChanged`), compare `pos_in_scrolling_layout` and `window_size`. If only viewport scroll offsets (`tile_pos_in_workspace_view`) changed, early-return immediately without sorting or emitting `windowsChanged()`. Model sorting and `windowsChanged` emissions are only executed when genuine structural or size changes occur.
+  - In `plugin/src/Caelestia/Internal/nirisocket.cpp` (`onConnected`), set `SO_RCVBUF` to 1MB (`1024 * 1024`) via `setsockopt` to provide headroom against burst events.
+  - In `plugin/src/Caelestia/Internal/nirisocket.cpp` (`scheduleReconnect`), cap the maximum reconnect delay to 5000ms.
 
+---
+
+## 6. Nexus Plugins Page (Manga / Novel Readers)
+
+### A. Readers Exposed as Enable/Disable Plugins
+* **Location:** `modules/nexus/pages/PluginsPage.qml` plus the reusable `modules/nexus/common/PluginRow.qml`, registered in `modules/nexus/PageCompRegistry.qml` (System → Plugins).
+* **Behaviour:**
+  - Each reader (Manga, Novel) is a plugin card with icon, description, `Enabled`/`Disabled` status, an **open** button, and an enable/disable switch bound to `GlobalConfig.extra.manga` / `GlobalConfig.extra.novel`.
+  - Disabling a reader persists `false` into `shell.json` (`extra.*`), closes the reader drawer on **every** screen (all `Visibilities.screens` entries, not just the active one), and fires the `Connections` on `GlobalConfig.extra` in `services/Manga.qml` / `services/Novel.qml`, which stops the local Python backend immediately.
+  - Re-enabling restores everything; nothing is deleted. The draw opening is re-checked against `GlobalConfig.extra.*` by the `mangaReader` / `novelReader` IPC handlers in `modules/Shortcuts.qml`.
+* **Set-from-QML contract:** `SETTINGS_PROPERTY` in `plugin/src/Caelestia/Settings/macros.hpp` expands to `Q_PROPERTY(... READ ... WRITE set_<name> NOTIFY <name>Changed)`, so `GlobalConfig.extra.manga = false` from QML notifies and persists.
+
+### B. Merge Hazard: Plugins Entry Reverts to “Page under construction”
+* **Symptom:** System → **Plugins** in Nexus shows the `PlaceholderComp` “Page under construction” text even though `modules/nexus/pages/PluginsPage.qml` exists and contains the reader toggles.
+* **Root Cause:** The upstream `PageCompRegistry.qml` merge for v2.5.0 (commit `140d25a8`) silently reverted our second `// System` entry from `StackPage { PluginsPage {} }` back to `PlaceholderComp {}` without raising a conflict. The page file survived, so nothing looked broken until the page was opened.
+* **Fix & Guarantee:** Keep the System → Plugins entry wired as `StackPage { Component { PluginsPage {} } }`. `scripts/verify-deltas.sh` check **#12** asserts both the registration and the `GlobalConfig.extra.manga` / `.novel` bindings, so the pre-commit / post-merge hooks catch any future regression.

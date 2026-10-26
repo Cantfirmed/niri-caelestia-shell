@@ -18,8 +18,10 @@ Item {
     readonly property real spacing: Tokens.spacing.medium
     readonly property real maxMagnitude: (implicitWidth - cover.implicitWidth) / 2 - spacing
 
+    property ScreenState screenState
+
     ServiceRef {
-        service: Audio.cava
+        service: root.screenState?.dashboard ? Audio.cava : null
     }
 
     Shape {

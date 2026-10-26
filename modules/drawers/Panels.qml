@@ -18,6 +18,7 @@ import qs.modules.novel as NovelModule
 import qs.modules.displayselect as DisplaySelect
 import qs.modules.soundpanel as SoundPanel
 import qs.modules.shaderselect as ShaderSelect
+import qs.modules.hotkeys as Hotkeys
 
 Item {
     id: root
@@ -44,6 +45,7 @@ Item {
     readonly property alias displayselect: displayselect
     readonly property alias soundpanel: soundpanel
     readonly property alias shaderselect: shaderselect
+    readonly property alias hotkeys: hotkeys
     readonly property alias calendar: calendar
 
     anchors.fill: parent
@@ -194,6 +196,12 @@ Item {
 
     ShaderSelect.Wrapper {
         id: shaderselect
+        visibilities: root.screenState
+        anchors.fill: parent
+    }
+
+    Hotkeys.Wrapper {
+        id: hotkeys
         visibilities: root.screenState
         anchors.fill: parent
     }

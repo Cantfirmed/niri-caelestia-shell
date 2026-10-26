@@ -278,7 +278,7 @@ Scope {
         target: "mangaReader"
         function toggle(): void {
             if (!GlobalConfig.extra.manga) {
-                Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in the Control Center settings"), "manga", Toast.Warning);
+                Toaster.toast(qsTr("Manga feature disabled"), qsTr("Enable it in Settings → Plugins"), "manga", Toast.Warning);
                 return;
             }
             const screenState = ShellState.forActive();
@@ -291,7 +291,7 @@ Scope {
         target: "novelReader"
         function toggle(): void {
             if (!GlobalConfig.extra.novel) {
-                Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in the Control Center settings"), "book", Toast.Warning);
+                Toaster.toast(qsTr("Novel feature disabled"), qsTr("Enable it in Settings → Plugins"), "book", Toast.Warning);
                 return;
             }
             const screenState = ShellState.forActive();
@@ -376,6 +376,25 @@ Scope {
 
         function toggleAll(): void {
             BiriShaders.toggleAll();
+        }
+    }
+
+    IpcHandler {
+        target: "hotkeys"
+
+        function open(): void {
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.hotkeys = true;
+        }
+
+        function close(): void {
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.hotkeys = false;
+        }
+
+        function toggle(): void {
+            const screenState = ShellState.forActive();
+            if (screenState) screenState.hotkeys = !screenState.hotkeys;
         }
     }
 

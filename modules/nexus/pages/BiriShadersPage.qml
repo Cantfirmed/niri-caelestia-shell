@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Caelestia.Config
 import Caelestia.I18n
 import qs.components
@@ -16,7 +17,14 @@ PageBase {
     readonly property list<var> focusPresets: [
         { id: "rainbow-ripple", name: Tr.tr("Rainbow Ripple"), icon: "gradient", desc: Tr.tr("Flowing pastel wax colors") },
         { id: "lightning", name: Tr.tr("Lightning & Glow"), icon: "bolt", desc: Tr.tr("Traveling electric pulse with light spill") },
-        { id: "pulse", name: Tr.tr("Cyan Pulse"), icon: "lens_blur", desc: Tr.tr("Subtle breathing cyan glow") }
+        { id: "pulse", name: BiriShaders.pulseMatchTheme ? Tr.tr("Theme Pulse") : Tr.tr("Cyan Pulse"), icon: "lens_blur", desc: BiriShaders.pulseMatchTheme ? Tr.tr("Breathing glow matching background colors") : Tr.tr("Subtle breathing cyan glow") }
+    ]
+
+    readonly property list<var> pulseModes: [
+        { id: "blend", name: Tr.tr("Dual-Tone Shift (Primary + Accent)"), desc: Tr.tr("Breathing transition between primary and accent colors") },
+        { id: "primary", name: Tr.tr("Primary Accent Only"), desc: Tr.tr("Pure pulse of the wallpaper primary accent") },
+        { id: "spectrum", name: Tr.tr("Wallpaper Spectrum Cycle"), desc: Tr.tr("Tri-color cycle across primary, secondary, and tertiary tones") },
+        { id: "cyan", name: Tr.tr("Classic Cyan"), desc: Tr.tr("Original fixed cyan pulse") }
     ]
 
     readonly property list<var> animPresets: [
@@ -26,18 +34,22 @@ PageBase {
         { id: "ripple", name: Tr.tr("Ripple"), icon: "waves", desc: Tr.tr("Water ripple distortion wave") }
     ]
 
-    readonly property list<var> globalPresets: [
+    readonly property list<var> cursorPresets: [
+        { id: "locator", name: Tr.tr("Adaptive Halo (Recommended)"), icon: "adjust", desc: Tr.tr("Compact 20px adaptive ring with contrast against light and dark content") },
+        { id: "spotlight", name: Tr.tr("Presentation Spotlight"), icon: "present_to_all", desc: Tr.tr("Dims screen with focused beam and pointer ring for talks") },
+        { id: "trail", name: Tr.tr("Motion Trail"), icon: "timeline", desc: Tr.tr("Smooth temporal cursor motion trail") },
+        { id: "blueglow", name: Tr.tr("Soft Blue Glow"), icon: "blur_on", desc: Tr.tr("Compact glowing aura around cursor") },
         { id: "comet-glow", name: Tr.tr("Comet Glow Trail"), icon: "auto_awesome", desc: Tr.tr("Rainbow cursor comet tail") },
-        { id: "blueglow", name: Tr.tr("Blue Cursor Glow"), icon: "blur_on", desc: Tr.tr("Soft glowing aura around cursor") },
-        { id: "rainbow-tunnel", name: Tr.tr("Rainbow Tunnel"), icon: "tunnel", desc: Tr.tr("Concentric rainbow tunnel at mouse") },
         { id: "ripple", name: Tr.tr("Cursor Ripple"), icon: "motion_photos_on", desc: Tr.tr("Expanding waves on mouse movement") },
         { id: "shockwave", name: Tr.tr("Shockwave"), icon: "flare", desc: Tr.tr("High-energy shockwave pulse") },
-        { id: "spotlight", name: Tr.tr("Spotlight"), icon: "highlight", desc: Tr.tr("Dims screen with spotlight on cursor") },
-        { id: "trail", name: Tr.tr("Motion Trail"), icon: "timeline", desc: Tr.tr("Smooth temporal cursor motion trail") },
+        { id: "rainbow-tunnel", name: Tr.tr("Rainbow Tunnel"), icon: "tunnel", desc: Tr.tr("Concentric rainbow tunnel at mouse") }
+    ]
+
+    readonly property list<var> screenPresets: [
         { id: "crt", name: Tr.tr("CRT Scanlines"), icon: "tv", desc: Tr.tr("Full-screen retro CRT monitor lines") },
-        { id: "warmtint", name: Tr.tr("Warm Night Tint"), icon: "wb_sunny", desc: Tr.tr("Gentle amber evening color tint") },
+        { id: "vignette", name: Tr.tr("Vignette"), icon: "vignette", desc: Tr.tr("Darkened cinematic screen edges") },
         { id: "grayscale", name: Tr.tr("Grayscale"), icon: "contrast", desc: Tr.tr("Monochromatic black and white") },
-        { id: "vignette", name: Tr.tr("Vignette"), icon: "vignette", desc: Tr.tr("Darkened cinematic screen edges") }
+        { id: "warmtint", name: Tr.tr("Warm Night Tint"), icon: "wb_sunny", desc: Tr.tr("Gentle amber evening color tint") }
     ]
 
     readonly property list<var> fpsOptions: [
@@ -99,7 +111,7 @@ PageBase {
                     if (BiriShaders.focusRingPreset === "lightning")
                         return "#00E5FF";
                     if (BiriShaders.focusRingPreset === "pulse")
-                        return "#26C6DA";
+                        return BiriShaders.pulseMatchTheme ? Colours.palette.m3primary : "#26C6DA";
                     return "#FF80AB";
                 }
 
@@ -250,6 +262,40 @@ PageBase {
             }
         }
 
+        ToggleRow {
+            visible: BiriShaders.focusRingPreset === "pulse"
+            text: Tr.tr("Match desktop background colors")
+            subtext: Tr.tr("Dynamically synchronize pulse glow with your active wallpaper palette")
+            enabled: BiriShaders.focusRingEnabled
+            checked: BiriShaders.pulseMatchTheme
+            onToggled: BiriShaders.pulseMatchTheme = checked
+        }
+
+        SelectRow {
+            visible: BiriShaders.focusRingPreset === "pulse" && BiriShaders.pulseMatchTheme
+            label: Tr.tr("Pulse color mode")
+            subtext: root.pulseModes.find(p => p.id === BiriShaders.pulseColorMode)?.desc ?? ""
+            enabled: BiriShaders.focusRingEnabled
+            menuItems: pulseMenuItems.instances
+            active: pulseMenuItems.instances.find(i => i.modelData?.id === BiriShaders.pulseColorMode) ?? null
+            onSelected: item => {
+                if (item.modelData)
+                    BiriShaders.pulseColorMode = item.modelData.id;
+            }
+
+            Variants {
+                id: pulseMenuItems
+
+                model: root.pulseModes
+
+                MenuItem {
+                    required property var modelData
+
+                    text: modelData.name
+                }
+            }
+        }
+
         SliderRow {
             icon: "line_weight"
             label: Tr.tr("Ring width")
@@ -281,9 +327,9 @@ PageBase {
             icon: "blur_circular"
             label: Tr.tr("Light spread")
             valueLabel: `${Math.round(BiriShaders.lightSpread)} px`
-            value: (BiriShaders.lightSpread - 20) / 130.0
+            value: (BiriShaders.lightSpread - 4) / 56.0
             enabled: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
-            onMoved: v => BiriShaders.lightSpread = Math.max(20, Math.min(150, Math.round(20 + v * 130)))
+            onMoved: v => BiriShaders.lightSpread = Math.max(4, Math.min(60, Math.round(4 + v * 56)))
         }
 
         // ---------------- Section 2: Window Open / Close Animations ----------------
@@ -324,35 +370,42 @@ PageBase {
             }
         }
 
-        // ---------------- Section 3: Global Screen & Cursor Shaders ----------------
+        // ---------------- Section 3: Mouse & Pointer Locator FX ----------------
         SectionHeader {
-            text: Tr.tr("Global Screen & Cursor FX")
+            text: Tr.tr("Mouse & Pointer Locator FX")
         }
 
         ToggleRow {
             first: true
-            text: Tr.tr("Enable global post-process shader")
-            subtext: Tr.tr("Run full-screen or cursor-following visual effects")
-            checked: BiriShaders.globalShaderEnabled
-            onToggled: BiriShaders.globalShaderEnabled = checked
+            text: Tr.tr("Enable cursor locator")
+            subtext: Tr.tr("Highlight cursor position for easy tracking and presentations")
+            checked: BiriShaders.isCursorShaderActive
+            onToggled: {
+                if (checked) {
+                    const hasValidCursor = root.cursorPresets.some(p => p.id === BiriShaders.globalShaderPreset);
+                    BiriShaders.selectCursorShader(hasValidCursor ? BiriShaders.globalShaderPreset : "locator");
+                } else {
+                    BiriShaders.selectCursorShader("none");
+                }
+            }
         }
 
         SelectRow {
             last: true
-            label: Tr.tr("Global effect preset")
-            subtext: root.globalPresets.find(p => p.id === BiriShaders.globalShaderPreset)?.desc ?? ""
-            enabled: BiriShaders.globalShaderEnabled
-            menuItems: globalMenuItems.instances
-            active: globalMenuItems.instances.find(i => i.modelData?.id === BiriShaders.globalShaderPreset) ?? null
+            label: Tr.tr("Cursor effect style")
+            subtext: root.cursorPresets.find(p => p.id === BiriShaders.globalShaderPreset)?.desc ?? ""
+            enabled: BiriShaders.isCursorShaderActive
+            menuItems: cursorMenuItems.instances
+            active: cursorMenuItems.instances.find(i => i.modelData?.id === BiriShaders.globalShaderPreset) ?? null
             onSelected: item => {
                 if (item.modelData)
-                    BiriShaders.globalShaderPreset = item.modelData.id;
+                    BiriShaders.selectCursorShader(item.modelData.id);
             }
 
             Variants {
-                id: globalMenuItems
+                id: cursorMenuItems
 
-                model: root.globalPresets
+                model: root.cursorPresets
 
                 MenuItem {
                     required property var modelData
@@ -362,7 +415,52 @@ PageBase {
             }
         }
 
-        // ---------------- Section 4: Multi-Monitor Carousel Overview ----------------
+        // ---------------- Section 4: Screen Post-Process Filters ----------------
+        SectionHeader {
+            text: Tr.tr("Screen Post-Process Filters")
+        }
+
+        ToggleRow {
+            first: true
+            text: Tr.tr("Enable screen filter")
+            subtext: Tr.tr("Full-display post-processing, CRT scanlines, and color grading")
+            checked: BiriShaders.isScreenFilterActive
+            onToggled: {
+                if (checked) {
+                    const hasValidScreen = root.screenPresets.some(p => p.id === BiriShaders.globalShaderPreset);
+                    BiriShaders.selectScreenFilter(hasValidScreen ? BiriShaders.globalShaderPreset : "crt");
+                } else {
+                    BiriShaders.selectScreenFilter("none");
+                }
+            }
+        }
+
+        SelectRow {
+            last: true
+            label: Tr.tr("Screen filter style")
+            subtext: root.screenPresets.find(p => p.id === BiriShaders.globalShaderPreset)?.desc ?? ""
+            enabled: BiriShaders.isScreenFilterActive
+            menuItems: screenMenuItems.instances
+            active: screenMenuItems.instances.find(i => i.modelData?.id === BiriShaders.globalShaderPreset) ?? null
+            onSelected: item => {
+                if (item.modelData)
+                    BiriShaders.selectScreenFilter(item.modelData.id);
+            }
+
+            Variants {
+                id: screenMenuItems
+
+                model: root.screenPresets
+
+                MenuItem {
+                    required property var modelData
+
+                    text: modelData.name
+                }
+            }
+        }
+
+        // ---------------- Section 5: Multi-Monitor Carousel Overview ----------------
         SectionHeader {
             text: Tr.tr("Carousel Overview")
         }
@@ -376,7 +474,67 @@ PageBase {
             onToggled: BiriShaders.carouselEnabled = checked
         }
 
-        // ---------------- Section 5: Performance & Reset ----------------
+        // ---------------- Section 6: Per-Window Shaders & Cycler ----------------
+        SectionHeader {
+            text: Tr.tr("Per-Window Shaders & In-Flight Cycler")
+        }
+
+        ToggleRow {
+            first: true
+            text: Tr.tr("Enable per-window shaders")
+            subtext: Tr.tr("Attach shaders to individual active windows and cycle them live")
+            checked: BiriShaders.windowShadersEnabled
+            onToggled: BiriShaders.windowShadersEnabled = checked
+        }
+
+        RowButton {
+            icon: "cycle"
+            text: Tr.tr("Cycle Window Shader (Mod+Shift+B)")
+            subtext: Tr.tr("Walk focused window through CRT, Parchment, Pixel Mosaic, Mercury Sheen, Shimmer")
+            enabled: BiriShaders.windowShadersEnabled
+            onClicked: BiriShaders.cycleWindowShader()
+        }
+
+        RowButton {
+            last: true
+            icon: "power_settings_new"
+            text: Tr.tr("Toggle Window Shader (Mod+Alt+B)")
+            subtext: Tr.tr("Instantly toggle the active window's shader on or off")
+            enabled: BiriShaders.windowShadersEnabled
+            onClicked: BiriShaders.toggleWindowShader()
+        }
+
+        // ---------------- Section 7: Per-Output Colour Filters ----------------
+        SectionHeader {
+            text: Tr.tr("Per-Output Colour Filters")
+        }
+
+        ToggleRow {
+            first: true
+            text: Tr.tr("Enable per-output colour filters")
+            subtext: Tr.tr("Built-in display color grades without writing custom GLSL")
+            checked: BiriShaders.outputShadersEnabled
+            onToggled: BiriShaders.outputShadersEnabled = checked
+        }
+
+        RowButton {
+            icon: "palette"
+            text: Tr.tr("Cycle Output Colour Filter (Mod+Shift+C)")
+            subtext: Tr.tr("Rotate active display through Grayscale, Invert, Warm Night Tint, and Vivid")
+            enabled: BiriShaders.outputShadersEnabled
+            onClicked: BiriShaders.cycleOutputShader()
+        }
+
+        RowButton {
+            last: true
+            icon: "power_settings_new"
+            text: Tr.tr("Toggle Output Colour Filter (Mod+Alt+C)")
+            subtext: Tr.tr("Instantly toggle the active monitor's color filter on or off")
+            enabled: BiriShaders.outputShadersEnabled
+            onClicked: BiriShaders.toggleOutputShader()
+        }
+
+        // ---------------- Section 8: Performance & Reset ----------------
         SectionHeader {
             text: Tr.tr("Performance & Defaults")
         }
@@ -407,7 +565,8 @@ PageBase {
 
         RowButton {
             last: true
-            label: Tr.tr("Reset Shaders to Default")
+            icon: "restart_alt"
+            text: Tr.tr("Reset Shaders to Default")
             subtext: Tr.tr("Turn off custom shaders and restore standard Niri rendering")
             onClicked: BiriShaders.resetToDefaults()
         }

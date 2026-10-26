@@ -89,8 +89,8 @@ StyledRect {
                         const size = TokenConfig.sizes.notifs.image * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1);
                         return Qt.size(size, size);
                     }
-                    cache: false
-                    asynchronous: true
+                    cache: true
+                    asynchronous: false
                     width: TokenConfig.sizes.notifs.image
                     height: TokenConfig.sizes.notifs.image
                 }
@@ -123,7 +123,7 @@ StyledRect {
                 radius: Tokens.rounding.full
 
                 Loader {
-                    asynchronous: true
+                    asynchronous: false
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: sourceComponent === materialIconComp ? 1 : 0
                     sourceComponent: root.image ? imageComp : root.appIcon ? appIconComp : materialIconComp
@@ -131,7 +131,7 @@ StyledRect {
             }
 
             Loader {
-                asynchronous: true
+                asynchronous: false
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 active: root.appIcon && root.image

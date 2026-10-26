@@ -21,8 +21,10 @@ StyledRect {
     implicitWidth: layout.implicitWidth + layout.anchors.margins * 2
     implicitHeight: layout.implicitHeight + Tokens.padding.large * 2
 
+    property ScreenState screenState
+
     ServiceRef {
-        service: Storage
+        service: root.screenState?.dashboard ? Storage : null
     }
 
     ColumnLayout {

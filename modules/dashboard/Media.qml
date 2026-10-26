@@ -27,6 +27,7 @@ Item {
         CoverVisualiser {
             Layout.fillHeight: true
             implicitWidth: Tokens.sizes.dashboard.mediaSectionWidth
+            screenState: root.screenState
         }
 
         Item {
@@ -139,6 +140,7 @@ Item {
 
                     Details {
                         Layout.fillWidth: true
+                        screenState: root.screenState
                     }
 
                     LyricsAndSelector {

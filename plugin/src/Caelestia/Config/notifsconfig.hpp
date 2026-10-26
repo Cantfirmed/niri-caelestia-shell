@@ -15,9 +15,12 @@ class NotifsConfig : public settings::ObjectNode {
     CONFIG_GLOBAL_PROPERTY(int, fullscreenExpireTimeout, 2000)
     CONFIG_PROPERTY(qreal, clearThreshold, 0.3)
     CONFIG_PROPERTY(int, expandThreshold, 20)
-    CONFIG_GLOBAL_PROPERTY(bool, actionOnClick, false)
+    CONFIG_GLOBAL_PROPERTY(bool, actionOnClick, true)
     CONFIG_PROPERTY(int, groupPreviewNum, 3)
     CONFIG_PROPERTY(bool, openExpanded, false)
+    CONFIG_GLOBAL_PROPERTY(bool, autoClearOnFocus, true)
+    CONFIG_GLOBAL_PROPERTY(int, autoClearDelay, 1500)
+    CONFIG_GLOBAL_PROPERTY(int, staleTimeoutHours, 24)
 };
 
 } // namespace caelestia::config

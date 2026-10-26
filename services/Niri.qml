@@ -588,9 +588,6 @@ Singleton {
             newContent = content.replace(/(layout\s*\{)/, `$1\n    gaps ${val}`);
         }
 
-        // Clean up any remaining struts block if present
-        newContent = newContent.replace(/\n?\s*struts\s*\{[^}]*\}/g, "");
-
         if (newContent !== content) {
             layoutConfigFile.watchChanges = false;
             layoutConfigFile.setText(newContent);

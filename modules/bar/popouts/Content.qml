@@ -110,6 +110,13 @@ Item {
         }
 
         Popout {
+            name: "btcodec"
+            sourceComponent: BluetoothCodec {
+                popouts: root.popouts
+            }
+        }
+
+        Popout {
             name: "battery"
             sourceComponent: Battery {}
         }

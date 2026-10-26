@@ -75,6 +75,15 @@ ColumnLayout {
                 const localPos = mapToItem(items, 0, y);
                 const icon = items.childAt(items.width / 2, localPos.y);
                 if (icon) {
+                    if (icon.item && typeof icon.item.checkPopout === "function") {
+                        const target = icon.item.checkPopout(icon.mapFromItem(root, 0, y).y);
+                        if (target && target.item) {
+                            popouts.currentName = target.name;
+                            popouts.currentCenter = Qt.binding(() => target.item.mapToItem(root, 0, target.item.implicitHeight / 2).y);
+                            popouts.hasCurrent = true;
+                            return;
+                        }
+                    }
                     popouts.currentName = icon.name;
                     popouts.currentCenter = Qt.binding(() => icon.mapToItem(root, 0, icon.implicitHeight / 2).y);
                     popouts.hasCurrent = true;

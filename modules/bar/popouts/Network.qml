@@ -114,6 +114,22 @@ ColumnLayout {
             }
 
             StyledRect {
+                visible: !!networkItem.modelData.band
+                implicitHeight: 18
+                implicitWidth: bandLabel.implicitWidth + Tokens.padding.extraSmall * 2
+                radius: Tokens.rounding.full
+                color: networkItem.modelData.active ? Colours.palette.m3primaryContainer : Colours.palette.m3surfaceContainerHigh
+
+                StyledText {
+                    id: bandLabel
+                    anchors.centerIn: parent
+                    text: networkItem.modelData.band
+                    font: Tokens.font.label.builders.small.weight(Font.DemiBold).build()
+                    color: networkItem.modelData.active ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurfaceVariant
+                }
+            }
+
+            StyledRect {
                 implicitWidth: implicitHeight
                 implicitHeight: wirelessConnectIcon.implicitHeight + Tokens.padding.extraSmall
                 radius: Tokens.rounding.full
@@ -131,6 +147,8 @@ ColumnLayout {
                     onClicked: {
                         if (networkItem.modelData.active) {
                             Nmcli.disconnectFromNetwork();
+                        } else if (networkItem.modelData.isEnterprise && !Nmcli.hasSavedProfile(networkItem.modelData.ssid)) {
+                            root.popouts.detachRequested("network");
                         } else {
                             root.connectingToSsid = networkItem.modelData.ssid;
                             NetworkConnection.handleConnect(networkItem.modelData, null, network => {
@@ -339,16 +357,27 @@ ColumnLayout {
         }
     }
 
-    IconTextButton {
+    RowLayout {
         Layout.fillWidth: true
         Layout.topMargin: Tokens.spacing.medium
-        inactiveColour: Colours.palette.m3primaryContainer
-        inactiveOnColour: Colours.palette.m3onPrimaryContainer
-        verticalPadding: Tokens.padding.extraSmall
-        text: qsTr("Open settings")
-        icon: "settings"
+        spacing: Tokens.spacing.small
 
-        onClicked: root.popouts.detachRequested("network")
+        IconTextButton {
+            Layout.fillWidth: true
+            inactiveColour: Colours.palette.m3primaryContainer
+            inactiveOnColour: Colours.palette.m3onPrimaryContainer
+            verticalPadding: Tokens.padding.extraSmall
+            text: qsTr("Open settings")
+            icon: "settings"
+
+            onClicked: root.popouts.detachRequested("network")
+        }
+
+        IconButton {
+            type: IconButton.Tonal
+            icon: "tune"
+            onClicked: Nmcli.openAdvancedEditor()
+        }
     }
 
     Connections {

@@ -142,6 +142,14 @@ PageBase {
         }
 
         ToggleRow {
+            text: Tr.tr("Tailscale")
+            subtext: Tr.tr("Connect or disconnect Tailscale")
+            disabled: !Config.utilities.cards.quickToggles
+            checked: root.isToggleOn("tailscale")
+            onToggled: root.setToggleOn("tailscale", checked)
+        }
+
+        ToggleRow {
             last: true
             text: Tr.tr("VPN")
             subtext: Tr.tr("Connect or disconnect the VPN")

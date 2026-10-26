@@ -106,11 +106,17 @@ PageBase {
         }
 
         RowButton {
-            last: true
             icon: "add"
             text: Tr.tr("Add network")
             disabled: !Nmcli.wifiEnabled
             onClicked: root.nState.openSubPage(2) // Add network sub-page
+        }
+
+        RowButton {
+            last: true
+            icon: "tune"
+            text: Tr.tr("Advanced network settings")
+            onClicked: Nmcli.openAdvancedEditor()
         }
 
         // ---- VPN -------------------------------------------------------------

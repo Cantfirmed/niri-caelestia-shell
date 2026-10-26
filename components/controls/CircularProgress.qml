@@ -18,7 +18,7 @@ Item {
     property int spacing: Tokens.spacing.small
     property color fgColour: Colours.palette.m3primary
     property color bgColour: Colours.palette.m3secondaryContainer
-    property alias hasEndIndicator: dot.active
+    property bool hasEndIndicator: false
 
     property bool wavy: false
     property alias waveFrequency: wave.frequency
@@ -85,8 +85,7 @@ Item {
         Anim on waveProgress {
             id: waveProgAnim
 
-            running: true
-            paused: root.wavePaused || wave.amplitudeMultiplier === 0
+            running: !root.wavePaused && wave.amplitudeMultiplier > 0
             from: 0
             to: 1
             duration: 2000
@@ -108,6 +107,7 @@ Item {
     Loader {
         id: dot
 
+        active: root.hasEndIndicator
         x: root.size / 2 + root.arcRadius * Math.cos(root.dotAngleRad) - width / 2
         y: root.size / 2 + root.arcRadius * Math.sin(root.dotAngleRad) - height / 2
 

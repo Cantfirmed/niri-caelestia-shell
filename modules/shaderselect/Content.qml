@@ -15,18 +15,18 @@ Card {
     required property PersistentProperties visibilities
 
     readonly property list<var> presetsList: [
-        { id: "off", label: "Off", icon: "block", hotkey: "0" },
-        { id: "cyberpunk", label: "Cyberpunk", icon: "auto_awesome", hotkey: "1" },
-        { id: "electric", label: "Electric", icon: "bolt", hotkey: "2" },
-        { id: "retro", label: "Retro CRT", icon: "tv", hotkey: "3" },
-        { id: "minimal", label: "Minimal", icon: "lens_blur", hotkey: "4" },
-        { id: "tunnel", label: "Tunnel", icon: "cyclone", hotkey: "5" }
+        { id: "off", label: qsTr("Off"), icon: "block", hotkey: "0", subtext: qsTr("Vanilla") },
+        { id: "focus", label: qsTr("Active Focus"), icon: "crop_free", hotkey: "1", subtext: qsTr("Highlight active") },
+        { id: "locator", label: qsTr("Mouse Locator"), icon: "near_me", hotkey: "2", subtext: qsTr("Adaptive halo") },
+        { id: "presentation", label: qsTr("Presentation"), icon: "present_to_all", hotkey: "3", subtext: qsTr("Spotlight beam") },
+        { id: "retro", label: qsTr("Retro CRT"), icon: "tv", hotkey: "4", subtext: qsTr("Scanlines") },
+        { id: "cyberpunk", label: qsTr("Cyberpunk"), icon: "auto_awesome", hotkey: "5", subtext: qsTr("Rainbow FX") }
     ]
 
     variant: Card.Variant.Elevated
-    padding: Appearance.padding.xl
-    radius: Appearance.rounding.large
-    implicitWidth: 680
+    padding: Tokens.padding.large
+    radius: Tokens.rounding.large
+    implicitWidth: 800
     implicitHeight: mainLayout.implicitHeight + padding * 2
     focus: true
 
@@ -37,19 +37,25 @@ Card {
             BiriShaders.applyPreset("off");
             event.accepted = true;
         } else if (event.key === Qt.Key_1) {
-            BiriShaders.applyPreset("cyberpunk");
+            BiriShaders.applyPreset("focus");
             event.accepted = true;
         } else if (event.key === Qt.Key_2) {
-            BiriShaders.applyPreset("electric");
+            BiriShaders.applyPreset("locator");
             event.accepted = true;
         } else if (event.key === Qt.Key_3) {
-            BiriShaders.applyPreset("retro");
+            BiriShaders.applyPreset("presentation");
             event.accepted = true;
         } else if (event.key === Qt.Key_4) {
-            BiriShaders.applyPreset("minimal");
+            BiriShaders.applyPreset("retro");
             event.accepted = true;
         } else if (event.key === Qt.Key_5) {
-            BiriShaders.applyPreset("tunnel");
+            BiriShaders.applyPreset("cyberpunk");
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Minus || event.key === Qt.Key_BracketLeft) {
+            BiriShaders.lightSpread = Math.max(4, BiriShaders.lightSpread - 2);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal || event.key === Qt.Key_BracketRight) {
+            BiriShaders.lightSpread = Math.min(60, BiriShaders.lightSpread + 2);
             event.accepted = true;
         }
     }
@@ -70,37 +76,47 @@ Card {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.leftMargin: root.padding
-        anchors.rightMargin: root.padding
-        anchors.topMargin: root.padding
-        spacing: Appearance.spacing.lg
+        anchors.margins: root.padding
+        spacing: Tokens.spacing.medium
 
         // Header Row
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.md
+            spacing: Tokens.spacing.medium
 
-            MaterialIcon {
-                text: "auto_awesome"
-                size: 26
-                color: Colours.palette.m3primary
+            StyledRect {
+                implicitWidth: 42
+                implicitHeight: 42
+                radius: Tokens.rounding.medium
+                color: Colours.tPalette.m3primaryContainer
+
+                MaterialIcon {
+                    anchors.centerIn: parent
+                    text: "auto_awesome"
+                    size: 24
+                    color: Colours.palette.m3primary
+                }
             }
 
             ColumnLayout {
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 spacing: 2
 
                 StyledText {
-                    text: qsTr("Shader & FX Quick Menu")
-                    font.pointSize: Appearance.font.size.large
-                    font.weight: 600
+                    Layout.fillWidth: true
+                    text: qsTr("Shader & Compositor FX")
+                    font: Tokens.font.title.small
                     color: Colours.palette.m3onSurface
+                    elide: Text.ElideRight
                 }
 
                 StyledText {
-                    text: qsTr("Biri Compositor Shaders (Mod+B)")
-                    font.pointSize: Appearance.font.size.bodySmall
+                    Layout.fillWidth: true
+                    text: qsTr("Window Focus, Mouse Highlights, and Display Post-Processing (Mod+B)")
+                    font: Tokens.font.body.small
                     color: Colours.palette.m3onSurfaceVariant
+                    elide: Text.ElideRight
                 }
             }
 
@@ -113,213 +129,475 @@ Card {
         // Section: Presets
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.sm
+            spacing: Tokens.spacing.small
 
-            StyledText {
-                text: qsTr("Presets (Press 0-5 to switch)")
-                font.pointSize: Appearance.font.size.bodySmall
-                font.weight: 600
-                color: Colours.palette.m3primary
+            RowLayout {
+                Layout.fillWidth: true
+
+                StyledText {
+                    text: qsTr("Presets")
+                    font: Tokens.font.label.medium
+                    color: Colours.palette.m3primary
+                }
+
+                StyledText {
+                    text: qsTr("· Press 0-5 to switch quickly")
+                    font: Tokens.font.body.small
+                    color: Colours.palette.m3outline
+                }
+
+                Item { Layout.fillWidth: true }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: Appearance.spacing.sm
+                spacing: Tokens.spacing.small
 
                 Repeater {
                     model: root.presetsList
 
                     PresetCard {
                         Layout.fillWidth: true
-                        presetId: modelData.id
-                        label: modelData.label
-                        icon: modelData.icon
-                        hotkey: modelData.hotkey
-                        isActive: BiriShaders.activePreset === modelData.id
                     }
                 }
             }
         }
 
-        // Section: Focus Ring
-        ColumnLayout {
+        // Section 1: Active Window Focus Ring
+        StyledRect {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.xs
+            implicitHeight: focusSectionLayout.implicitHeight + Tokens.padding.medium * 2
+            radius: Tokens.rounding.medium
+            color: Colours.tPalette.m3surfaceContainerLow
+            border.color: Colours.palette.m3outlineVariant
+            border.width: 1
 
-            RowLayout {
-                Layout.fillWidth: true
+            ColumnLayout {
+                id: focusSectionLayout
 
-                StyledText {
-                    text: qsTr("Focus Ring / Border")
-                    font.pointSize: Appearance.font.size.bodySmall
-                    font.weight: 600
-                    color: Colours.palette.m3onSurface
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Tokens.padding.medium
+                spacing: Tokens.spacing.small
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    MaterialIcon {
+                        text: "crop_free"
+                        size: 20
+                        color: BiriShaders.focusRingEnabled ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: 1
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Active Window Focus Ring")
+                            font: Tokens.font.label.medium
+                            color: Colours.palette.m3onSurface
+                            elide: Text.ElideRight
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Subtle theme-accent glow on focused window")
+                            font: Tokens.font.body.small
+                            color: Colours.palette.m3onSurfaceVariant
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    FXChip {
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                        icon: BiriShaders.lightSpillEnabled ? "blur_on" : "blur_off"
+                        label: BiriShaders.lightSpillEnabled ? qsTr("Glow Spill: ON") : qsTr("Glow Spill: OFF")
+                        isSelected: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
+                        onTriggered: {
+                            BiriShaders.lightSpillEnabled = !BiriShaders.lightSpillEnabled;
+                        }
+                    }
                 }
 
-                Item { Layout.fillWidth: true }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
 
-                FXChip {
-                    label: BiriShaders.lightSpillEnabled ? qsTr("Light Spill: ON") : qsTr("Light Spill: OFF")
-                    isSelected: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
-                    onTriggered: {
-                        BiriShaders.lightSpillEnabled = !BiriShaders.lightSpillEnabled;
+                    FXChip {
+                        label: qsTr("Off")
+                        isSelected: !BiriShaders.focusRingEnabled
+                        onTriggered: BiriShaders.selectFocusRing("none")
+                    }
+
+                    FXChip {
+                        icon: "palette"
+                        label: qsTr("Theme Pulse")
+                        isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "pulse" && BiriShaders.pulseMatchTheme
+                        onTriggered: {
+                            BiriShaders.pulseMatchTheme = true;
+                            BiriShaders.selectFocusRing("pulse");
+                        }
+                    }
+
+                    FXChip {
+                        label: qsTr("Cyan Pulse")
+                        isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "pulse" && !BiriShaders.pulseMatchTheme
+                        onTriggered: {
+                            BiriShaders.pulseMatchTheme = false;
+                            BiriShaders.selectFocusRing("pulse");
+                        }
+                    }
+
+                    FXChip {
+                        label: qsTr("Lightning")
+                        isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "lightning"
+                        onTriggered: BiriShaders.selectFocusRing("lightning")
+                    }
+
+                    FXChip {
+                        label: qsTr("Rainbow")
+                        isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "rainbow-ripple"
+                        onTriggered: BiriShaders.selectFocusRing("rainbow-ripple")
+                    }
+
+                    Item { Layout.fillWidth: true }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+                    opacity: (BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled) ? 1.0 : 0.4
+                    enabled: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
+
+                    Behavior on opacity {
+                        Anim {}
+                    }
+
+                    MaterialIcon {
+                        text: "blur_circular"
+                        size: 18
+                        color: Colours.palette.m3onSurfaceVariant
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    StyledText {
+                        text: qsTr("Glow Spread")
+                        font: Tokens.font.label.small
+                        color: Colours.palette.m3onSurfaceVariant
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    StyledSlider {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitHeight: 20
+                        value: (BiriShaders.lightSpread - 4) / 56.0
+                        onInteraction: v => {
+                            BiriShaders.lightSpread = Math.max(4, Math.min(60, Math.round(4 + v * 56)));
+                        }
+                    }
+
+                    StyledText {
+                        text: `${Math.round(BiriShaders.lightSpread)} px`
+                        font: Tokens.font.label.small
+                        color: (BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled) ? Colours.palette.m3primary : Colours.palette.m3outline
+                        Layout.preferredWidth: 44
+                        horizontalAlignment: Text.AlignRight
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
             }
+        }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.xs
+        // Section 2: Mouse & Pointer Locator (Presentations / Tracking)
+        StyledRect {
+            Layout.fillWidth: true
+            implicitHeight: mouseSectionLayout.implicitHeight + Tokens.padding.medium * 2
+            radius: Tokens.rounding.medium
+            color: Colours.tPalette.m3surfaceContainerLow
+            border.color: Colours.palette.m3outlineVariant
+            border.width: 1
 
-                FXChip {
-                    label: qsTr("Off")
-                    isSelected: !BiriShaders.focusRingEnabled
-                    onTriggered: BiriShaders.selectFocusRing("none")
+            ColumnLayout {
+                id: mouseSectionLayout
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Tokens.padding.medium
+                spacing: Tokens.spacing.small
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    MaterialIcon {
+                        text: "near_me"
+                        size: 20
+                        color: BiriShaders.isCursorShaderActive ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: 1
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Mouse & Pointer Locator")
+                            font: Tokens.font.label.medium
+                            color: Colours.palette.m3onSurface
+                            elide: Text.ElideRight
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Find your cursor instantly on multi-monitor setups or during presentations")
+                            font: Tokens.font.body.small
+                            color: Colours.palette.m3onSurfaceVariant
+                            elide: Text.ElideRight
+                        }
+                    }
                 }
 
-                FXChip {
-                    label: qsTr("Rainbow Ripple")
-                    isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "rainbow-ripple"
-                    onTriggered: BiriShaders.selectFocusRing("rainbow-ripple")
+                // Line 1: Off, Adaptive Halo, Presentation Spotlight, Motion Trail
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
+
+                    FXChip {
+                        label: qsTr("Off")
+                        isSelected: !BiriShaders.isCursorShaderActive
+                        onTriggered: BiriShaders.selectCursorShader("none")
+                    }
+
+                    FXChip {
+                        icon: "adjust"
+                        label: qsTr("Adaptive Halo (Recommended)")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "locator"
+                        onTriggered: BiriShaders.selectCursorShader("locator")
+                    }
+
+                    FXChip {
+                        icon: "present_to_all"
+                        label: qsTr("Presentation Spotlight")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "spotlight"
+                        onTriggered: BiriShaders.selectCursorShader("spotlight")
+                    }
+
+                    FXChip {
+                        icon: "timeline"
+                        label: qsTr("Motion Trail")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "trail"
+                        onTriggered: BiriShaders.selectCursorShader("trail")
+                    }
+
+                    Item { Layout.fillWidth: true }
                 }
 
-                FXChip {
-                    label: qsTr("Lightning Glow")
-                    isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "lightning"
-                    onTriggered: BiriShaders.selectFocusRing("lightning")
-                }
+                // Line 2 (starting after Motion Trail to prevent overflow):
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
 
-                FXChip {
-                    label: qsTr("Cyan Pulse")
-                    isSelected: BiriShaders.focusRingEnabled && BiriShaders.focusRingPreset === "pulse"
-                    onTriggered: BiriShaders.selectFocusRing("pulse")
+                    FXChip {
+                        icon: "blur_on"
+                        label: qsTr("Soft Blue Glow")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "blueglow"
+                        onTriggered: BiriShaders.selectCursorShader("blueglow")
+                    }
+
+                    FXChip {
+                        icon: "auto_awesome"
+                        label: qsTr("Comet Trail")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "comet-glow"
+                        onTriggered: BiriShaders.selectCursorShader("comet-glow")
+                    }
+
+                    FXChip {
+                        icon: "motion_photos_on"
+                        label: qsTr("Ripple")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "ripple"
+                        onTriggered: BiriShaders.selectCursorShader("ripple")
+                    }
+
+                    FXChip {
+                        icon: "flare"
+                        label: qsTr("Shockwave")
+                        isSelected: BiriShaders.isCursorShaderActive && BiriShaders.globalShaderPreset === "shockwave"
+                        onTriggered: BiriShaders.selectCursorShader("shockwave")
+                    }
+
+                    Item { Layout.fillWidth: true }
                 }
             }
         }
 
-        // Section: Window Animation
-        ColumnLayout {
+        // Section 3: Screen Post-Process Filters (Clearly distinct from cursor!)
+        StyledRect {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.xs
+            implicitHeight: screenSectionLayout.implicitHeight + Tokens.padding.medium * 2
+            radius: Tokens.rounding.medium
+            color: Colours.tPalette.m3surfaceContainerLow
+            border.color: Colours.palette.m3outlineVariant
+            border.width: 1
 
-            StyledText {
-                text: qsTr("Window Animations")
-                font.pointSize: Appearance.font.size.bodySmall
-                font.weight: 600
-                color: Colours.palette.m3onSurface
-            }
+            ColumnLayout {
+                id: screenSectionLayout
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.xs
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Tokens.padding.medium
+                spacing: Tokens.spacing.small
 
-                FXChip {
-                    label: qsTr("Off")
-                    isSelected: !BiriShaders.windowAnimEnabled
-                    onTriggered: BiriShaders.selectWindowAnim("none")
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    MaterialIcon {
+                        text: "tv"
+                        size: 20
+                        color: BiriShaders.isScreenFilterActive ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: 1
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Screen Post-Process Filters")
+                            font: Tokens.font.label.medium
+                            color: Colours.palette.m3onSurface
+                            elide: Text.ElideRight
+                        }
+
+                        StyledText {
+                            Layout.fillWidth: true
+                            text: qsTr("Whole-display color grading and CRT monitor emulation (separate from cursor)")
+                            font: Tokens.font.body.small
+                            color: Colours.palette.m3onSurfaceVariant
+                            elide: Text.ElideRight
+                        }
+                    }
                 }
 
-                FXChip {
-                    label: qsTr("Whirlpool")
-                    isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "whirlpool"
-                    onTriggered: BiriShaders.selectWindowAnim("whirlpool")
-                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
 
-                FXChip {
-                    label: qsTr("Melt")
-                    isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "melt"
-                    onTriggered: BiriShaders.selectWindowAnim("melt")
-                }
+                    FXChip {
+                        label: qsTr("Off")
+                        isSelected: !BiriShaders.isScreenFilterActive
+                        onTriggered: BiriShaders.selectScreenFilter("none")
+                    }
 
-                FXChip {
-                    label: qsTr("Lightning")
-                    isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "lightning"
-                    onTriggered: BiriShaders.selectWindowAnim("lightning")
-                }
+                    FXChip {
+                        icon: "tv"
+                        label: qsTr("CRT Scanlines")
+                        isSelected: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "crt"
+                        onTriggered: BiriShaders.selectScreenFilter("crt")
+                    }
 
-                FXChip {
-                    label: qsTr("Ripple")
-                    isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "ripple"
-                    onTriggered: BiriShaders.selectWindowAnim("ripple")
+                    FXChip {
+                        icon: "vignette"
+                        label: qsTr("Vignette")
+                        isSelected: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "vignette"
+                        onTriggered: BiriShaders.selectScreenFilter("vignette")
+                    }
+
+                    FXChip {
+                        icon: "contrast"
+                        label: qsTr("Grayscale")
+                        isSelected: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "grayscale"
+                        onTriggered: BiriShaders.selectScreenFilter("grayscale")
+                    }
+
+                    FXChip {
+                        icon: "wb_sunny"
+                        label: qsTr("Warm Night Tint")
+                        isSelected: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "warmtint"
+                        onTriggered: BiriShaders.selectScreenFilter("warmtint")
+                    }
+
+                    Item { Layout.fillWidth: true }
                 }
             }
         }
 
-        // Section: Global / Screen / Cursor FX
-        ColumnLayout {
+        // Section 4: Window Dissolve Animations
+        RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.xs
+            spacing: Tokens.spacing.small
+
+            MaterialIcon {
+                text: "animation"
+                size: 18
+                color: Colours.palette.m3onSurfaceVariant
+            }
 
             StyledText {
-                text: qsTr("Cursor & Screen FX")
-                font.pointSize: Appearance.font.size.bodySmall
-                font.weight: 600
-                color: Colours.palette.m3onSurface
+                text: qsTr("Window Close FX:")
+                font: Tokens.font.label.small
+                color: Colours.palette.m3onSurfaceVariant
             }
 
-            Flow {
-                Layout.fillWidth: true
-                spacing: Appearance.spacing.xs
-
-                FXChip {
-                    label: qsTr("Off")
-                    isSelected: !BiriShaders.globalShaderEnabled
-                    onTriggered: BiriShaders.selectGlobalShader("none")
-                }
-
-                FXChip {
-                    label: qsTr("Comet Glow")
-                    isSelected: BiriShaders.globalShaderEnabled && BiriShaders.globalShaderPreset === "comet-glow"
-                    onTriggered: BiriShaders.selectGlobalShader("comet-glow")
-                }
-
-                FXChip {
-                    label: qsTr("Blue Glow")
-                    isSelected: BiriShaders.globalShaderEnabled && BiriShaders.globalShaderPreset === "blueglow"
-                    onTriggered: BiriShaders.selectGlobalShader("blueglow")
-                }
-
-                FXChip {
-                    label: qsTr("Shockwave")
-                    isSelected: BiriShaders.globalShaderEnabled && BiriShaders.globalShaderPreset === "shockwave"
-                    onTriggered: BiriShaders.selectGlobalShader("shockwave")
-                }
-
-                FXChip {
-                    label: qsTr("CRT Lines")
-                    isSelected: BiriShaders.globalShaderEnabled && BiriShaders.globalShaderPreset === "crt"
-                    onTriggered: BiriShaders.selectGlobalShader("crt")
-                }
-
-                FXChip {
-                    label: qsTr("Vignette")
-                    isSelected: BiriShaders.globalShaderEnabled && BiriShaders.globalShaderPreset === "vignette"
-                    onTriggered: BiriShaders.selectGlobalShader("vignette")
-                }
-
-                FXChip {
-                    label: qsTr("Grayscale")
-                    isSelected: BiriShaders.globalShaderEnabled && BiriShaders.globalShaderPreset === "grayscale"
-                    onTriggered: BiriShaders.selectGlobalShader("grayscale")
-                }
+            FXChip {
+                label: qsTr("Off")
+                isSelected: !BiriShaders.windowAnimEnabled
+                onTriggered: BiriShaders.selectWindowAnim("none")
             }
+
+            FXChip {
+                label: qsTr("Ripple")
+                isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "ripple"
+                onTriggered: BiriShaders.selectWindowAnim("ripple")
+            }
+
+            FXChip {
+                label: qsTr("Whirlpool")
+                isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "whirlpool"
+                onTriggered: BiriShaders.selectWindowAnim("whirlpool")
+            }
+
+            FXChip {
+                label: qsTr("Melt")
+                isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "melt"
+                onTriggered: BiriShaders.selectWindowAnim("melt")
+            }
+
+            FXChip {
+                label: qsTr("Lightning")
+                isSelected: BiriShaders.windowAnimEnabled && BiriShaders.windowAnimPreset === "lightning"
+                onTriggered: BiriShaders.selectWindowAnim("lightning")
+            }
+
+            Item { Layout.fillWidth: true }
         }
 
         // Footer Row
         RowLayout {
             Layout.fillWidth: true
-            spacing: Appearance.spacing.md
+            spacing: Tokens.spacing.medium
 
             StyledText {
                 Layout.fillWidth: true
-                text: qsTr("Hotkeys: [0-5] Presets · [Esc] Dismiss")
-                font.pointSize: Appearance.font.size.bodySmall
+                text: qsTr("Hotkeys: [0-5] Presets · [- / +] Spread · [Esc] Dismiss")
+                font: Tokens.font.body.small
                 color: Colours.palette.m3outline
             }
 
-            TextButton {
+            IconTextButton {
                 text: qsTr("Full Settings (Nexus)")
-                icon: "settings"
+                icon: "tune"
                 onClicked: {
                     root.visibilities.shaderSelect = false;
                     Quickshell.execDetached(["qs", "-c", "niri-caelestia-shell", "ipc", "call", "nexus", "open"]);
@@ -331,17 +609,26 @@ Card {
     component PresetCard: StyledRect {
         id: presetCard
 
-        required property string presetId
-        required property string label
-        required property string icon
-        required property string hotkey
-        required property bool isActive
+        required property var modelData
+        property string presetId: modelData.id
+        property string label: modelData.label
+        property string icon: modelData.icon
+        property string hotkey: modelData.hotkey
+        property string subtext: modelData.subtext ?? ""
+        readonly property bool isActive: BiriShaders.activePreset === presetId
 
-        implicitHeight: 74
+        implicitHeight: 76
         radius: Tokens.rounding.medium
         color: presetCard.isActive ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
-        border.color: presetCard.isActive ? Colours.palette.m3primary : "transparent"
-        border.width: presetCard.isActive ? 2 : 0
+        border.color: presetCard.isActive ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
+        border.width: presetCard.isActive ? 1.5 : 1
+
+        Behavior on color {
+            CAnim {}
+        }
+        Behavior on border.color {
+            CAnim {}
+        }
 
         StateLayer {
             radius: parent.radius
@@ -357,10 +644,18 @@ Card {
             RowLayout {
                 Layout.fillWidth: true
 
-                MaterialIcon {
-                    text: presetCard.icon
-                    size: 20
-                    color: presetCard.isActive ? Colours.palette.m3primary : Colours.palette.m3onSurface
+                StyledRect {
+                    implicitWidth: 26
+                    implicitHeight: 26
+                    radius: Tokens.rounding.small
+                    color: presetCard.isActive ? Colours.palette.m3primary : Colours.tPalette.m3surfaceContainerHighest
+
+                    MaterialIcon {
+                        anchors.centerIn: parent
+                        text: presetCard.icon
+                        size: 16
+                        color: presetCard.isActive ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                    }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -374,8 +669,7 @@ Card {
                     StyledText {
                         anchors.centerIn: parent
                         text: presetCard.hotkey
-                        font.pointSize: Tokens.font.size.extraSmall
-                        font.weight: 700
+                        font: Tokens.font.label.small
                         color: presetCard.isActive ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant
                     }
                 }
@@ -384,9 +678,16 @@ Card {
             StyledText {
                 Layout.fillWidth: true
                 text: presetCard.label
-                font.pointSize: Tokens.font.size.small
-                font.weight: presetCard.isActive ? 600 : 500
+                font: Tokens.font.label.medium
                 color: presetCard.isActive ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                elide: Text.ElideRight
+            }
+
+            StyledText {
+                Layout.fillWidth: true
+                text: presetCard.subtext
+                font: Tokens.font.label.small
+                color: presetCard.isActive ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3outline
                 elide: Text.ElideRight
             }
         }
@@ -395,17 +696,25 @@ Card {
     component FXChip: StyledRect {
         id: fxChip
 
+        property string icon: ""
         required property string label
         required property bool isSelected
 
         signal triggered()
 
-        implicitHeight: 28
-        implicitWidth: chipLabel.implicitWidth + 20
+        implicitHeight: 30
+        implicitWidth: chipContentLayout.implicitWidth + Tokens.padding.medium * 2
         radius: Tokens.rounding.full
         color: fxChip.isSelected ? Colours.palette.m3primary : Colours.tPalette.m3surfaceContainerHigh
-        border.color: fxChip.isSelected ? Colours.palette.m3primary : "transparent"
+        border.color: fxChip.isSelected ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
         border.width: 1
+
+        Behavior on color {
+            CAnim {}
+        }
+        Behavior on border.color {
+            CAnim {}
+        }
 
         StateLayer {
             radius: parent.radius
@@ -413,14 +722,26 @@ Card {
             onClicked: fxChip.triggered()
         }
 
-        StyledText {
-            id: chipLabel
+        RowLayout {
+            id: chipContentLayout
 
             anchors.centerIn: parent
-            text: fxChip.label
-            font.pointSize: Tokens.font.size.extraSmall
-            font.weight: fxChip.isSelected ? 600 : 400
-            color: fxChip.isSelected ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+            spacing: 4
+
+            MaterialIcon {
+                visible: fxChip.icon.length > 0
+                text: fxChip.icon
+                size: 14
+                color: fxChip.isSelected ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            StyledText {
+                text: fxChip.label
+                font: Tokens.font.label.small
+                color: fxChip.isSelected ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                Layout.alignment: Qt.AlignVCenter
+            }
         }
     }
 }

@@ -22,11 +22,19 @@ QtObject {
             category: "appearance",
             keywords: "blur transparency opacity effects window rules rounded corners compositor"
         },
+        // Biri
+        {
+            label: Tr.tr("Biri compositor"),
+            icon: "view_quilt",
+            description: Tr.tr("Floating PiP, display layout, input & capture"),
+            category: "biri",
+            keywords: "biri pip picture in picture float fullscreen sticky portrait vertical isolated display touchpad dwt capture gaps gap struts margin padding screen layout border"
+        },
         {
             label: Tr.tr("Biri Shaders & FX"),
             icon: "auto_awesome",
             description: Tr.tr("Animated borders, light spill, screen/cursor shaders"),
-            category: "appearance",
+            category: "biri",
             keywords: "shaders biri focus ring glow lightning rainbow ripple cursor crt effects light spill"
         },
 
@@ -83,7 +91,7 @@ QtObject {
             icon: "dock_to_bottom",
             description: Tr.tr("Dashboard, taskbar, launcher, sidebar"),
             category: "shell",
-            keywords: "panels taskbar dock bar dashboard launcher sidebar utilities drawers widgets statusbar"
+            keywords: "panels taskbar dock bar dashboard launcher sidebar utilities drawers widgets statusbar gaps gap struts margin padding screen"
         },
         {
             label: Tr.tr("Apps"),
@@ -104,7 +112,7 @@ QtObject {
             icon: "globe",
             description: Tr.tr("UI language, weather location, display units"),
             category: "shell",
-            keywords: "language region locale weather units celsius fahrenheit format date time"
+            keywords: "language region locale weather units celsius fahrenheit format date time location city map coordinates gps"
         },
 
         // About

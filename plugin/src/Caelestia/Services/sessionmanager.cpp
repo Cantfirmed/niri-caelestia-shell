@@ -42,8 +42,12 @@ SessionManager::SessionManager(QObject* parent)
     if (!ok)
         qCWarning(lcSessionManager) << "Failed to connect to PrepareForSleep signal:" << bus->lastError().message();
 
+    auto sessionId = qEnvironmentVariable("XDG_SESSION_ID");
+    if (sessionId.isEmpty()) {
+        sessionId = u"auto"_s;
+    }
     auto sessionMsg = QDBusMessage::createMethodCall(k_loginService, k_loginPath, k_loginIface, u"GetSession"_s);
-    sessionMsg.setArguments({ u"auto"_s });
+    sessionMsg.setArguments({ sessionId });
     const QDBusReply<QDBusObjectPath> sessionReply = bus->call(sessionMsg);
     if (!sessionReply.isValid()) {
         qCWarning(lcSessionManager) << "Failed to get session path:" << sessionReply.error().message();
@@ -58,6 +62,14 @@ SessionManager::SessionManager(QObject* parent)
     ok = bus->connect(k_loginService, m_sessionPath, k_sessionIface, u"Unlock"_s, this, SLOT(handleUnlockRequested()));
     if (!ok)
         qCWarning(lcSessionManager) << "Failed to connect to Unlock signal:" << bus->lastError().message();
+
+    auto propMsg = QDBusMessage::createMethodCall(k_loginService, m_sessionPath, u"org.freedesktop.DBus.Properties"_s, u"Get"_s);
+    propMsg.setArguments({ k_sessionIface, u"LockedHint"_s });
+    const QDBusReply<QDBusVariant> propReply = bus->call(propMsg);
+    if (propReply.isValid() && propReply.value().variant().toBool()) {
+        qCInfo(lcSessionManager) << "Session is already locked in logind; requesting lock on startup.";
+        QMetaObject::invokeMethod(this, &SessionManager::lockRequested, Qt::QueuedConnection);
+    }
 }
 
 bool SessionManager::exec(const QStringList& command) {

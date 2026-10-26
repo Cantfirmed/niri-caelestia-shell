@@ -4,6 +4,7 @@ import QtQuick
 import Caelestia
 import Caelestia.Config
 import qs.components
+import qs.services
 
 Item {
     id: root
@@ -11,8 +12,18 @@ Item {
     required property ScreenState screenState
     readonly property Props props: Props {}
 
-    readonly property bool shouldBeActive: screenState.sidebar && Config.sidebar.enabled
+    readonly property bool shouldBeActive: (screenState?.sidebar ?? false) && (Config.sidebar?.enabled ?? false)
+    property bool hasBeenActive: false
     property real offsetScale: shouldBeActive ? 0 : 1
+
+    onShouldBeActiveChanged: {
+        if (shouldBeActive) {
+            hasBeenActive = true;
+            Notifs.list.forEach(n => n.popup = false);
+        }
+    }
+
+    Component.onCompleted: Qt.callLater(() => root.hasBeenActive = true)
 
     visible: offsetScale < 1
     anchors.rightMargin: (-implicitWidth - 5) * offsetScale
@@ -33,7 +44,7 @@ Item {
         anchors.margins: CUtils.clamp(anchors.leftMargin - Config.border.thickness, 0, anchors.leftMargin)
         anchors.bottomMargin: 0
 
-        active: root.shouldBeActive || root.visible
+        active: root.hasBeenActive || root.shouldBeActive || root.visible
 
         sourceComponent: Content {
             implicitWidth: Tokens.sizes.sidebar.width - content.anchors.leftMargin - content.anchors.margins

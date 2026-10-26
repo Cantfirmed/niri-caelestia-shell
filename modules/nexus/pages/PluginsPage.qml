@@ -2,8 +2,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import Caelestia
 import Caelestia.Config
+import Caelestia.I18n
 import qs.components
 import qs.services
 import qs.modules.nexus.common
@@ -11,8 +11,44 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
-    title: qsTr("Plugins")
+    title: Tr.tr("Plugins")
     isSubPage: false
+
+    function setReaderEnabled(id: string, enabled: bool): void {
+        if (id === "manga") {
+            GlobalConfig.extra.manga = enabled;
+            if (!enabled)
+                closeOnAllScreens("manga");
+        } else if (id === "novel") {
+            GlobalConfig.extra.novel = enabled;
+            if (!enabled)
+                closeOnAllScreens("novel");
+        }
+    }
+
+    function closeOnAllScreens(prop: string): void {
+        const active = Visibilities.getForActive();
+        if (active)
+            active[prop] = false;
+
+        const screens = Visibilities.screens ?? {};
+        for (const name in screens) {
+            const vis = screens[name];
+            if (vis && vis !== active)
+                vis[prop] = false;
+        }
+    }
+
+    function openReader(id: string): void {
+        const state = ShellState.forActive();
+        if (!state)
+            return;
+
+        if (id === "manga")
+            state.manga = true;
+        else if (id === "novel")
+            state.novel = true;
+    }
 
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -22,37 +58,47 @@ PageBase {
 
         SectionHeader {
             first: true
-            text: qsTr("Readers")
+            text: Tr.tr("Readers")
         }
 
-        ToggleRow {
-            Layout.fillWidth: true
+        PluginRow {
             first: true
-            text: qsTr("Manga reader")
-            subtext: qsTr("Browse and read manga, manhwa, and manhua")
+
+            icon: "manga"
+            title: Tr.tr("Manga reader")
+            description: Tr.tr("Browse and read manga, manhwa, and manhua · Mod+M")
+            statusText: checked ? Tr.tr("Enabled") : Tr.tr("Disabled")
             checked: GlobalConfig.extra.manga
-            onToggled: {
-                GlobalConfig.extra.manga = checked
-                if (!checked) {
-                    const v = Visibilities.getForActive()
-                    if (v) v.manga = false
-                }
-            }
+            actionVisible: checked
+
+            onToggled: checked => root.setReaderEnabled("manga", checked)
+            onActivated: root.openReader("manga")
         }
 
-        ToggleRow {
-            Layout.fillWidth: true
+        PluginRow {
             last: true
-            text: qsTr("Novel reader")
-            subtext: qsTr("Browse and read light novels and web novels")
+
+            icon: "book"
+            title: Tr.tr("Novel reader")
+            description: Tr.tr("Browse and read light novels and web novels · Mod+Shift+M")
+            statusText: checked ? Tr.tr("Enabled") : Tr.tr("Disabled")
             checked: GlobalConfig.extra.novel
-            onToggled: {
-                GlobalConfig.extra.novel = checked
-                if (!checked) {
-                    const v = Visibilities.getForActive()
-                    if (v) v.novel = false
-                }
-            }
+            actionVisible: checked
+
+            onToggled: checked => root.setReaderEnabled("novel", checked)
+            onActivated: root.openReader("novel")
+        }
+
+        StyledText {
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.medium
+            Layout.leftMargin: Tokens.padding.small
+            Layout.rightMargin: Tokens.padding.small
+
+            text: Tr.tr("Disabling a plugin stops its local backend and closes it on every screen. Enable it again at any time — nothing is deleted.")
+            color: Colours.palette.m3outline
+            font: Tokens.font.label.small
+            wrapMode: Text.WordWrap
         }
     }
 }

@@ -144,8 +144,8 @@ Item {
                                 copyTimer.start();
                             } else if (action.modelData.invoke) {
                                 action.modelData.invoke();
-                            } else if (!root.notif.resident) {
-                                root.notif.close();
+                                if (!root.notif.resident)
+                                    root.notif.close();
                             }
                         }
                     }
@@ -171,7 +171,7 @@ Item {
                         id: iconComp
 
                         IconImage {
-                            asynchronous: true
+                            asynchronous: false
                             source: Quickshell.iconPath(action.modelData.identifier)
                         }
                     }

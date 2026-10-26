@@ -26,10 +26,12 @@ ColumnLayout {
         return `${mins}:${secs}`;
     }
 
+    property ScreenState screenState
+
     spacing: Tokens.spacing.extraSmall
 
     Timer {
-        running: Players.active?.isPlaying ?? false
+        running: (root.screenState?.dashboard ?? true) && (Players.active?.isPlaying ?? false)
         interval: GlobalConfig.dashboard.mediaUpdateInterval
         triggeredOnStart: true
         repeat: true

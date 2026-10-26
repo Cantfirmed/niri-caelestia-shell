@@ -15,7 +15,7 @@ Item {
 
     states: State {
         name: "visible"
-        when: root.visibilities.manga
+        when: root.visibilities?.manga ?? false
 
         PropertyChanges {
             root.implicitWidth: 600

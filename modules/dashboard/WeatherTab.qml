@@ -9,6 +9,8 @@ import qs.utils
 Item {
     id: root
 
+    property ScreenState screenState
+
     readonly property var today: Weather.forecast && Weather.forecast.length > 0 ? Weather.forecast[0] : null
 
     implicitWidth: layout.implicitWidth > 800 ? layout.implicitWidth : 840

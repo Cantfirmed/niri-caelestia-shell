@@ -40,5 +40,7 @@ PageBase {
             stepSize: 5
             onMoved: v => GlobalConfig.sidebar.dragThreshold = v
         }
+
+        ScreenGapsSection {}
     }
 }

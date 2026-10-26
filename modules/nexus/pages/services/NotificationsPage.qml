@@ -69,6 +69,20 @@ PageBase {
         }
 
         ToggleRow {
+            text: Tr.tr("Auto-clear on window focus")
+            subtext: Tr.tr("Dismiss notifications when their application window is focused")
+            checked: GlobalConfig.notifs.autoClearOnFocus
+            onToggled: GlobalConfig.notifs.autoClearOnFocus = checked
+        }
+
+        ToggleRow {
+            text: Tr.tr("Click to open message")
+            subtext: Tr.tr("Activate and dismiss notifications when clicked")
+            checked: GlobalConfig.notifs.actionOnClick
+            onToggled: GlobalConfig.notifs.actionOnClick = checked
+        }
+
+        ToggleRow {
             text: Tr.tr("Open expanded")
             subtext: Tr.tr("Show notifications expanded by default")
             checked: GlobalConfig.notifs.openExpanded

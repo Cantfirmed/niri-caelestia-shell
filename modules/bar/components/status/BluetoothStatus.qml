@@ -22,6 +22,31 @@ Item {
         }
     }
 
+    function checkPopout(localY: real): var {
+        const layoutY = layout.mapFromItem(root, 0, localY).y;
+
+        for (let i = 0; i < devicesRepeater.count; i++) {
+            const item = devicesRepeater.itemAt(i);
+            if (item) {
+                const halfSpacing = layout.spacing / 2;
+                if (layoutY >= (item.y - halfSpacing) && layoutY <= (item.y + item.height + halfSpacing)) {
+                    const iconName = Icons.getBluetoothIcon(item.modelData?.icon);
+                    if (iconName === "headphones" || iconName === "speaker" || (item.modelData?.icon && (item.modelData.icon.includes("head") || item.modelData.icon.includes("audio")))) {
+                        return {
+                            name: "btcodec",
+                            item: item
+                        };
+                    }
+                }
+            }
+        }
+
+        return {
+            name: "bluetooth",
+            item: btIcon
+        };
+    }
+
     ColumnLayout {
         id: layout
 
@@ -30,6 +55,8 @@ Item {
 
         // Bluetooth icon
         MaterialIcon {
+            id: btIcon
+
             Layout.alignment: Qt.AlignHCenter
             horizontalAlignment: Text.AlignHCenter
             animate: true
@@ -45,6 +72,8 @@ Item {
 
         // Connected bluetooth devices
         Repeater {
+            id: devicesRepeater
+
             model: ScriptModel {
                 values: Bluetooth.devices.values.filter(d => d.state !== BluetoothDeviceState.Disconnected) // qmllint disable unresolved-type
             }

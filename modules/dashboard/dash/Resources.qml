@@ -12,18 +12,20 @@ Item {
     anchors.top: parent.top
     anchors.bottom: parent.bottom
 
+    property ScreenState screenState
+
     implicitWidth: layout.implicitWidth + layout.anchors.margins * 2
 
     ServiceRef {
-        service: Cpu
+        service: root.screenState?.dashboard ? Cpu : null
     }
 
     ServiceRef {
-        service: Memory
+        service: root.screenState?.dashboard ? Memory : null
     }
 
     ServiceRef {
-        service: Storage
+        service: root.screenState?.dashboard ? Storage : null
     }
 
     ColumnLayout {

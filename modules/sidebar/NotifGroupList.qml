@@ -23,9 +23,9 @@ LazyListView {
     implicitHeight: contentHeight
 
     spacing: Math.round(Tokens.spacing.extraSmall)
-    asynchronous: true
+    asynchronous: false
 
-    readyDelay: 1
+    readyDelay: 0
     cacheBuffer: 400
     removeDuration: Tokens.anim.durations.normal
 
@@ -100,6 +100,33 @@ LazyListView {
                     x = 0;
                 else
                     modelData?.close();
+            }
+            onClicked: event => {
+                if (event.button !== Qt.LeftButton)
+                    return;
+
+                if (GlobalConfig.notifs.actionOnClick) {
+                    const actions = modelData?.actions ?? [];
+                    const defAction = actions.find(a => a.identifier === "default") || (actions.length > 0 ? actions[0] : null);
+                    let activated = false;
+                    if (defAction?.invoke) {
+                        defAction.invoke();
+                        activated = true;
+                    } else if (Notifs.focusAppWindow(modelData)) {
+                        activated = true;
+                    }
+
+                    if (activated) {
+                        if (!(modelData?.resident ?? false))
+                            modelData?.close();
+                        root.screenState.sidebar = false;
+                        return;
+                    }
+                }
+
+                if (!root.expanded) {
+                    root.requestToggleExpand(true);
+                }
             }
 
             ParallelAnimation {

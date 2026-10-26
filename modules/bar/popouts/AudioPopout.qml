@@ -55,6 +55,80 @@ Item {
             }
         }
 
+        ColumnLayout {
+            visible: !!BluetoothAudio.activeCard
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.small
+            spacing: Tokens.spacing.extraSmall
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Tokens.spacing.small
+
+                StyledText {
+                    text: Tr.tr("Bluetooth Codec")
+                    font: Tokens.font.body.builders.medium.weight(Font.Medium).build()
+                }
+
+                Item { Layout.fillWidth: true }
+
+                StyledRect {
+                    visible: !!BluetoothAudio.activeCard?.activeCodecName
+                    radius: Tokens.rounding.small
+                    color: Qt.alpha(Colours.palette.m3primary, 0.15)
+                    implicitWidth: codecBadge.implicitWidth + Tokens.padding.small
+                    implicitHeight: codecBadge.implicitHeight + 2
+
+                    StyledText {
+                        id: codecBadge
+                        anchors.centerIn: parent
+                        text: BluetoothAudio.activeCard?.activeCodecName ?? ""
+                        font: Tokens.font.label.small
+                        color: Colours.palette.m3primary
+                    }
+                }
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: Tokens.spacing.extraSmall
+
+                Repeater {
+                    model: BluetoothAudio.activeCard ? BluetoothAudio.activeCard.profiles : []
+
+                    StyledRect {
+                        id: chipItem
+                        required property var modelData
+                        readonly property bool isActive: BluetoothAudio.activeCard?.activeProfile === modelData.id
+
+                        radius: Tokens.rounding.full
+                        implicitHeight: chipText.implicitHeight + Tokens.padding.extraSmall
+                        implicitWidth: chipText.implicitWidth + Tokens.padding.medium
+                        color: isActive ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3surfaceContainerHighest, 0.6)
+                        border.color: isActive ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.2)
+                        border.width: 1
+
+                        StateLayer {
+                            radius: parent.radius
+                            onClicked: {
+                                if (BluetoothAudio.activeCard) {
+                                    BluetoothAudio.setProfile(BluetoothAudio.activeCard.name, chipItem.modelData.id);
+                                }
+                            }
+                        }
+
+                        StyledText {
+                            id: chipText
+                            anchors.centerIn: parent
+                            text: chipItem.modelData.codec
+                            font: Tokens.font.label.medium
+                            color: chipItem.isActive ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                        }
+                    }
+                }
+            }
+        }
+
         StyledText {
             Layout.topMargin: Tokens.spacing.medium
             text: Tr.trCtx("Input device", "audio input device")

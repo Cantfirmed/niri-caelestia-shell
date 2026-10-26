@@ -167,7 +167,7 @@
       "windowPreviewSize": 400,
       "trayMenuWidth": 300,
       "batteryWidth": 250,
-      "networkWidth": 320
+      "networkWidth": 360
     },
     "entries": [
       {
@@ -229,6 +229,7 @@
     "enabled": true,
     "showOnHover": true,
     "useWallpaperAvatar": true,
+    "showDeveloper": true,
     "mediaUpdateInterval": 500,
     "resourceUpdateInterval": 1000,
     "dragThreshold": 50,
@@ -294,7 +295,10 @@
     "defaultExpireTimeout": 5000,
     "clearThreshold": 0.3,
     "expandThreshold": 20,
-    "actionOnClick": false,
+    "actionOnClick": true,
+    "autoClearOnFocus": true,
+    "autoClearDelay": 1500,
+    "staleTimeoutHours": 24,
     "groupPreviewNum": 3,
     "sizes": {
       "width": 400,
@@ -406,6 +410,10 @@
       {
         "enabled": true,
         "id": "vpn"
+      },
+      {
+        "enabled": true,
+        "id": "tailscale"
       }
     ],
     "toasts": {

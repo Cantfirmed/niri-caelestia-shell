@@ -14,7 +14,7 @@ Item {
     anchors.fill: parent
 
     visible: opacity > 0
-    opacity: visibilities.shaderSelect ? 1.0 : 0.0
+    opacity: (visibilities?.shaderSelect ?? false) ? 1.0 : 0.0
 
     Behavior on opacity {
         Anim {
