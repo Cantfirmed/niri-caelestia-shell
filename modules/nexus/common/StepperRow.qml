@@ -23,6 +23,11 @@ ConnectedRect {
     Layout.fillWidth: true
     implicitHeight: rowLayout.implicitHeight + rowLayout.anchors.margins * 2
 
+    onValueChanged: {
+        if (spinBox.value !== root.value)
+            spinBox.value = root.value;
+    }
+
     RowLayout {
         id: rowLayout
 
@@ -55,12 +60,18 @@ ConnectedRect {
         }
 
         StyledSpinBox {
+            id: spinBox
+
             from: root.from
             to: root.to
             stepSize: root.stepSize
             value: root.value
+            enabled: root.enabled
             cLayer: 2
-            onValueModified: root.moved(value)
+            onValueModified: {
+                root.value = value;
+                root.moved(value);
+            }
         }
     }
 }

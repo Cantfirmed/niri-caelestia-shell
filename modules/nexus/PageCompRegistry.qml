@@ -211,6 +211,9 @@ QtObject {
                 Component {
                     NotificationsPage {}
                 }
+                Component {
+                    ScreenLockPage {}
+                }
             }
         },
         Component {

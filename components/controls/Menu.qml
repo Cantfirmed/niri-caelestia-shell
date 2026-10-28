@@ -39,6 +39,7 @@ MouseArea {
         return contentWin ? contentWin.interactionWrapper : (win as QsWindow).contentItem;
     }
     anchors.fill: parent
+    visible: opacity > 0
 
     enabled: expanded
     hoverEnabled: expanded
@@ -63,6 +64,9 @@ MouseArea {
 
     Elevation {
         id: menu
+
+        visible: root.opacity > 0
+        enabled: root.expanded
 
         x: {
             watcher.transform; // mapToItem is not reactive so this forces updates
@@ -98,7 +102,8 @@ MouseArea {
 
         MouseArea {
             anchors.fill: parent
-            hoverEnabled: true
+            enabled: root.expanded
+            hoverEnabled: root.expanded
             onWheel: e => e.accepted = true
         }
 

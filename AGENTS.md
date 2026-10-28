@@ -266,6 +266,32 @@ With `Exclusive`, the compositor automatically grants keyboard focus to the shel
 - **Prevent Event Stealing:** Avoid placing a catch-all `MouseArea { anchors.fill: parent }` across the entire modal surface; use `TapHandler { onTapped: root.focus = true }` instead so child controls (`Chip`, `IconButton`, `SearchBar`) receive pointer clicks cleanly.
 - **Button Rows:** Prefer `Flow { Layout.fillWidth: true }` over horizontal `Flickable` for chip/button toolbars to prevent gesture stealing.
 
+### Invisible popup / menu swallowing clicks on adjacent elements
+
+**Symptom**: Buttons or controls directly below a dropdown or menu (such as a `SelectRow` or `SplitButton`) are unclickable, or only clickable in a tiny sliver at the bottom or sides.
+
+**Root cause**: In Qt Quick, setting `opacity: 0` hides an item visually but **does not prevent it or its children from receiving pointer/mouse events**. If a popup or dropdown component (e.g. `Menu.qml`) animates opacity to 0 when closed but does not set `visible: false` or disable its child `MouseArea`s, the invisible popup continues to float in the scene graph and intercepts pointer clicks intended for underlying controls.
+
+**Fix**:
+1. Add `visible: opacity > 0` on the root popup or overlay item so the compositor/scene graph completely excludes it from hit testing when closed.
+2. Explicitly bind `enabled: root.expanded` and `hoverEnabled: root.expanded` on all internal `MouseArea` elements inside the popup.
+
+### DoubleSpinBox / SpinBox custom indicator buttons disabled or unclickable
+
+**Symptom**: `+` and `-` buttons in a custom `StyledSpinBox` or `DoubleSpinBox` do not respond to clicks, or clicking does nothing.
+
+**Root causes**:
+1. **Undefined indicator enabled property**: Unlike QML integer `SpinBox`, `QtQuick.Templates.DoubleSpinBox` does not have `up.enabled` or `down.enabled` (`root.down.enabled` is `undefined`). Binding `disabled: !root.enabled || !root.down.enabled` evaluates `!undefined` as `true`, permanently disabling the button.
+2. **Event consumption by child MouseAreas**: If the indicator is an `IconButton` or `ButtonBase` containing an inner `MouseArea` / `StateLayer`, the child consumes pointer clicks. `DoubleSpinBox` will never receive the click unless the button declares an explicit `onClicked: root.increase()` / `onClicked: root.decrease()` handler.
+3. **Timer cancellation on quick clicks**: Using `Timer { running: pressed; triggeredOnStart: true }` without an `onClicked` handler fails because a standard click (50–100ms) drops `pressed` back to `false` before `onTriggered` executes in the Qt event loop, stopping the timer prematurely.
+
+**Fix**:
+- Bound disabled state directly against values:
+  - Down button: `disabled: !root.enabled || root.value <= root.from`
+  - Up button: `disabled: !root.enabled || root.value >= root.to`
+- Add explicit click handlers: `onClicked: { if (!timer.didRepeat && root.value < root.to) root.increase(); }`
+- Use `triggeredOnStart: false` on the repeat timer so single clicks trigger via `onClicked`, while holding past `repeatRate` triggers smooth auto-repeat.
+
 ### Hover zones not working on occupied workspaces
 
 **Root cause**: `dragMaskPadding` in `ContentWindow.qml` had early-return checks that returned `0` when windows existed on the workspace (both Hyprland `windows > 0` and Niri `NiriIpc.windows.some(...)`). This zeroed out the mask padding, collapsing the hover zones.

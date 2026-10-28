@@ -103,9 +103,9 @@ QtObject {
         {
             label: Tr.tr("Services"),
             icon: "build",
-            description: Tr.tr("Poll intervals, lyrics backend"),
+            description: Tr.tr("Screen off & lock, poll intervals, lyrics"),
             category: "shell",
-            keywords: "services daemon background polling lyrics mpris notifications intervals"
+            keywords: "services daemon background polling lyrics mpris notifications intervals screen lock auto-lock timeout dpms idle power sleep display standby power-off"
         },
         {
             label: Tr.tr("Language & region"),

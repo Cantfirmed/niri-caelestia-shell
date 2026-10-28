@@ -11,7 +11,7 @@ DoubleSpinBox {
     property int repeatDecay: 50
     property int cLayer: 1
 
-    function increase(): void {
+    function increase() {
         let newValue = Math.min(to, value + stepSize);
         // Round to avoid floating point precision errors
         const decimals = stepSize < 1 ? Math.max(1, Math.ceil(-Math.log10(stepSize))) : 0;
@@ -20,7 +20,7 @@ DoubleSpinBox {
         valueModified();
     }
 
-    function decrease(): void {
+    function decrease() {
         let newValue = Math.max(from, value - stepSize);
         // Round to avoid floating point precision errors
         const decimals = stepSize < 1 ? Math.max(1, Math.ceil(-Math.log10(stepSize))) : 0;
@@ -36,8 +36,8 @@ DoubleSpinBox {
     implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
     implicitHeight: Math.max(up.indicator.implicitHeight, down.indicator.implicitHeight, contentItem.implicitHeight) + topPadding + bottomPadding
 
-    leftPadding: up.indicator.implicitWidth + Tokens.spacing.extraSmall / 2
-    rightPadding: down.indicator.implicitWidth + Tokens.spacing.extraSmall / 2
+    leftPadding: down.indicator.implicitWidth + Tokens.spacing.extraSmall / 2
+    rightPadding: up.indicator.implicitWidth + Tokens.spacing.extraSmall / 2
 
     contentItem: TextFieldBase {
         text: root.textFromValue(root.value, root.locale)
@@ -61,6 +61,10 @@ DoubleSpinBox {
     down.indicator: IconButton {
         id: downButton
 
+        anchors.left: parent.left
+        anchors.verticalCenter: parent.verticalCenter
+        z: 2
+
         topRightRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
         bottomRightRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
 
@@ -71,7 +75,11 @@ DoubleSpinBox {
         padding: Tokens.padding.extraSmall
         isRound: true
         label.anchors.horizontalCenterOffset: pressed ? 0 : 2
-        disabled: !enabled
+        disabled: !root.enabled || root.value <= root.from
+        onClicked: {
+            if (!timer.didRepeat && root.value > root.from)
+                root.decrease();
+        }
 
         Behavior on topRightRadius {
             Anim {
@@ -96,6 +104,8 @@ DoubleSpinBox {
         id: upButton
 
         anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        z: 2
 
         topLeftRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
         bottomLeftRadius: pressed ? Tokens.rounding.small : Tokens.rounding.extraSmall
@@ -107,7 +117,11 @@ DoubleSpinBox {
         padding: Tokens.padding.extraSmall
         isRound: true
         label.anchors.horizontalCenterOffset: pressed ? 0 : -2
-        disabled: !enabled
+        disabled: !root.enabled || root.value >= root.to
+        onClicked: {
+            if (!timer.didRepeat && root.value < root.to)
+                root.increase();
+        }
 
         Behavior on topLeftRadius {
             Anim {
@@ -131,19 +145,24 @@ DoubleSpinBox {
     Timer {
         id: timer
 
-        running: upButton.pressed || downButton.pressed
+        property bool didRepeat: false
+
+        running: (upButton.pressed || downButton.pressed) && root.enabled
         onRunningChanged: {
-            if (!running)
+            if (!running) {
                 interval = root.repeatRate;
+                didRepeat = false;
+            }
         }
 
         interval: root.repeatRate
         repeat: true
-        triggeredOnStart: true
+        triggeredOnStart: false
         onTriggered: {
-            if (upButton.pressed)
+            didRepeat = true;
+            if (upButton.pressed && root.value < root.to)
                 root.increase();
-            else if (downButton.pressed)
+            else if (downButton.pressed && root.value > root.from)
                 root.decrease();
             if (interval > root.repeatDecay)
                 interval -= root.repeatDecay;

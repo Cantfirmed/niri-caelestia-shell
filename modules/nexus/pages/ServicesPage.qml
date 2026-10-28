@@ -45,6 +45,39 @@ PageBase {
 
     title: Tr.tr("Services")
 
+    readonly property string screenLockSummary: {
+        const list = GlobalConfig.general.idle.timeouts;
+        let screenStr = Tr.tr("Never");
+        let lockStr = Tr.tr("Never");
+
+        for (let i = 0; i < list.count; i++) {
+            const item = list.at(i);
+            if (!item)
+                continue;
+            const action = item.idleAction;
+            const enabled = item.enabled ?? true;
+            if (action === "dpms off" && enabled) {
+                screenStr = root.formatShortDuration(item.timeout ?? 300);
+            } else if (action === "lock" && enabled) {
+                lockStr = root.formatShortDuration(item.timeout ?? 180);
+            }
+        }
+
+        return Tr.tr("Screen off: %1 • Lock: %2").arg(screenStr).arg(lockStr);
+    }
+
+    function formatShortDuration(seconds) {
+        if (!seconds || seconds <= 0)
+            return Tr.tr("Never");
+        if (seconds < 60)
+            return `${seconds}s`;
+        const mins = Math.floor(seconds / 60);
+        if (mins < 60)
+            return `${mins}m`;
+        const hrs = Math.floor(mins / 60);
+        return `${hrs}h`;
+    }
+
     ColumnLayout {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
@@ -79,6 +112,20 @@ PageBase {
             text: Tr.tr("Notifications")
             subtext: Tr.tr("Notifications, toasts, timeouts")
             onClicked: root.nState.openSubPage(1)
+        }
+
+        // Screen & Lock
+        SectionHeader {
+            text: Tr.tr("Screen & Lock")
+        }
+
+        NavRow {
+            first: true
+            last: true
+            icon: "screen_lock_landscape"
+            text: Tr.tr("Screen timeout & Lock")
+            subtext: root.screenLockSummary
+            onClicked: root.nState.openSubPage(2)
         }
 
         // Polling
