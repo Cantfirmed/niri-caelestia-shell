@@ -20,6 +20,7 @@ binds {
     Mod+Tab repeat=false { toggle-overview; }
     Mod+Shift+Slash { show-hotkey-overlay; }
     Ctrl+Shift+Escape hotkey-overlay-title="Btop" { spawn-sh "command -v btop && kitty -1 fish -c btop"; }
+    Mod+Alt+M hotkey-overlay-title="[Window] Mute Focused Window" { spawn "bash" "/home/patrick/.config/niri/mute-window.sh"; }
 
     // === Application Launchers ===
     Mod+Return hotkey-overlay-title="Open Terminal" { spawn "kitty"; }

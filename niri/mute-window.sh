@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Ensure NIRI_SOCKET is available
+if [ -z "$NIRI_SOCKET" ]; then
+    for sock in /run/user/$UID/niri*.sock; do
+        if [ -S "$sock" ]; then
+            export NIRI_SOCKET="$sock"
+            break
+        fi
+    done
+fi
+
 # Get focused window info
 if [ -z "$1" ]; then
     WINDOW_INFO=$(niri msg --json focused-window)
