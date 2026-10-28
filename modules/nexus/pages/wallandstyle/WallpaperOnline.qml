@@ -16,8 +16,8 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
-    readonly property string pythonPath: (Quickshell.env("CAELESTIA_VIRTUAL_ENV") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quickshell/.venv") + "/bin/python3"
-    readonly property string scriptDir: Paths.toLocalFile(Qt.resolvedUrl("../../../../scripts/webWallpaper/wallhaven"))
+    readonly property string pythonPath: Quickshell.env("CAELESTIA_VIRTUAL_ENV") ? (Quickshell.env("CAELESTIA_VIRTUAL_ENV") + "/bin/python3") : "python3"
+    readonly property string scriptDir: Quickshell.shellPath("scripts/webWallpaper/wallhaven")
     property string keyword: ""
     property bool loading: false
     property bool downloading: false
@@ -26,6 +26,10 @@ PageBase {
     property int lastApiPage: 1
 
     property Process listProcess: Process {
+        onExited: (exitCode, exitStatus) => {
+            root.loading = false;
+        }
+
         stdout: StdioCollector {
             onStreamFinished: {
                 root.loading = false;
@@ -60,6 +64,11 @@ PageBase {
 
     property Process downloadProcess: Process {
         property string currentSlug: ""
+
+        onExited: (exitCode, exitStatus) => {
+            root.downloading = false;
+            downloadProcess.currentSlug = "";
+        }
 
         stdout: StdioCollector {
             onStreamFinished: {
@@ -105,6 +114,9 @@ PageBase {
         if (keyword) {
             args.splice(3, 0, keyword);
         }
+        if (listProcess.running) {
+            listProcess.running = false;
+        }
         listProcess.command = args;
         listProcess.running = true;
     }
@@ -120,6 +132,9 @@ PageBase {
             "--dir", Paths.wallsdir,
             "--json"
         ];
+        if (downloadProcess.running) {
+            downloadProcess.running = false;
+        }
         downloadProcess.command = args;
         downloadProcess.running = true;
     }
@@ -168,7 +183,7 @@ PageBase {
                     font: Tokens.font.body.large
 
                     onAccepted: {
-                        root.keyword = text;
+                        root.keyword = text.trim();
                         root.fetchWallpapers(1);
                     }
                 }
@@ -346,7 +361,7 @@ PageBase {
                                     if (Math.abs(r - 3.56) < 0.05) return "32:9";
                                     return delegateRoot.modelData.ratio + " Ratio";
                                 }
-                                font: Tokens.font.label.extraSmall
+                                font: Tokens.font.label.small
                                 color: Colours.palette.m3outline
                                 elide: Text.ElideRight
                             }

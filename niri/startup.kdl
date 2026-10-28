@@ -2,8 +2,9 @@
 spawn-at-startup "/home/patrick/Projects/DotfileManager/dfm/target/release/dotfile-manager" "--apply"
 // --- Startup Processes ---
 spawn-sh-at-startup "dbus-update-activation-environment --systemd --all"
-spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_ID"
-spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP"
+spawn-sh-at-startup "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_ID"
+spawn-sh-at-startup "systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP"
+spawn-at-startup "xwayland-satellite"
 
 
 spawn-at-startup "bash" "-c" "systemctl --user import-environment XDG_MENU_PREFIX && kbuildsycoca6"

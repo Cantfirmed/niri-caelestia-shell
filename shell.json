@@ -33,7 +33,7 @@
     }
   },
   "general": {
-    "isDistLogo": true,
+    "logo": "cachyos",
     "apps": {
       "terminal": [
         "foot"

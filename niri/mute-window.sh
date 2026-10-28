@@ -1,6 +1,6 @@
 #!/bin/bash
-# Mute/unmute the focused window's audio via PulseAudio/PipeWire.
 
+# Get focused window info
 if [ -z "$1" ]; then
     WINDOW_INFO=$(niri msg --json focused-window)
 else
@@ -15,14 +15,16 @@ if [ -z "$PID" ] || [ "$PID" == "null" ]; then
     exit 0
 fi
 
+# Try to find sink inputs by PID
 SINK_INPUTS=$(pactl list sink-inputs | awk -v pid="$PID" '
     /^Sink Input #/ { id=$3 }
-    /application.process.id = "/ {
-        gsub(/"/, "", $3);
-        if ($3 == pid) print id
+    /application.process.id = "/ { 
+        gsub(/"/, "", $3); 
+        if ($3 == pid) print id 
     }
 ')
 
+# Fallback: if no sink inputs found by PID, try to find by app_id or title (for Xwayland/Wine)
 if [ -z "$SINK_INPUTS" ]; then
     SINK_INPUTS=$(pactl list sink-inputs | awk -v appid="$APP_ID" -v title="$TITLE" '
         /^Sink Input #/ { id=$3 }
@@ -43,12 +45,12 @@ if [ -n "$SINK_INPUTS" ]; then
         $0 ~ "Sink Input " id { found=1 }
         found && /Mute:/ { print $2; exit }
     ')
-
+    
     for ID in $SINK_INPUTS; do
         CLEAN_ID=$(echo "$ID" | sed 's/#//')
         pactl set-sink-input-mute "$CLEAN_ID" toggle
     done
-
+    
     if [ "$IS_MUTED" == "yes" ]; then
         notify-send -h boolean:transient:true -t 1000 -a "niri" "Audio" "Unmuted: $TITLE" -i audio-volume-high
     else

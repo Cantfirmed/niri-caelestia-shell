@@ -6,11 +6,15 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export QML2_IMPORT_PATH="$SCRIPT_DIR/build/qml:${QML2_IMPORT_PATH:-}"
 export QML_IMPORT_PATH="$SCRIPT_DIR/build/qml:${QML_IMPORT_PATH:-}"
+export LD_LIBRARY_PATH="$SCRIPT_DIR/build/lib:${LD_LIBRARY_PATH:-}"
 
 # Prevent Quickshell from opening an interactive crash dialog or popups,
 # which causes futex deadlocks when crashing without an active GUI surface.
 export QS_DISABLE_CRASH_HANDLER=1
 export QS_NO_RELOAD_POPUP=1
+
+# Silence harmless DBus property errors (e.g. Discord SNI omitting IconName, transient MPRIS errors)
+export QT_LOGGING_RULES="quickshell.dbus.properties.warning=false;${QT_LOGGING_RULES:-}"
 
 # Ensure Wayland and Niri environment variables are populated
 if [ -z "${WAYLAND_DISPLAY:-}" ]; then
@@ -31,6 +35,8 @@ if [ -z "${NIRI_SOCKET:-}" ]; then
     done
 fi
 
+export DISPLAY="${DISPLAY:-:0}"
+
 LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/caelestia/quickshell-wrapper.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 exec >> "$LOG_FILE" 2>&1
@@ -40,10 +46,13 @@ log_msg() {
 }
 
 while true; do
+    export DISPLAY="${DISPLAY:-:0}"
     export QML2_IMPORT_PATH="$SCRIPT_DIR/build/qml:${QML2_IMPORT_PATH:-}"
     export QML_IMPORT_PATH="$SCRIPT_DIR/build/qml:${QML_IMPORT_PATH:-}"
+    export LD_LIBRARY_PATH="$SCRIPT_DIR/build/lib:${LD_LIBRARY_PATH:-}"
     export QS_DISABLE_CRASH_HANDLER=1
     export QS_NO_RELOAD_POPUP=1
+    export QT_LOGGING_RULES="quickshell.dbus.properties.warning=false;${QT_LOGGING_RULES:-}"
 
     log_msg "[quickshell-wrapper] Starting Quickshell..."
     if [ -x "$HOME/.local/bin/quickshell" ]; then
@@ -67,11 +76,11 @@ while true; do
                 continue
             fi
 
-            # Ping Quickshell IPC
-            if ! timeout 3s qs -c niri-caelestia-shell ipc call lock isLocked >/dev/null 2>&1; then
+            # Ping Quickshell IPC with relaxed threshold to prevent false-positive kills during heavy UI/DBus load
+            if ! timeout 6s qs -c niri-caelestia-shell ipc call lock isLocked >/dev/null 2>&1; then
                 CONSECUTIVE_FAILS=$((CONSECUTIVE_FAILS + 1))
-                if [ $CONSECUTIVE_FAILS -ge 3 ]; then
-                    log_msg "[quickshell-watchdog] Quickshell (PID $QS_PID) unresponsive to IPC for 3 consecutive checks. Terminating..."
+                if [ $CONSECUTIVE_FAILS -ge 5 ]; then
+                    log_msg "[quickshell-watchdog] Quickshell (PID $QS_PID) unresponsive to IPC for 5 consecutive checks (~30-40s). Terminating..."
                     kill -9 "$QS_PID" 2>/dev/null
                     break
                 fi
@@ -79,7 +88,7 @@ while true; do
                 CONSECUTIVE_FAILS=0
             fi
 
-            sleep 5
+            sleep 6
         done
     ) &
     WATCHDOG_PID=$!

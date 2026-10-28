@@ -173,7 +173,7 @@ Singleton {
             "export CAELESTIA_DATA_DIR=\"$1\" && exec \"$2\" \"$3\"",
             "--",
             Paths.config + "/data",
-            (Quickshell.env("CAELESTIA_VIRTUAL_ENV") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quickshell/.venv") + "/bin/python3",
+            (Quickshell.env("CAELESTIA_VIRTUAL_ENV") ? (Quickshell.env("CAELESTIA_VIRTUAL_ENV") + "/bin/python3") : "python3"),
             root._rootPath + "/scripts/novel/main.py"
         ]
         running: false // Started by healthPoller if needed

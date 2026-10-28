@@ -24,6 +24,7 @@ depends=(
   'qt6-base'
   'qt6-declarative'
   'qt6-shadertools'
+  'qt6-m3shapes-git'
 
   # Core utilities
   'wl-clipboard'

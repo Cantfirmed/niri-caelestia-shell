@@ -33,7 +33,21 @@ DISCONNECT_COUNT = 0
 LAST_LID_CLOSED = None
 
 
+def ensure_niri_socket():
+    """Ensure NIRI_SOCKET is set in os.environ by discovering active niri socket if needed."""
+    if "NIRI_SOCKET" in os.environ and os.path.exists(os.environ["NIRI_SOCKET"]):
+        return True
+    uid = os.getuid()
+    socks = glob.glob(f"/run/user/{uid}/niri*.sock")
+    if socks:
+        socks.sort(key=lambda s: os.path.getmtime(s), reverse=True)
+        os.environ["NIRI_SOCKET"] = socks[0]
+        return True
+    return False
+
+
 def run_cmd(cmd):
+    ensure_niri_socket()
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
 
@@ -71,18 +85,41 @@ def get_drm_status():
 
 
 def is_session_locked():
-    """Check if session is currently locked via Quickshell IPC or lockscreen."""
+    """Check if session is currently locked via Quickshell IPC or logind."""
+    uid = os.getuid()
     try:
+        ensure_niri_socket()
+        env = dict(os.environ)
+        if "WAYLAND_DISPLAY" not in env:
+            for sock in glob.glob(f"/run/user/{uid}/wayland-*"):
+                env["WAYLAND_DISPLAY"] = os.path.basename(sock)
+                break
         res = subprocess.run(
             ["qs", "-c", "niri-caelestia-shell", "ipc", "call", "lock", "isLocked"],
             capture_output=True,
             text=True,
-            timeout=0.5,
+            timeout=2.0,
+            env=env,
         )
-        if res.returncode == 0 and res.stdout.strip() == "true":
+        if res.returncode == 0:
+            return res.stdout.strip() == "true"
+    except Exception:
+        pass
+
+    # Fallback when Quickshell is temporarily restarting: check logind
+    try:
+        session_id = os.environ.get("XDG_SESSION_ID", "2")
+        res = subprocess.run(
+            ["loginctl", "show-session", session_id, "-p", "LockedHint"],
+            capture_output=True,
+            text=True,
+            timeout=1.0,
+        )
+        if res.returncode == 0 and "LockedHint=yes" in res.stdout:
             return True
     except Exception:
         pass
+
     return False
 
 
@@ -201,8 +238,8 @@ def check_and_fix_displays():
 
     has_active_display = any(bool(data.get("logical")) for data in outputs.values())
 
-    # Count consecutive checks where external monitor is confirmed absent in both DRM and Niri
-    if not external_connected and not has_external_niri:
+    # Count consecutive checks where external monitor is confirmed absent in DRM
+    if not external_connected:
         DISCONNECT_COUNT += 1
     else:
         DISCONNECT_COUNT = 0
@@ -210,14 +247,15 @@ def check_and_fix_displays():
     should_revert = False
     reason = ""
 
-    # Only revert to internal display if the external monitor is confirmed absent
-    # across at least 3 consecutive cycles (~4.5s) AND internal screen is inactive
-    if not internal_is_active and not external_is_present and DISCONNECT_COUNT >= 3:
+    # Immediate black screen recovery:
+    # If all displays are inactive (black screen), lid is open, session is unlocked, and no external monitor is physically connected,
+    # recover immediately without waiting 4.5s.
+    if not has_active_display and not external_connected:
+        should_revert = True
+        reason = "All displays inactive, lid is open, and no external monitor is physically connected."
+    elif not internal_is_active and not external_is_present and DISCONNECT_COUNT >= 3:
         should_revert = True
         reason = f"External monitor confirmed disconnected ({DISCONNECT_COUNT} checks), and internal screen is inactive."
-    elif not has_active_display and not external_is_present and DISCONNECT_COUNT >= 3:
-        should_revert = True
-        reason = f"All displays inactive and external monitor confirmed disconnected ({DISCONNECT_COUNT} checks)."
 
     if should_revert:
         LAST_REVERT_TIME = now
@@ -293,7 +331,26 @@ def main():
     except IOError:
         sys.exit(0)
 
+    # Check if this machine is a desktop (no internal eDP/LVDS/DSI display hardware)
+    has_internal_hw = any(
+        os.path.basename(p).split("-", 1)[-1].startswith(("eDP", "LVDS", "DSI"))
+        for p in glob.glob("/sys/class/drm/card*-*")
+    )
+    if not has_internal_hw:
+        print("[DisplayMonitor] Desktop system detected (no internal panel). Monitor daemon idle.", flush=True)
+        while True:
+            time.sleep(3600)
+
     print("[DisplayMonitor] Starting Niri display monitor daemon...", flush=True)
+
+    # Initial sanity check on startup
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    display_script = os.path.join(script_dir, "niri-display.py")
+    try:
+        if os.path.exists(display_script):
+            subprocess.run([display_script, "--sanity-check"])
+    except Exception as e:
+        print(f"[DisplayMonitor] Sanity check error: {e}", file=sys.stderr, flush=True)
 
     # Initial check on startup
     check_and_fix_displays()
@@ -302,26 +359,41 @@ def main():
 
     while True:
         try:
-            # Connect to Niri event-stream
-            proc = subprocess.Popen(
-                ["niri", "msg", "--json", "event-stream"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                text=True,
-                bufsize=1,
-            )
+            ensure_niri_socket()
+            proc = None
+            if "NIRI_SOCKET" in os.environ and os.path.exists(os.environ["NIRI_SOCKET"]):
+                proc = subprocess.Popen(
+                    ["niri", "msg", "--json", "event-stream"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    bufsize=1,
+                )
 
             while True:
-                watch_fds = [proc.stdout]
+                watch_fds = []
+                if proc and proc.stdout and proc.poll() is None:
+                    watch_fds.append(proc.stdout)
                 if netlink_sock:
                     watch_fds.append(netlink_sock)
 
                 # Wait with 1.5s timeout as a periodic safety net
+                last_loop_time = time.time()
                 readable, _, _ = select.select(watch_fds, [], [], 1.5)
+                loop_elapsed = time.time() - last_loop_time
+                if loop_elapsed > 3.5:
+                    print(
+                        f"[DisplayMonitor] System resumed from sleep (elapsed {loop_elapsed:.1f}s). Granting 8s grace period...",
+                        flush=True,
+                    )
+                    LAST_UNLOCK_TIME = time.time() + 3.0
+                    DISCONNECT_COUNT = 0
 
                 if not readable:
                     # Timeout fired — periodic check
                     check_and_fix_displays()
+                    if proc and proc.poll() is not None:
+                        break
                     continue
 
                 need_check = False
@@ -334,23 +406,30 @@ def main():
                                 need_check = True
                         except Exception:
                             pass
-                    elif fd == proc.stdout:
+                    elif proc and proc.stdout and fd == proc.stdout:
                         line = proc.stdout.readline()
                         if not line:
-                            # Process closed
+                            # Process closed or EOF
                             break
                         # Any workspace, config, or window change can signal layout shift
                         if any(k in line for k in ("WorkspacesChanged", "ConfigLoaded", "OutputsChanged")):
                             need_check = True
 
-                if proc.poll() is not None:
+                if proc and proc.poll() is not None:
                     break
 
                 if need_check:
                     time.sleep(0.3)  # Brief pause for kernel/compositor to settle
                     check_and_fix_displays()
 
-            proc.wait()
+            if proc:
+                try:
+                    proc.wait(timeout=1.0)
+                except Exception:
+                    proc.kill()
+
+            # Always perform check when loop exits or reconnects
+            check_and_fix_displays()
         except Exception as e:
             print(f"[DisplayMonitor] Error in monitor loop: {e}", file=sys.stderr, flush=True)
 

@@ -46,6 +46,26 @@ Singleton {
         return junk.includes(t.toLowerCase()) ? "" : t;
     }
 
+    function resolveLogo(name: string): string {
+        if (!name || name === "caelestia")
+            return "";
+        if (name.startsWith("/") || name.startsWith("~"))
+            return "file://" + Paths.absolutePath(name);
+        if (name.startsWith("file://"))
+            return name;
+
+        const themed = Quickshell.iconPath(name, true)
+            || Quickshell.iconPath(`distributor-logo-${name}`, true)
+            || (name !== "caelestia" ? Quickshell.iconPath("distributor-logo", true) : "");
+        if (themed)
+            return themed;
+
+        if (name === "cachyos")
+            return Qt.resolvedUrl(`${Quickshell.shellDir}/assets/cachyos.svg`);
+
+        return "";
+    }
+
     FileView {
         id: osRelease
 
@@ -60,16 +80,24 @@ Singleton {
             root.osId = fd("ID");
             root.osIdLike = fd("ID_LIKE").split(" ");
 
-            const logo = Quickshell.iconPath(fd("LOGO"), true);
-            if (GlobalConfig.general.logo === "caelestia") {
+            const configuredLogo = GlobalConfig.general.logo;
+            if (configuredLogo === "caelestia") {
                 root.osLogo = Qt.resolvedUrl(`${Quickshell.shellDir}/assets/logo.svg`);
                 root.isDefaultLogo = true;
-            } else if (GlobalConfig.general.logo) {
-                root.osLogo = Quickshell.iconPath(GlobalConfig.general.logo, true) || "file://" + Paths.absolutePath(GlobalConfig.general.logo);
+            } else if (configuredLogo) {
+                const resolved = root.resolveLogo(configuredLogo);
+                root.osLogo = resolved || "file://" + Paths.absolutePath(configuredLogo);
                 root.isDefaultLogo = false;
-            } else if (logo) {
-                root.osLogo = logo;
-                root.isDefaultLogo = false;
+            } else {
+                const target = fd("LOGO") || fd("ID") || "";
+                const logo = root.resolveLogo(target);
+                if (logo) {
+                    root.osLogo = logo;
+                    root.isDefaultLogo = false;
+                } else {
+                    root.osLogo = Qt.resolvedUrl(`${Quickshell.shellDir}/assets/logo.svg`);
+                    root.isDefaultLogo = true;
+                }
             }
         }
     }

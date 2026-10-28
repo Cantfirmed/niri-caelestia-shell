@@ -7,3 +7,10 @@ logs
 *.log
 __pycache__/
 .dfm_setup_done
+*.lock
+*.bak*
+niri.bak*
+niri/dms/
+niri/dms.disabled-by-dfm/
+niri/niri/
+niri/shaders/

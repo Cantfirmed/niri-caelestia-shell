@@ -3,19 +3,4 @@
 // Generated automatically by Caelestia Nexus Settings. Edits may be overwritten.
 // ============================================================================
 
-// Rule: Steam
-window-rule {
-    match app-id="steam"
-    match app-id="steam.desktop"
-    open-floating false
-    default-column-width { proportion 0.50; }
-}
-
-// Rule: discord
-window-rule {
-    match app-id="discord"
-    match app-id="discord.desktop"
-    open-floating false
-    default-column-width { proportion 0.50; }
-}
-
+// Tiling rules disabled or empty

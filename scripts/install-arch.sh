@@ -57,7 +57,7 @@ cd "$INSTALL_DIR"
 # ── Build C++ plugin ──────────────────────────────────────────────────
 if [ ! -d build/plugin ]; then
     info "Building C++ QML plugin..."
-    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DVERSION=2.5.0
     cmake --build build
     ok "Plugin built"
 else

@@ -7,5 +7,6 @@ environment {
     QT_QPA_PLATFORM "wayland"
     ELECTRON_OZONE_PLATFORM_HINT "auto"
     MOZ_ENABLE_WAYLAND "1"
-    SDL_VIDEODRIVER "wayland"
+    SDL_VIDEODRIVER "wayland,x11"
+    DISPLAY ":0"
 }

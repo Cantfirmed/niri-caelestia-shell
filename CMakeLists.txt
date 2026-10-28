@@ -8,7 +8,7 @@ if(NOT DEFINED VERSION)
     )
 
     if("${VERSION}" STREQUAL "")
-        message(FATAL_ERROR "VERSION is not set and failed to get from git")
+        set(VERSION "2.5.0")
     endif()
 endif()
 
