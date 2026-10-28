@@ -21,13 +21,7 @@ Singleton {
     }
 
     function forActive(): ScreenState {
-        if (typeof Hypr !== "undefined" && Hypr.focusedMonitor) {
-            const mon = Hypr.focusedMonitor;
-            for (const s of states.instances)
-                if (Hypr.monitorFor(s.modelData) === mon)
-                    return s;
-        }
-        const targetName = typeof Niri !== "undefined" ? Niri.focusedMonitorName : "";
+        const targetName = Compositor.focusedMonitorName;
         if (targetName) {
             for (const s of states.instances)
                 if (s.modelData && s.modelData.name === targetName)
@@ -46,13 +40,7 @@ Singleton {
     }
 
     function componentsForActive(): Components {
-        if (typeof Hypr !== "undefined" && Hypr.focusedMonitor) {
-            const mon = Hypr.focusedMonitor;
-            for (const c of components.instances)
-                if (Hypr.monitorFor(c.modelData) === mon)
-                    return c;
-        }
-        const targetName = typeof Niri !== "undefined" ? Niri.focusedMonitorName : "";
+        const targetName = Compositor.focusedMonitorName;
         if (targetName) {
             for (const c of components.instances)
                 if (c.modelData && c.modelData.name === targetName)

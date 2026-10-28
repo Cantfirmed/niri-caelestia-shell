@@ -16,17 +16,19 @@ Card {
 
     readonly property list<var> presetsList: [
         { id: "off", label: qsTr("Off"), icon: "block", hotkey: "0", subtext: qsTr("Vanilla") },
-        { id: "focus", label: qsTr("Active Focus"), icon: "crop_free", hotkey: "1", subtext: qsTr("Highlight active") },
-        { id: "locator", label: qsTr("Mouse Locator"), icon: "near_me", hotkey: "2", subtext: qsTr("Adaptive halo") },
-        { id: "presentation", label: qsTr("Presentation"), icon: "present_to_all", hotkey: "3", subtext: qsTr("Spotlight beam") },
-        { id: "retro", label: qsTr("Retro CRT"), icon: "tv", hotkey: "4", subtext: qsTr("Scanlines") },
-        { id: "cyberpunk", label: qsTr("Cyberpunk"), icon: "auto_awesome", hotkey: "5", subtext: qsTr("Rainbow FX") }
+        { id: "ambient-glow", label: qsTr("Ambient Glow"), icon: "blur_on", hotkey: "1", subtext: qsTr("Soft theme spill") },
+        { id: "minimal-clean", label: qsTr("Minimal Clean"), icon: "crop_free", hotkey: "2", subtext: qsTr("Subtle 1px") },
+        { id: "focus", label: qsTr("Active Focus"), icon: "lens_blur", hotkey: "3", subtext: qsTr("Pulse ring") },
+        { id: "locator", label: qsTr("Mouse Locator"), icon: "near_me", hotkey: "4", subtext: qsTr("Adaptive halo") },
+        { id: "presentation", label: qsTr("Presentation"), icon: "present_to_all", hotkey: "5", subtext: qsTr("Spotlight beam") },
+        { id: "retro", label: qsTr("Retro CRT"), icon: "tv", hotkey: "6", subtext: qsTr("Scanlines") },
+        { id: "cyberpunk", label: qsTr("Cyberpunk"), icon: "auto_awesome", hotkey: "7", subtext: qsTr("Rainbow FX") }
     ]
 
     variant: Card.Variant.Elevated
     padding: Tokens.padding.large
     radius: Tokens.rounding.large
-    implicitWidth: 800
+    implicitWidth: 840
     implicitHeight: mainLayout.implicitHeight + padding * 2
     focus: true
 
@@ -37,18 +39,24 @@ Card {
             BiriShaders.applyPreset("off");
             event.accepted = true;
         } else if (event.key === Qt.Key_1) {
-            BiriShaders.applyPreset("focus");
+            BiriShaders.applyPreset("ambient-glow");
             event.accepted = true;
         } else if (event.key === Qt.Key_2) {
-            BiriShaders.applyPreset("locator");
+            BiriShaders.applyPreset("minimal-clean");
             event.accepted = true;
         } else if (event.key === Qt.Key_3) {
-            BiriShaders.applyPreset("presentation");
+            BiriShaders.applyPreset("focus");
             event.accepted = true;
         } else if (event.key === Qt.Key_4) {
-            BiriShaders.applyPreset("retro");
+            BiriShaders.applyPreset("locator");
             event.accepted = true;
         } else if (event.key === Qt.Key_5) {
+            BiriShaders.applyPreset("presentation");
+            event.accepted = true;
+        } else if (event.key === Qt.Key_6) {
+            BiriShaders.applyPreset("retro");
+            event.accepted = true;
+        } else if (event.key === Qt.Key_7) {
             BiriShaders.applyPreset("cyberpunk");
             event.accepted = true;
         } else if (event.key === Qt.Key_Minus || event.key === Qt.Key_BracketLeft) {
@@ -590,7 +598,7 @@ Card {
 
             StyledText {
                 Layout.fillWidth: true
-                text: qsTr("Hotkeys: [0-5] Presets · [- / +] Spread · [Esc] Dismiss")
+                text: qsTr("Hotkeys: [0-7] Presets · [- / +] Spread · [Esc] Dismiss")
                 font: Tokens.font.body.small
                 color: Colours.palette.m3outline
             }

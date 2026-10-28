@@ -9,13 +9,10 @@ import Caelestia.Config
 // 3 Styled Radial buttons
 RowLayout {
     id: root
-    property var client: Niri.focusedWindow
+    property var client: Compositor.focusedWindow
     property int implicitSize: Appearance.font.size.bodyMedium
 
     spacing: Appearance.padding.xs / 2
-
-    // Pin feature removed - Niri doesn't support window pinning
-    // TODO: Implement alternative if Niri adds pin support in future
 
     StyledRadialButton {
         disabled: !root.client
@@ -27,7 +24,7 @@ RowLayout {
         icon: root.client.is_floating ? "grid_view" : "picture_in_picture"
         function onClicked(): void {
             console.log("Toggling floating for", root.client?.id);
-            Niri.toggleWindowFloating(root.client?.id);
+            Compositor.toggleWindowFloating(root.client?.id);
         }
     }
 
@@ -45,7 +42,7 @@ RowLayout {
 
             icon: "fullscreen"
             function onClicked(): void {
-                Niri.toggleMaximize();
+                Compositor.toggleMaximize();
             }
         }
     }
@@ -59,7 +56,7 @@ RowLayout {
         implicitSize: root.implicitSize
 
         function onClicked(): void {
-            Niri.closeWindow(root.client?.id);
+            Compositor.closeWindow(root.client?.id);
         }
     }
 }

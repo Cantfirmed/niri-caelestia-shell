@@ -20,7 +20,7 @@ Item {
     readonly property ShellScreen clientScreen: {
         const wsId = root.client?.workspace_id;
         if (wsId === undefined || wsId === null) return root.screen;
-        const ws = Niri.allWorkspaces.find(w => w.id === wsId);
+        const ws = Compositor.workspaces.find(w => w.id === wsId);
         if (!ws) return root.screen;
         const s = Screens.screens.find(scr => scr.name === ws.output);
         return s || root.screen;
@@ -36,8 +36,8 @@ Item {
         
         const size = c.layout.window_size;
         
-        // Ask the Niri service for currently visible windows and their coordinates
-        const visibleWindows = Niri.getWindowsInScreen(0, 0, clientScreen.width, clientScreen.height, 0, 0);
+        // Ask the compositor service for currently visible windows and their coordinates
+        const visibleWindows = Compositor.getWindowsInScreen(0, 0, clientScreen.width, clientScreen.height, 0, 0);
         const item = visibleWindows.find(w => w.window.id === c.id);
         if (item) {
             return {

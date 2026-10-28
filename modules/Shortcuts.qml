@@ -12,12 +12,7 @@ Scope {
     id: root
 
     property bool launcherInterrupted
-    readonly property bool hasFullscreen: {
-        if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
-            return Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-        }
-        return false;
-    }
+    readonly property bool hasFullscreen: Compositor.hasFullscreen
 
     // qmllint disable unresolved-type
     CustomShortcut {
@@ -306,9 +301,7 @@ Scope {
         function open(): void {
             const screenState = ShellState.forActive();
             if (screenState) {
-                if (typeof NiriIpc !== "undefined" && typeof NiriIpc.fetchOutputs === "function") {
-                    NiriIpc.fetchOutputs(); // Refresh outputs on opening
-                }
+                Compositor.refreshOutputs(); // Refresh outputs on opening
                 screenState.displaySelect = true;
             }
         }
@@ -324,9 +317,7 @@ Scope {
             const screenState = ShellState.forActive();
             if (screenState) {
                 if (!screenState.displaySelect) {
-                    if (typeof NiriIpc !== "undefined" && typeof NiriIpc.fetchOutputs === "function") {
-                        NiriIpc.fetchOutputs(); // Refresh outputs on opening
-                    }
+                    Compositor.refreshOutputs(); // Refresh outputs on opening
                 }
                 screenState.displaySelect = !screenState.displaySelect;
             }
@@ -399,31 +390,21 @@ Scope {
     }
 
     // Helper property to check for external monitors
-    readonly property bool hasExternalMonitor: {
-        const outputs = Niri.outputs;
-        if (!outputs) return false;
-        for (const connector in outputs) {
-            const lower = connector.toLowerCase();
-            if (!lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi")) {
-                return true;
-            }
-        }
-        return false;
-    }
+    readonly property bool hasExternalMonitor: Compositor.hasExternalMonitor
 
     IpcHandler {
         target: "niriLayout"
 
         function toggleGaps(): void {
-            Niri.toggleGaps();
+            Compositor.toggleGaps();
         }
 
         function setGaps(val: int): void {
-            Niri.setGaps(val);
+            Compositor.setGaps(val);
         }
 
         function getGaps(): int {
-            return Niri.gaps;
+            return Compositor.gaps;
         }
     }
 

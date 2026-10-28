@@ -25,6 +25,7 @@ Singleton {
     property int lightSpread: 14
     property real lightIntensity: 0.65
     property real lightThreshold: 0.55
+    property real pulseSpeed: 1.2
 
     // Pulse Focus Ring Theme / Background Color Matching
     property bool pulseMatchTheme: true
@@ -32,15 +33,23 @@ Singleton {
     readonly property color currentThemePrimary: Colours.palette.m3primary
     readonly property color currentThemeSecondary: Colours.palette.m3secondary
     readonly property color currentThemeTertiary: Colours.palette.m3tertiary
+    readonly property color currentThemeSurface: Colours.palette.m3surface
 
     // Window Open/Close Animation Shader
     property bool windowAnimEnabled: false
     property string windowAnimPreset: "whirlpool"
     property int windowAnimDuration: 400
+    property real whirlpoolTwist: 1.5
+    property real animScaleDamping: 0.5
+    property bool animThemeTint: true
 
     // Global / Screen / Cursor Shader
     property bool globalShaderEnabled: false
     property string globalShaderPreset: "locator"
+    property real vignetteStrength: 0.65
+    property real scanlineDensity: 1.0
+    property real scanlineDarkness: 0.15
+    property real chromaticAberration: 0.0
 
     // Consolidated Carousel Overview
     property bool carouselEnabled: false
@@ -71,6 +80,10 @@ Singleton {
     readonly property string activePreset: {
         if (!focusRingEnabled && !windowAnimEnabled && !globalShaderEnabled)
             return "off";
+        if (focusRingEnabled && focusRingPreset === "pulse" && focusRingWidth === 1 && !lightSpillEnabled && !windowAnimEnabled && !globalShaderEnabled)
+            return "minimal-clean";
+        if (focusRingEnabled && focusRingPreset === "pulse" && lightSpillEnabled && lightSpread >= 18 && windowAnimEnabled && windowAnimPreset === "whirlpool" && !globalShaderEnabled)
+            return "ambient-glow";
         if (focusRingEnabled && focusRingPreset === "pulse" && !windowAnimEnabled && !globalShaderEnabled)
             return "focus";
         if (focusRingEnabled && focusRingPreset === "pulse" && !windowAnimEnabled && globalShaderEnabled && globalShaderPreset === "locator")
@@ -101,6 +114,36 @@ Singleton {
             root.focusRingEnabled = false;
             root.windowAnimEnabled = false;
             root.globalShaderEnabled = false;
+        } else if (name === "minimal-clean") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 1;
+            root.focusRingPadding = 2;
+            root.lightSpillEnabled = false;
+            root.pulseMatchTheme = true;
+            root.pulseColorMode = "primary";
+            root.pulseSpeed = 1.0;
+            root.windowAnimEnabled = false;
+            root.globalShaderEnabled = false;
+        } else if (name === "ambient-glow") {
+            root.focusRingEnabled = true;
+            root.focusRingPreset = "pulse";
+            root.focusRingWidth = 2;
+            root.focusRingPadding = 4;
+            root.lightSpillEnabled = true;
+            root.lightSpread = 20;
+            root.lightIntensity = 0.75;
+            root.lightThreshold = 0.50;
+            root.pulseMatchTheme = true;
+            root.pulseColorMode = "blend";
+            root.pulseSpeed = 1.2;
+            root.windowAnimEnabled = true;
+            root.windowAnimPreset = "whirlpool";
+            root.windowAnimDuration = 400;
+            root.whirlpoolTwist = 1.2;
+            root.animScaleDamping = 0.5;
+            root.animThemeTint = true;
+            root.globalShaderEnabled = false;
         } else if (name === "focus") {
             root.focusRingEnabled = true;
             root.focusRingPreset = "pulse";
@@ -110,6 +153,9 @@ Singleton {
             root.lightSpread = 14;
             root.lightIntensity = 0.65;
             root.lightThreshold = 0.55;
+            root.pulseMatchTheme = true;
+            root.pulseColorMode = "blend";
+            root.pulseSpeed = 1.2;
             root.windowAnimEnabled = false;
             root.globalShaderEnabled = false;
         } else if (name === "locator") {
@@ -121,6 +167,7 @@ Singleton {
             root.lightSpread = 12;
             root.lightIntensity = 0.6;
             root.lightThreshold = 0.55;
+            root.pulseMatchTheme = true;
             root.windowAnimEnabled = false;
             root.globalShaderEnabled = true;
             root.globalShaderPreset = "locator";
@@ -133,6 +180,7 @@ Singleton {
             root.lightSpread = 14;
             root.lightIntensity = 0.7;
             root.lightThreshold = 0.5;
+            root.pulseMatchTheme = true;
             root.windowAnimEnabled = false;
             root.globalShaderEnabled = true;
             root.globalShaderPreset = "spotlight";
@@ -144,8 +192,11 @@ Singleton {
             root.lightSpillEnabled = false;
             root.windowAnimEnabled = true;
             root.windowAnimPreset = "melt";
+            root.windowAnimDuration = 450;
             root.globalShaderEnabled = true;
             root.globalShaderPreset = "crt";
+            root.scanlineDensity = 1.0;
+            root.scanlineDarkness = 0.20;
         } else if (name === "cyberpunk") {
             root.focusRingEnabled = true;
             root.focusRingPreset = "rainbow-ripple";
@@ -157,8 +208,12 @@ Singleton {
             root.lightThreshold = 0.5;
             root.windowAnimEnabled = true;
             root.windowAnimPreset = "whirlpool";
+            root.windowAnimDuration = 450;
+            root.whirlpoolTwist = 2.0;
+            root.animScaleDamping = 0.6;
             root.globalShaderEnabled = true;
             root.globalShaderPreset = "comet-glow";
+            root.chromaticAberration = 0.003;
         }
         root.saveImmediately();
     }
@@ -228,7 +283,7 @@ Singleton {
         if (anyOn) {
             applyPreset("off");
         } else {
-            applyPreset("cyberpunk");
+            applyPreset("ambient-glow");
         }
     }
 
@@ -261,13 +316,21 @@ Singleton {
             lightSpread: root.lightSpread,
             lightIntensity: root.lightIntensity,
             lightThreshold: root.lightThreshold,
+            pulseSpeed: root.pulseSpeed,
 
             windowAnimEnabled: root.windowAnimEnabled,
             windowAnimPreset: root.windowAnimPreset,
             windowAnimDuration: root.windowAnimDuration,
+            whirlpoolTwist: root.whirlpoolTwist,
+            animScaleDamping: root.animScaleDamping,
+            animThemeTint: root.animThemeTint,
 
             globalShaderEnabled: root.globalShaderEnabled,
             globalShaderPreset: root.globalShaderPreset,
+            vignetteStrength: root.vignetteStrength,
+            scanlineDensity: root.scanlineDensity,
+            scanlineDarkness: root.scanlineDarkness,
+            chromaticAberration: root.chromaticAberration,
 
             carouselEnabled: root.carouselEnabled,
             carouselRevealZoom: root.carouselRevealZoom,
@@ -294,6 +357,56 @@ Singleton {
 
     function reloadNiriConfig(): void {
         Quickshell.execDetached(["niri", "msg", "action", "load-config-file"]);
+    }
+
+    function toVec3(c: color): string {
+        if (!c) return "vec3(1.0, 0.7, 0.8)";
+        const r = Math.max(0, Math.min(1, c.r)).toFixed(3);
+        const g = Math.max(0, Math.min(1, c.g)).toFixed(3);
+        const b = Math.max(0, Math.min(1, c.b)).toFixed(3);
+        return `vec3(${r}, ${g}, ${b})`;
+    }
+
+    function generatePulseFrag(): string {
+        const pSpeed = root.pulseSpeed.toFixed(2);
+        const colPrimary = toVec3(Colours.palette.m3primary);
+        const colSecondary = toVec3(Colours.palette.m3secondary);
+        const colTertiary = toVec3(Colours.palette.m3tertiary);
+        const colSurface = toVec3(Colours.palette.m3surface);
+
+        let glsl = "// Biri Focus Ring - Dynamic Background / Theme Pulse Shader\n";
+        glsl += "// Generated automatically by Caelestia Biri Shaders to match desktop wallpaper.\n";
+        glsl += `const vec3 THEME_PRIMARY = ${colPrimary};\n`;
+        glsl += `const vec3 THEME_SECONDARY = ${colSecondary};\n`;
+        glsl += `const vec3 THEME_TERTIARY = ${colTertiary};\n`;
+        glsl += `const vec3 THEME_SURFACE = ${colSurface};\n`;
+        glsl += `const float PULSE_SPEED = ${pSpeed};\n\n`;
+
+        glsl += "vec4 ring_color(vec2 coords) {\n";
+        glsl += "    float d = ring_distance(coords);\n";
+        glsl += "    float half_px = 0.5 / niri_scale;\n";
+        glsl += "    float coverage = smoothstep(-half_px, half_px, d)\n";
+        glsl += "        * (1.0 - smoothstep(ring_width - half_px, ring_width + half_px, d));\n";
+        glsl += `    float pulse = 0.65 + 0.35 * sin(niri_time * PULSE_SPEED * 2.0);\n`;
+
+        if (!root.pulseMatchTheme || root.pulseColorMode === "cyan") {
+            glsl += "    vec3 col = vec3(0.15, 0.8, 1.0);\n";
+        } else if (root.pulseColorMode === "primary") {
+            glsl += "    vec3 col = THEME_PRIMARY;\n";
+        } else if (root.pulseColorMode === "spectrum") {
+            glsl += `    float t = fract(niri_time * PULSE_SPEED * 0.25);\n`;
+            glsl += "    vec3 col = (t < 0.333) ? mix(THEME_PRIMARY, THEME_SECONDARY, t * 3.0) : ((t < 0.666) ? mix(THEME_SECONDARY, THEME_TERTIARY, (t - 0.333) * 3.0) : mix(THEME_TERTIARY, THEME_PRIMARY, (t - 0.666) * 3.0));\n";
+        } else { // "blend" (default)
+            glsl += `    vec3 col = mix(THEME_PRIMARY, THEME_TERTIARY, 0.5 + 0.5 * sin(niri_time * PULSE_SPEED * 1.2));\n`;
+        }
+
+        glsl += "    return vec4(col * pulse, coverage);\n";
+        glsl += "}\n";
+        return glsl;
+    }
+
+    function updatePulseShader(): void {
+        pulseFragWriter.setText(generatePulseFrag());
     }
 
     function generateKdl(): string {
@@ -346,23 +459,135 @@ Singleton {
 
         // 3. Window Open/Close Animation Shader
         if (root.windowAnimEnabled && root.windowAnimPreset !== "none") {
-            const animFile = `${root.shadersDir}/close/close-${root.windowAnimPreset}.kdl`;
             kdl += "// ---------------- Window Animation Shader ----------------\n";
-            kdl += `include "${animFile}"\n\n`;
+            if (root.windowAnimPreset === "whirlpool") {
+                const duration = Math.max(100, root.windowAnimDuration);
+                const twist = root.whirlpoolTwist.toFixed(2);
+                const damp = root.animScaleDamping.toFixed(2);
+                const themeCol = toVec3(Colours.palette.m3primary);
+                const themeTertiary = toVec3(Colours.palette.m3tertiary);
+
+                kdl += "animations {\n";
+                kdl += "    window-open {\n";
+                kdl += `        duration-ms ${duration}\n`;
+                kdl += "        curve \"linear\"\n";
+                kdl += "        custom-shader r\"\n";
+                kdl += `            const vec3 THEME_COL = ${themeCol};\n`;
+                kdl += `            const float TWIST = ${twist};\n`;
+                kdl += `            const float DAMP = ${damp};\n`;
+                kdl += "            vec4 open_color(vec3 coords_geo, vec3 size_geo) {\n";
+                kdl += "                float progress = niri_clamped_progress;\n";
+                kdl += "                vec2 uv = coords_geo.xy;\n";
+                kdl += "                if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);\n";
+                kdl += "                vec2 center = vec2(0.5, 0.5);\n";
+                kdl += "                vec2 delta = uv - center;\n";
+                kdl += "                float dist = length(delta);\n";
+                kdl += "                float angle = atan(delta.y, delta.x);\n";
+                kdl += "                float inv = 1.0 - progress;\n";
+                kdl += "                float max_rot = 6.28318 * TWIST;\n";
+                kdl += "                float rotation = inv * max_rot * (1.0 - dist * DAMP);\n";
+                kdl += "                float pull = mix(0.2, 1.0, progress);\n";
+                kdl += "                float new_dist = dist / max(pull, 0.001);\n";
+                kdl += "                float new_angle = angle + rotation;\n";
+                kdl += "                vec2 new_uv = center + new_dist * vec2(cos(new_angle), sin(new_angle));\n";
+                kdl += "                if (new_uv.x < 0.0 || new_uv.x > 1.0 || new_uv.y < 0.0 || new_uv.y > 1.0) return vec4(0.0);\n";
+                kdl += "                vec3 coords_tex = niri_geo_to_tex * vec3(new_uv, 1.0);\n";
+                kdl += "                vec4 color = texture2D(niri_tex, coords_tex.st);\n";
+                kdl += "                float fade = smoothstep(0.0, 0.5, progress);\n";
+                kdl += "                return color * fade;\n";
+                kdl += "            }\n";
+                kdl += "        \"\n";
+                kdl += "    }\n";
+                kdl += "    window-close {\n";
+                kdl += `        duration-ms ${duration}\n`;
+                kdl += "        curve \"linear\"\n";
+                kdl += "        custom-shader r\"\n";
+                kdl += `            const vec3 THEME_COL = ${themeCol};\n`;
+                kdl += `            const vec3 THEME_ACC = ${themeTertiary};\n`;
+                kdl += `            const float TWIST = ${twist};\n`;
+                kdl += `            const float DAMP = ${damp};\n`;
+                kdl += "            vec4 close_color(vec3 coords_geo, vec3 size_geo) {\n";
+                kdl += "                float progress = niri_clamped_progress;\n";
+                kdl += "                vec2 uv = coords_geo.xy;\n";
+                kdl += "                if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return vec4(0.0);\n";
+                kdl += "                vec2 center = vec2(0.5, 0.5);\n";
+                kdl += "                vec2 delta = uv - center;\n";
+                kdl += "                float dist = length(delta);\n";
+                kdl += "                float angle = atan(delta.y, delta.x);\n";
+                kdl += "                float max_rot = 6.28318 * TWIST;\n";
+                kdl += "                float rotation = progress * max_rot * (1.0 - dist * DAMP);\n";
+                kdl += "                float pull = 1.0 - progress * 0.8;\n";
+                kdl += "                float new_dist = dist * pull;\n";
+                kdl += "                float new_angle = angle + rotation;\n";
+                kdl += "                vec2 new_uv = center + new_dist * vec2(cos(new_angle), sin(new_angle));\n";
+                kdl += "                if (new_uv.x < 0.0 || new_uv.x > 1.0 || new_uv.y < 0.0 || new_uv.y > 1.0) return vec4(0.0);\n";
+                kdl += "                vec3 coords_tex = niri_geo_to_tex * vec3(new_uv, 1.0);\n";
+                kdl += "                vec4 color = texture2D(niri_tex, coords_tex.st);\n";
+                kdl += "                float fade = 1.0 - smoothstep(0.1, 0.9, progress);\n";
+                kdl += "                float dissolve = smoothstep(1.0 - progress * 1.1, 0.0, dist);\n";
+                if (root.animThemeTint) {
+                    kdl += "                vec3 tint = mix(color.rgb, THEME_ACC, progress * 0.25);\n";
+                    kdl += "                return vec4(tint * color.a * fade * dissolve, color.a * fade * dissolve);\n";
+                } else {
+                    kdl += "                return color * fade * dissolve;\n";
+                }
+                kdl += "            }\n";
+                kdl += "        \"\n";
+                kdl += "    }\n";
+                kdl += "}\n\n";
+            } else {
+                const animFile = `${root.shadersDir}/close/close-${root.windowAnimPreset}.kdl`;
+                kdl += `include "${animFile}"\n\n`;
+            }
         }
 
         // 4. Global / Screen / Cursor Shader
         if (root.globalShaderEnabled && root.globalShaderPreset !== "none") {
-            let shaderFile = "";
-
+            kdl += "// ---------------- Global / Screen / Cursor Shader ----------------\n";
             if (root.cursorPresets.includes(root.globalShaderPreset)) {
-                shaderFile = `${root.shadersDir}/cursor/${root.globalShaderPreset}.kdl`;
+                const shaderFile = `${root.shadersDir}/cursor/${root.globalShaderPreset}.kdl`;
+                kdl += `include "${shaderFile}"\n\n`;
+            } else if (root.globalShaderPreset === "crt") {
+                const scanDens = root.scanlineDensity.toFixed(2);
+                const scanDark = root.scanlineDarkness.toFixed(2);
+                const aber = root.chromaticAberration.toFixed(4);
+                kdl += "global-shader {\n";
+                kdl += "    enable\n";
+                kdl += "    source r\"\n";
+                kdl += `        const float SCAN_DENS = ${scanDens};\n`;
+                kdl += `        const float SCAN_DARK = ${scanDark};\n`;
+                kdl += `        const float ABER = ${aber};\n`;
+                kdl += "        vec4 global_color(vec3 c) {\n";
+                kdl += "            vec2 uv = c.xy;\n";
+                kdl += "            vec3 s;\n";
+                kdl += "            if (ABER > 0.0001) {\n";
+                kdl += "                float r = tex2D_screen(uv + vec2(ABER, 0.0)).r;\n";
+                kdl += "                float g = tex2D_screen(uv).g;\n";
+                kdl += "                float b = tex2D_screen(uv - vec2(ABER, 0.0)).b;\n";
+                kdl += "                s = vec3(r, g, b);\n";
+                kdl += "            } else {\n";
+                kdl += "                s = tex2D_screen(uv).rgb;\n";
+                kdl += "            }\n";
+                kdl += "            float scan = 1.0 - SCAN_DARK * (0.5 + 0.5 * sin(uv.y * niri_size.y * 3.14159 * SCAN_DENS));\n";
+                kdl += "            return vec4(s * scan, 1.0);\n";
+                kdl += "        }\n";
+                kdl += "    \"\n";
+                kdl += "}\n\n";
+            } else if (root.globalShaderPreset === "vignette") {
+                const vig = root.vignetteStrength.toFixed(2);
+                kdl += "global-shader {\n";
+                kdl += "    enable\n";
+                kdl += "    source r\"\n";
+                kdl += `        const float VIG_STRENGTH = ${vig};\n`;
+                kdl += "        vec4 global_color(vec3 c) {\n";
+                kdl += "            vec3 s = tex2D_screen(c.xy).rgb;\n";
+                kdl += "            float v = smoothstep(0.85, 0.35, length(c.xy - 0.5) * VIG_STRENGTH);\n";
+                kdl += "            return vec4(s * mix(1.0 - VIG_STRENGTH * 0.5, 1.0, v), 1.0);\n";
+                kdl += "        }\n";
+                kdl += "    \"\n";
+                kdl += "}\n\n";
             } else if (root.screenPresets.includes(root.globalShaderPreset)) {
-                shaderFile = `${root.shadersDir}/screen/${root.globalShaderPreset}.kdl`;
-            }
-
-            if (shaderFile.length > 0) {
-                kdl += "// ---------------- Global / Screen / Cursor Shader ----------------\n";
+                const shaderFile = `${root.shadersDir}/screen/${root.globalShaderPreset}.kdl`;
                 kdl += `include "${shaderFile}"\n\n`;
             }
         }
@@ -431,13 +656,21 @@ Singleton {
         root.lightSpread = 14;
         root.lightIntensity = 0.65;
         root.lightThreshold = 0.55;
+        root.pulseSpeed = 1.2;
 
         root.windowAnimEnabled = false;
         root.windowAnimPreset = "whirlpool";
         root.windowAnimDuration = 400;
+        root.whirlpoolTwist = 1.5;
+        root.animScaleDamping = 0.5;
+        root.animThemeTint = true;
 
         root.globalShaderEnabled = false;
         root.globalShaderPreset = "locator";
+        root.vignetteStrength = 0.65;
+        root.scanlineDensity = 1.0;
+        root.scanlineDarkness = 0.15;
+        root.chromaticAberration = 0.0;
 
         root.carouselEnabled = false;
         root.carouselRevealZoom = 0.7;
@@ -459,25 +692,48 @@ Singleton {
     onLightSpreadChanged: requestSave()
     onLightIntensityChanged: requestSave()
     onLightThresholdChanged: requestSave()
+    onPulseSpeedChanged: {
+        if (root.loaded) {
+            updatePulseShader();
+            requestSave();
+        }
+    }
 
     onPulseMatchThemeChanged: {
-        updatePulseShader();
-        requestSave();
+        if (root.loaded) {
+            updatePulseShader();
+            requestSave();
+        }
     }
     onPulseColorModeChanged: {
-        updatePulseShader();
-        requestSave();
+        if (root.loaded) {
+            updatePulseShader();
+            requestSave();
+        }
     }
-    onCurrentThemePrimaryChanged: updatePulseShader()
-    onCurrentThemeSecondaryChanged: updatePulseShader()
-    onCurrentThemeTertiaryChanged: updatePulseShader()
+    onCurrentThemePrimaryChanged: {
+        if (root.loaded) updatePulseShader();
+    }
+    onCurrentThemeSecondaryChanged: {
+        if (root.loaded) updatePulseShader();
+    }
+    onCurrentThemeTertiaryChanged: {
+        if (root.loaded) updatePulseShader();
+    }
 
     onWindowAnimEnabledChanged: requestSave()
     onWindowAnimPresetChanged: requestSave()
     onWindowAnimDurationChanged: requestSave()
+    onWhirlpoolTwistChanged: requestSave()
+    onAnimScaleDampingChanged: requestSave()
+    onAnimThemeTintChanged: requestSave()
 
     onGlobalShaderEnabledChanged: requestSave()
     onGlobalShaderPresetChanged: requestSave()
+    onVignetteStrengthChanged: requestSave()
+    onScanlineDensityChanged: requestSave()
+    onScanlineDarknessChanged: requestSave()
+    onChromaticAberrationChanged: requestSave()
 
     onCarouselEnabledChanged: requestSave()
     onCarouselRevealZoomChanged: requestSave()
@@ -512,6 +768,7 @@ Singleton {
         path: root.statePath
         printErrors: false
         onLoaded: {
+            initTimer.stop();
             const raw = text();
             if (raw && raw.trim().length > 0) {
                 try {
@@ -525,13 +782,21 @@ Singleton {
                         if (data.lightSpread !== undefined) root.lightSpread = data.lightSpread;
                         if (data.lightIntensity !== undefined) root.lightIntensity = data.lightIntensity;
                         if (data.lightThreshold !== undefined) root.lightThreshold = data.lightThreshold;
+                        if (data.pulseSpeed !== undefined) root.pulseSpeed = data.pulseSpeed;
 
                         if (data.windowAnimEnabled !== undefined) root.windowAnimEnabled = data.windowAnimEnabled;
                         if (data.windowAnimPreset !== undefined) root.windowAnimPreset = data.windowAnimPreset;
                         if (data.windowAnimDuration !== undefined) root.windowAnimDuration = data.windowAnimDuration;
+                        if (data.whirlpoolTwist !== undefined) root.whirlpoolTwist = data.whirlpoolTwist;
+                        if (data.animScaleDamping !== undefined) root.animScaleDamping = data.animScaleDamping;
+                        if (data.animThemeTint !== undefined) root.animThemeTint = data.animThemeTint;
 
                         if (data.globalShaderEnabled !== undefined) root.globalShaderEnabled = data.globalShaderEnabled;
                         if (data.globalShaderPreset !== undefined) root.globalShaderPreset = data.globalShaderPreset;
+                        if (data.vignetteStrength !== undefined) root.vignetteStrength = data.vignetteStrength;
+                        if (data.scanlineDensity !== undefined) root.scanlineDensity = data.scanlineDensity;
+                        if (data.scanlineDarkness !== undefined) root.scanlineDarkness = data.scanlineDarkness;
+                        if (data.chromaticAberration !== undefined) root.chromaticAberration = data.chromaticAberration;
 
                         if (data.carouselEnabled !== undefined) root.carouselEnabled = data.carouselEnabled;
                         if (data.carouselRevealZoom !== undefined) root.carouselRevealZoom = data.carouselRevealZoom;
@@ -554,6 +819,7 @@ Singleton {
             }
         }
         onLoadFailed: {
+            initTimer.stop();
             root.loaded = true;
             root.saveImmediately();
         }
@@ -578,54 +844,5 @@ Singleton {
 
         path: `${root.shadersDir}/focus-ring/pulse.frag`
         printErrors: true
-    }
-
-    function toVec3(c: color): string {
-        if (!c) return "vec3(1.0, 0.7, 0.8)";
-        const r = Math.max(0, Math.min(1, c.r)).toFixed(3);
-        const g = Math.max(0, Math.min(1, c.g)).toFixed(3);
-        const b = Math.max(0, Math.min(1, c.b)).toFixed(3);
-        return `vec3(${r}, ${g}, ${b})`;
-    }
-
-    function generatePulseFrag(): string {
-        let glsl = "// Biri Focus Ring - Dynamic Background / Theme Pulse Shader\n";
-        glsl += "// Generated automatically by Caelestia Biri Shaders to match desktop wallpaper.\n";
-        glsl += "vec4 ring_color(vec2 coords) {\n";
-        glsl += "    float d = ring_distance(coords);\n";
-        glsl += "    float half_px = 0.5 / niri_scale;\n";
-        glsl += "    float coverage = smoothstep(-half_px, half_px, d)\n";
-        glsl += "        * (1.0 - smoothstep(ring_width - half_px, ring_width + half_px, d));\n";
-        glsl += "    float pulse = 0.65 + 0.35 * sin(niri_time * 2.0);\n";
-
-        if (!root.pulseMatchTheme || root.pulseColorMode === "cyan") {
-            glsl += "    vec3 col = vec3(0.15, 0.8, 1.0);\n";
-        } else if (root.pulseColorMode === "primary") {
-            const c1 = Colours.palette.m3primary;
-            glsl += `    vec3 col = ${toVec3(c1)};\n`;
-        } else if (root.pulseColorMode === "spectrum") {
-            const c1 = Colours.palette.m3primary;
-            const c2 = Colours.palette.m3secondary;
-            const c3 = Colours.palette.m3tertiary;
-            glsl += `    vec3 colA = ${toVec3(c1)};\n`;
-            glsl += `    vec3 colB = ${toVec3(c2)};\n`;
-            glsl += `    vec3 colC = ${toVec3(c3)};\n`;
-            glsl += "    float t = fract(niri_time * 0.25);\n";
-            glsl += "    vec3 col = (t < 0.333) ? mix(colA, colB, t * 3.0) : ((t < 0.666) ? mix(colB, colC, (t - 0.333) * 3.0) : mix(colC, colA, (t - 0.666) * 3.0));\n";
-        } else { // "blend" (default)
-            const c1 = Colours.palette.m3primary;
-            const c2 = Colours.palette.m3tertiary;
-            glsl += `    vec3 colA = ${toVec3(c1)}; // Background Primary\n`;
-            glsl += `    vec3 colB = ${toVec3(c2)}; // Background Tertiary\n`;
-            glsl += "    vec3 col = mix(colA, colB, 0.5 + 0.5 * sin(niri_time * 1.2));\n";
-        }
-
-        glsl += "    return vec4(col * pulse, coverage);\n";
-        glsl += "}\n";
-        return glsl;
-    }
-
-    function updatePulseShader(): void {
-        pulseFragWriter.setText(generatePulseFrag());
     }
 }

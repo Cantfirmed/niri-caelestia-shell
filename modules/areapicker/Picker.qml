@@ -22,8 +22,8 @@ MouseArea {
 
     property bool onClient
 
-    property real realBorderWidth: onClient ? (typeof Hypr !== "undefined" ? (Hypr.options["general:border_size"] ?? 1) : borderWidth) : 2
-    property real realRounding: onClient ? (typeof Hypr !== "undefined" ? (Hypr.options["decoration:rounding"] ?? 0) : rounding) : 0
+    property real realBorderWidth: onClient ? borderWidth : 2
+    property real realRounding: onClient ? rounding : 0
 
     property real ssx
     property real ssy
@@ -42,31 +42,20 @@ MouseArea {
     property real cursorY: 0
 
     property var clients: {
-        if (typeof Niri !== "undefined" && Niri.niriAvailable) {
-            const wsWindows = Niri.getActiveWorkspaceWindows();
-            return wsWindows.slice().sort((a, b) => {
-                const aPos = a.layout?.pos_in_scrolling_layout || [0, 0];
-                const bPos = b.layout?.pos_in_scrolling_layout || [0, 0];
-                if (aPos[0] !== bPos[0]) return aPos[0] - bPos[0];
-                return aPos[1] - bPos[1];
-            });
-        }
-        if (typeof Hypr !== "undefined") {
-            const mon = Hypr.monitorFor(screen);
-            if (!mon) return [];
-            const special = mon.lastIpcObject?.specialWorkspace;
-            const wsId = special?.name ? special.id : mon.activeWorkspace?.id;
-            if (wsId === undefined) return [];
-            return Hypr.toplevelsForWs(wsId);
-        }
-        return [];
+        const wsWindows = Compositor.getActiveWorkspaceWindows();
+        return wsWindows.slice().sort((a, b) => {
+            const aPos = a.layout?.pos_in_scrolling_layout || [0, 0];
+            const bPos = b.layout?.pos_in_scrolling_layout || [0, 0];
+            if (aPos[0] !== bPos[0]) return aPos[0] - bPos[0];
+            return aPos[1] - bPos[1];
+        });
     }
 
     function getWindowGeometry(window) {
         if (!window?.layout?.window_size) return null;
         const size = window.layout.window_size;
         const pos = window.layout.pos_in_scrolling_layout ?? [0, 0];
-        const focusedWindow = Niri.focusedWindow;
+        const focusedWindow = Compositor.focusedWindow;
         if (!focusedWindow?.layout?.pos_in_scrolling_layout) {
             return {
                 x: (screen.width - size[0]) / 2,
@@ -92,22 +81,12 @@ MouseArea {
     function checkClientRects(x: real, y: real): void {
         for (const client of clients) {
             if (!client) continue;
-            let cx, cy, cw, ch;
-            if (typeof Niri !== "undefined" && Niri.niriAvailable) {
-                const geom = getWindowGeometry(client);
-                if (!geom) continue;
-                cx = geom.x;
-                cy = geom.y;
-                cw = geom.w;
-                ch = geom.h;
-            } else if (client.lastIpcObject?.at && client.lastIpcObject?.size) {
-                cx = client.lastIpcObject.at[0] - screen.x;
-                cy = client.lastIpcObject.at[1] - screen.y;
-                cw = client.lastIpcObject.size[0];
-                ch = client.lastIpcObject.size[1];
-            } else {
-                continue;
-            }
+            const geom = getWindowGeometry(client);
+            if (!geom) continue;
+            const cx = geom.x;
+            const cy = geom.y;
+            const cw = geom.w;
+            const ch = geom.h;
             if (cx <= x && cy <= y && cx + cw >= x && cy + ch >= y) {
                 onClient = true;
                 sx = cx;
@@ -150,9 +129,6 @@ MouseArea {
     cursorShape: Qt.BlankCursor
 
     Component.onCompleted: {
-        if (typeof Hypr !== "undefined" && Hypr.extras) {
-            Hypr.extras.refreshOptions();
-        }
 
         if (loader.freeze)
             clients = clients;
@@ -292,6 +268,7 @@ MouseArea {
 
     Item {
         id: cursorIndicator
+
         x: root.cursorX - crosshair.width / 2
         y: root.cursorY - crosshair.height / 2
         z: 100
@@ -299,6 +276,7 @@ MouseArea {
 
         Rectangle {
             id: crosshair
+
             width: 24
             height: 24
             color: "transparent"
@@ -336,6 +314,7 @@ MouseArea {
 
             Row {
                 id: badgeRow
+
                 anchors.centerIn: parent
                 spacing: Tokens.spacing.extraSmall
 
@@ -439,21 +418,25 @@ MouseArea {
 
     Behavior on rsx {
         enabled: !root.pressed
+
         Anim {}
     }
 
     Behavior on rsy {
         enabled: !root.pressed
+
         Anim {}
     }
 
     Behavior on sw {
         enabled: !root.pressed
+
         Anim {}
     }
 
     Behavior on sh {
         enabled: !root.pressed
+
         Anim {}
     }
 }

@@ -114,10 +114,10 @@ Item {
         flatWindows.splice(flatIndex, 0, ...draggedWindows);
 
         // 7. Compute new indices (1-based for backend)
-        let indices = draggedWindows.map(w => flatWindows.findIndex(x => x.id === w.id));
+        let targetIndices = draggedWindows.map(w => flatWindows.findIndex(x => x.id === w.id) + 1);
 
-        // 8. Call backend to update order
-        Niri.moveGroupColumnsSequential(Niri.focusedWindowId, draggedWindows.map(w => w.id), flatIndex + 1);
+        // 8. Dispatch atomic batch move transaction in C++ NiriIpc
+        Niri.moveGroupColumnsSequential(Niri.focusedWindowId, draggedWindows.map(w => w.id), targetIndices);
     }
 
     // height: column.height

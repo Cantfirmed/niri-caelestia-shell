@@ -1,6 +1,7 @@
 #pragma once
 
 #include <qbytearray.h>
+#include <qjsonobject.h>
 #include <qlocalsocket.h>
 #include <qobject.h>
 #include <qtimer.h>
@@ -9,6 +10,9 @@
 #include <functional>
 
 namespace caelestia {
+
+/// Resolve active Niri IPC socket path from $NIRI_SOCKET or runtime directory auto-discovery.
+QString resolveNiriSocketPath();
 
 /// Dedicated EventStream connection to niri's IPC socket.
 /// Connects, sends "EventStream", then emits events continuously.
@@ -44,9 +48,10 @@ private:
     bool m_handshakeDone = false;
 };
 
-/// Request/action connection to niri's IPC socket.
-/// Each request opens a fresh connection, sends the payload, reads response, closes.
-/// This avoids conflicts with the EventStream socket.
+/// Persistent request/action connection to niri's IPC socket.
+/// Maintains a warm AF_UNIX connection separate from EventStream so sequential
+/// multi-step transactions (Focus -> MoveColumnToIndex -> RestoreFocus) execute
+/// with sub-100us round-trip latency and zero per-request socket allocation.
 class NiriRequestSocket : public QObject {
     Q_OBJECT
 
@@ -61,6 +66,12 @@ public:
     /// Send an action (fire-and-forget, response discarded).
     void action(const QByteArray& payload);
 
+private slots:
+    void onConnected();
+    void onDisconnected();
+    void onReadyRead();
+    void onError(QLocalSocket::LocalSocketError error);
+
 private:
     struct PendingRequest {
         QByteArray payload;
@@ -68,10 +79,15 @@ private:
     };
 
     void processQueue();
-    void startRequest(const PendingRequest& req);
+    void writeCurrent();
+    void failCurrent(const QJsonObject& errObj = QJsonObject());
 
+    QLocalSocket* m_socket = nullptr;
+    QByteArray m_readBuffer;
     std::deque<PendingRequest> m_queue;
-    bool m_busy = false;
+    PendingRequest m_activeRequest;
+    bool m_hasActive = false;
+    bool m_retriedCurrent = false;
 };
 
 } // namespace caelestia

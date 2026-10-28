@@ -1,9 +1,3 @@
-# TODO
+# Tasks
 
-## Medium Stuff
-
-Try to get better Utility Panel mouse over - DONE
-
-## Small Stuff
-
-- Improve Display Setting
+See [TODO.md](TODO.md) for the active taskboard cards and structured folder tasks (`tasks/`).

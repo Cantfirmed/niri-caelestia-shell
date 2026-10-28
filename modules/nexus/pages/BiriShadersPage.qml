@@ -14,6 +14,17 @@ import qs.modules.nexus.common
 PageBase {
     id: root
 
+    readonly property list<var> presetCards: [
+        { id: "off", name: Tr.tr("Vanilla Off"), icon: "block", desc: Tr.tr("Stock compositor rendering") },
+        { id: "minimal-clean", name: Tr.tr("Minimal Clean"), icon: "crop_free", desc: Tr.tr("Subtle 1px theme outline, no spill") },
+        { id: "ambient-glow", name: Tr.tr("Ambient Glow"), icon: "blur_on", desc: Tr.tr("Soft wallpaper spill & gentle whirlpool") },
+        { id: "focus", name: Tr.tr("Active Focus"), icon: "lens_blur", desc: Tr.tr("Standard focused window pulse") },
+        { id: "locator", name: Tr.tr("Mouse Locator"), icon: "adjust", desc: Tr.tr("Adaptive high-contrast cursor halo") },
+        { id: "presentation", name: Tr.tr("Presentation"), icon: "present_to_all", desc: Tr.tr("Spotlight beam on cursor for talks") },
+        { id: "retro", name: Tr.tr("Retro CRT"), icon: "tv", desc: Tr.tr("Melt window dissolve & scanlines") },
+        { id: "cyberpunk", name: Tr.tr("Cyberpunk"), icon: "auto_awesome", desc: Tr.tr("Wax rainbow ring & comet tail") }
+    ]
+
     readonly property list<var> focusPresets: [
         { id: "rainbow-ripple", name: Tr.tr("Rainbow Ripple"), icon: "gradient", desc: Tr.tr("Flowing pastel wax colors") },
         { id: "lightning", name: Tr.tr("Lightning & Glow"), icon: "bolt", desc: Tr.tr("Traveling electric pulse with light spill") },
@@ -104,7 +115,7 @@ PageBase {
                 radius: Tokens.rounding.medium
                 color: Qt.rgba(Colours.palette.m3surface.r, Colours.palette.m3surface.g, Colours.palette.m3surface.b, 0.92)
 
-                border.width: BiriShaders.focusRingEnabled ? Math.max(2, BiriShaders.focusRingWidth) : 1
+                border.width: BiriShaders.focusRingEnabled ? Math.max(1, BiriShaders.focusRingWidth) : 1
                 border.color: {
                     if (!BiriShaders.focusRingEnabled)
                         return Colours.palette.m3outlineVariant;
@@ -224,9 +235,90 @@ PageBase {
             }
         }
 
-        // ---------------- Section 1: Focus Ring & Border Shaders ----------------
+        // ---------------- Quick Presets ----------------
         SectionHeader {
             first: true
+            text: Tr.tr("Quick Presets")
+        }
+
+        GridLayout {
+            Layout.fillWidth: true
+            columns: 2
+            rowSpacing: Tokens.spacing.extraSmall
+            columnSpacing: Tokens.spacing.extraSmall
+
+            Repeater {
+                model: root.presetCards
+
+                StyledRect {
+                    id: presetBtn
+
+                    required property var modelData
+
+                    readonly property bool isActive: BiriShaders.activePreset === modelData.id
+
+                    Layout.fillWidth: true
+                    implicitHeight: 64
+                    radius: Tokens.rounding.medium
+                    color: presetBtn.isActive ? Colours.palette.m3secondaryContainer : Colours.tPalette.m3surfaceContainer
+                    border.color: presetBtn.isActive ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
+                    border.width: presetBtn.isActive ? 1.5 : 1
+
+                    Behavior on color { CAnim {} }
+                    Behavior on border.color { CAnim {} }
+
+                    StateLayer {
+                        radius: parent.radius
+                        color: presetBtn.isActive ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                        onClicked: BiriShaders.applyPreset(presetBtn.modelData.id)
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.small
+
+                        StyledRect {
+                            implicitWidth: 32
+                            implicitHeight: 32
+                            radius: Tokens.rounding.small
+                            color: presetBtn.isActive ? Colours.palette.m3primary : Colours.tPalette.m3surfaceContainerHighest
+
+                            MaterialIcon {
+                                anchors.centerIn: parent
+                                text: presetBtn.modelData.icon
+                                size: 18
+                                color: presetBtn.isActive ? Colours.palette.m3onPrimary : Colours.palette.m3onSurface
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: presetBtn.modelData.name
+                                font: Tokens.font.label.medium
+                                color: presetBtn.isActive ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3onSurface
+                                elide: Text.ElideRight
+                            }
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: presetBtn.modelData.desc
+                                font: Tokens.font.body.small
+                                color: presetBtn.isActive ? Colours.palette.m3onSecondaryContainer : Colours.palette.m3outline
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------------- Section 1: Focus Ring & Border Shaders ----------------
+        SectionHeader {
             text: Tr.tr("Focus Ring & Border Shaders")
         }
 
@@ -297,6 +389,16 @@ PageBase {
         }
 
         SliderRow {
+            visible: BiriShaders.focusRingPreset === "pulse"
+            icon: "speed"
+            label: Tr.tr("Pulse speed")
+            valueLabel: `${BiriShaders.pulseSpeed.toFixed(1)}x`
+            value: (BiriShaders.pulseSpeed - 0.5) / 2.5
+            enabled: BiriShaders.focusRingEnabled
+            onMoved: v => BiriShaders.pulseSpeed = Math.max(0.5, Math.min(3.0, 0.5 + v * 2.5))
+        }
+
+        SliderRow {
             icon: "line_weight"
             label: Tr.tr("Ring width")
             valueLabel: `${Math.round(BiriShaders.focusRingWidth)} px`
@@ -323,13 +425,34 @@ PageBase {
         }
 
         SliderRow {
-            last: true
+            visible: BiriShaders.lightSpillEnabled
             icon: "blur_circular"
             label: Tr.tr("Light spread")
             valueLabel: `${Math.round(BiriShaders.lightSpread)} px`
             value: (BiriShaders.lightSpread - 4) / 56.0
             enabled: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
             onMoved: v => BiriShaders.lightSpread = Math.max(4, Math.min(60, Math.round(4 + v * 56)))
+        }
+
+        SliderRow {
+            visible: BiriShaders.lightSpillEnabled
+            icon: "wb_incandescent"
+            label: Tr.tr("Light spill intensity")
+            valueLabel: `${Math.round(BiriShaders.lightIntensity * 100)}%`
+            value: (BiriShaders.lightIntensity - 0.1) / 0.9
+            enabled: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
+            onMoved: v => BiriShaders.lightIntensity = Math.max(0.1, Math.min(1.0, 0.1 + v * 0.9))
+        }
+
+        SliderRow {
+            last: true
+            visible: BiriShaders.lightSpillEnabled
+            icon: "tune"
+            label: Tr.tr("Light spill threshold")
+            valueLabel: `${Math.round(BiriShaders.lightThreshold * 100)}%`
+            value: (BiriShaders.lightThreshold - 0.1) / 0.8
+            enabled: BiriShaders.focusRingEnabled && BiriShaders.lightSpillEnabled
+            onMoved: v => BiriShaders.lightThreshold = Math.max(0.1, Math.min(0.9, 0.1 + v * 0.8))
         }
 
         // ---------------- Section 2: Window Open / Close Animations ----------------
@@ -346,7 +469,6 @@ PageBase {
         }
 
         SelectRow {
-            last: true
             label: Tr.tr("Animation effect")
             subtext: root.animPresets.find(p => p.id === BiriShaders.windowAnimPreset)?.desc ?? ""
             enabled: BiriShaders.windowAnimEnabled
@@ -368,6 +490,45 @@ PageBase {
                     text: modelData.name
                 }
             }
+        }
+
+        SliderRow {
+            icon: "timer"
+            label: Tr.tr("Animation duration")
+            valueLabel: `${BiriShaders.windowAnimDuration} ms`
+            value: (BiriShaders.windowAnimDuration - 150) / 650.0
+            enabled: BiriShaders.windowAnimEnabled
+            onMoved: v => BiriShaders.windowAnimDuration = Math.round(150 + v * 650)
+        }
+
+        SliderRow {
+            visible: BiriShaders.windowAnimPreset === "whirlpool"
+            icon: "cyclone"
+            label: Tr.tr("Whirlpool spiral twist")
+            valueLabel: `${BiriShaders.whirlpoolTwist.toFixed(1)} turns`
+            value: (BiriShaders.whirlpoolTwist - 0.5) / 2.5
+            enabled: BiriShaders.windowAnimEnabled
+            onMoved: v => BiriShaders.whirlpoolTwist = Math.max(0.5, Math.min(3.0, 0.5 + v * 2.5))
+        }
+
+        SliderRow {
+            visible: BiriShaders.windowAnimPreset === "whirlpool"
+            icon: "compress"
+            label: Tr.tr("Scale damping")
+            valueLabel: `${Math.round(BiriShaders.animScaleDamping * 100)}%`
+            value: (BiriShaders.animScaleDamping - 0.1) / 0.8
+            enabled: BiriShaders.windowAnimEnabled
+            onMoved: v => BiriShaders.animScaleDamping = Math.max(0.1, Math.min(0.9, 0.1 + v * 0.8))
+        }
+
+        ToggleRow {
+            last: true
+            visible: BiriShaders.windowAnimPreset === "whirlpool"
+            text: Tr.tr("Theme accent color dissolve")
+            subtext: Tr.tr("Tint dissolving edges with Material 3 wallpaper palette")
+            enabled: BiriShaders.windowAnimEnabled
+            checked: BiriShaders.animThemeTint
+            onToggled: BiriShaders.animThemeTint = checked
         }
 
         // ---------------- Section 3: Mouse & Pointer Locator FX ----------------
@@ -436,7 +597,6 @@ PageBase {
         }
 
         SelectRow {
-            last: true
             label: Tr.tr("Screen filter style")
             subtext: root.screenPresets.find(p => p.id === BiriShaders.globalShaderPreset)?.desc ?? ""
             enabled: BiriShaders.isScreenFilterActive
@@ -458,6 +618,47 @@ PageBase {
                     text: modelData.name
                 }
             }
+        }
+
+        SliderRow {
+            visible: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "crt"
+            icon: "density_medium"
+            label: Tr.tr("Scanline density")
+            valueLabel: `${BiriShaders.scanlineDensity.toFixed(1)}x`
+            value: (BiriShaders.scanlineDensity - 0.5) / 1.5
+            enabled: BiriShaders.isScreenFilterActive
+            onMoved: v => BiriShaders.scanlineDensity = Math.max(0.5, Math.min(2.0, 0.5 + v * 1.5))
+        }
+
+        SliderRow {
+            visible: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "crt"
+            icon: "contrast"
+            label: Tr.tr("Scanline darkness")
+            valueLabel: `${Math.round(BiriShaders.scanlineDarkness * 100)}%`
+            value: (BiriShaders.scanlineDarkness - 0.05) / 0.45
+            enabled: BiriShaders.isScreenFilterActive
+            onMoved: v => BiriShaders.scanlineDarkness = Math.max(0.05, Math.min(0.5, 0.05 + v * 0.45))
+        }
+
+        SliderRow {
+            visible: BiriShaders.isScreenFilterActive && BiriShaders.globalShaderPreset === "vignette"
+            icon: "vignette"
+            label: Tr.tr("Vignette strength")
+            valueLabel: `${Math.round(BiriShaders.vignetteStrength * 100)}%`
+            value: (BiriShaders.vignetteStrength - 0.2) / 0.8
+            enabled: BiriShaders.isScreenFilterActive
+            onMoved: v => BiriShaders.vignetteStrength = Math.max(0.2, Math.min(1.0, 0.2 + v * 0.8))
+        }
+
+        SliderRow {
+            last: true
+            visible: BiriShaders.isScreenFilterActive && (BiriShaders.globalShaderPreset === "crt" || BiriShaders.globalShaderPreset === "vignette")
+            icon: "lens"
+            label: Tr.tr("Chromatic aberration")
+            valueLabel: `${(BiriShaders.chromaticAberration * 1000).toFixed(1)} ‰`
+            value: BiriShaders.chromaticAberration / 0.01
+            enabled: BiriShaders.isScreenFilterActive
+            onMoved: v => BiriShaders.chromaticAberration = Math.max(0.0, Math.min(0.01, v * 0.01))
         }
 
         // ---------------- Section 5: Multi-Monitor Carousel Overview ----------------

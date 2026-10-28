@@ -6,11 +6,15 @@
 #include <qjsonarray.h>
 #include <qjsonobject.h>
 #include <QAbstractListModel>
+#include <QList>
 #include <QObject>
-#include <QtQmlIntegration>
+#include <QSet>
 #include <QTimer>
 #include <QVariant>
-#include <QList>
+#include <QtQmlIntegration>
+
+#include <deque>
+#include <functional>
 
 namespace caelestia {
 
@@ -28,6 +32,7 @@ public:
     void resetData(const QVariantList& items);
     void appendItem(const QVariantMap& item);
     void setItem(int idx, const QVariantMap& item);
+    void updateItemSilent(int idx, const QVariantMap& item);
     void removeItem(int idx);
     const QVariantList& items() const;
 
@@ -37,9 +42,8 @@ private:
 
 /// NiriIpc — QML singleton providing native IPC access to the niri compositor.
 ///
-/// Replaces all Process-based niri msg spawning with a persistent socket.
-/// Exposes the same property shape as the old QML services so consumers
-/// can migrate transparently.
+/// Replaces all Process-based niri msg spawning with persistent EventStream and
+/// Request sockets, plus an atomic C++ transaction runner for column reordering.
 class NiriIpc : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -116,9 +120,16 @@ public:
     [[nodiscard]] bool capsLock() const;
     [[nodiscard]] bool numLock() const;
 
-    // ── Actions (Q_INVOKABLE for QML) ──
+    // ── Actions & Atomic Transactions (Q_INVOKABLE for QML) ──
     Q_INVOKABLE bool action(const QString& actionName, const QVariantList& args = {});
     Q_INVOKABLE void fetchOutputs();
+    Q_INVOKABLE bool moveColumnToIndex(qint64 windowId, int targetIndex, bool restoreFocus = true);
+    Q_INVOKABLE bool reorderColumn(qint64 windowId, int targetIndex);
+    Q_INVOKABLE bool moveGroupColumns(
+        const QVariantList& windowIds,
+        const QVariantList& targetIndices,
+        qint64 restoreFocusWindowId = -1
+    );
 
     // ── Workspace Helpers ──
     Q_INVOKABLE int getWorkspaceIdxById(int workspaceId) const;
@@ -130,11 +141,16 @@ public:
 signals:
     void availableChanged();
     void workspacesChanged();
+    void workspaceActivated(int workspaceId, bool focused);
     void focusedWorkspaceChanged();
     void workspaceHasWindowsChanged();
     void windowsChanged();
+    void windowClosed(qint64 windowId);
+    void windowFocusChanged(qint64 windowId);
     void focusedWindowChanged();
     void lastFocusedWindowChanged();
+    void layoutChanged();
+    void viewportChanged();
     void scrollDirectionChanged();
     void inOverviewChanged();
     void outputsChanged();
@@ -142,6 +158,7 @@ signals:
     void capsLockChanged();
     void numLockChanged();
     void windowOpenedOrChanged(const QVariantMap& windowData);
+    void columnMoveCompleted(qint64 windowId, bool success);
 
 private slots:
     void onEventStreamConnected();
@@ -149,6 +166,31 @@ private slots:
     void onEvent(const QJsonObject& event);
 
 private:
+    struct ColumnMoveStep {
+        qint64 windowId = -1;
+        int targetIndex = 1;
+        bool cancelled = false;
+    };
+
+    struct ColumnMoveTransaction {
+        QList<ColumnMoveStep> steps;
+        qint64 originalFocusWindowId = -1;
+        qint64 primaryWindowId = -1;
+        qint64 lastMovedWindowId = -1;
+        bool restoreFocus = true;
+        bool anyMoved = false;
+        int currentStep = 0;
+        std::function<void(bool success)> callback;
+    };
+
+    void enqueueMoveTransaction(ColumnMoveTransaction tx);
+    void processNextMoveTransaction();
+    void executeNextMoveStep();
+    void finishActiveMoveTransaction();
+    void invalidateClosedWindowInTransactions(qint64 closedId);
+    static QByteArray buildFocusWindowPayload(qint64 windowId);
+    static QByteArray buildMoveColumnPayload(int targetIndex);
+
     void fetchInitialState();
     void handleWorkspacesChanged(const QJsonObject& data);
     void handleWindowsChanged(const QJsonObject& data);
@@ -164,7 +206,6 @@ private:
     void updateWorkspaceHasWindows();
     void updateFocusedWindowFields();
     void sortWindowsList();
-    void sortWindowsIfDirty();
     void rebuildWindowIndex();
     int findWindowIndexById(qint64 id) const;
     void setupLedWatchers();
@@ -174,6 +215,11 @@ private:
     NiriRequestSocket m_requestSocket;
 
     bool m_available = false;
+
+    // Atomic column move transaction queue
+    std::deque<ColumnMoveTransaction> m_moveQueue;
+    ColumnMoveTransaction m_activeMoveTx;
+    bool m_moveInFlight = false;
 
     // Workspace state
     NiriListModel* m_workspacesModel;
@@ -187,7 +233,6 @@ private:
     // Window state
     NiriListModel* m_windowsModel;
     QHash<qint64, int> m_windowIndex; // window ID -> index in m_windows for O(1) lookup
-    bool m_windowsSortDirty = false;
     int m_focusedWindowIndex = -1;
     QString m_focusedWindowId;
     QString m_focusedWindowTitle;
@@ -197,6 +242,7 @@ private:
     int m_lastFocusedColumn = -1;
     QString m_scrollDirection = QStringLiteral("none");
     bool m_inOverview = false;
+    QTimer m_viewportThrottleTimer;
 
     // Output state
     QVariantMap m_outputs;

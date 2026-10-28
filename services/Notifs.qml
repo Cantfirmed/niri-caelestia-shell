@@ -98,17 +98,7 @@ Singleton {
     }
 
     function hasFullscreen(): bool {
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            const wsId = NiriIpc.focusedWorkspaceId;
-            return NiriIpc.windows.some(w => w.workspace_id === wsId && (w.is_fullscreen === true || w.fullscreen === true));
-        }
-        if (typeof Hypr !== "undefined" && Hypr.monitors) {
-            for (const monitor of Hypr.monitors.values) {
-                if (monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1))
-                    return true;
-            }
-        }
-        return false;
+        return Compositor.hasFullscreen;
     }
 
     function shouldShowPopup(): bool {
@@ -172,10 +162,10 @@ Singleton {
         if (!notif)
             return false;
 
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available && NiriIpc.windows) {
-            const win = NiriIpc.windows.find(w => root.matchesApp(notif, w.app_id ?? "", w.title ?? ""));
+        if (Compositor.available && Compositor.windows) {
+            const win = Compositor.windows.find(w => root.matchesApp(notif, w.app_id ?? "", w.title ?? ""));
             if (win && win.id !== undefined) {
-                Niri.focusWindow(win.id);
+                Compositor.focusWindow(win.id);
                 return true;
             }
         }
@@ -219,9 +209,9 @@ Singleton {
     }
 
     Connections {
-        target: typeof NiriIpc !== "undefined" ? NiriIpc : null
+        target: Compositor
 
-        function onFocusedWindowChanged(): void {
+        function onActiveWindowChanged(): void {
             if (GlobalConfig.notifs.autoClearOnFocus ?? true) {
                 autoClearTimer.restart();
             }
@@ -236,8 +226,8 @@ Singleton {
             if (!(GlobalConfig.notifs.autoClearOnFocus ?? true))
                 return;
 
-            const curClass = (typeof NiriIpc !== "undefined" && NiriIpc.available) ? NiriIpc.focusedWindowClass : Niri.focusedWindowClass;
-            const curTitle = (typeof NiriIpc !== "undefined" && NiriIpc.available) ? NiriIpc.focusedWindowTitle : Niri.focusedWindowTitle;
+            const curClass = Compositor.activeWindowClass;
+            const curTitle = Compositor.activeWindowTitle;
             if (!curClass || curClass === "Desktop")
                 return;
 
@@ -317,8 +307,8 @@ Singleton {
         onNotification: notif => {
             notif.tracked = true;
 
-            const curClass = Niri.focusedWindowClass;
-            const isCurrentlyFocused = (GlobalConfig.notifs.autoClearOnFocus ?? true) && curClass && curClass !== "Desktop" && root.matchesApp(notif, curClass, Niri.focusedWindowTitle);
+            const curClass = Compositor.activeWindowClass;
+            const isCurrentlyFocused = (GlobalConfig.notifs.autoClearOnFocus ?? true) && curClass && curClass !== "Desktop" && root.matchesApp(notif, curClass, Compositor.activeWindowTitle);
 
             const comp = notifComp.createObject(root, {
                 popup: root.shouldShowPopup(),

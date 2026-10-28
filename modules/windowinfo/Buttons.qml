@@ -73,7 +73,7 @@ ColumnLayout {
             columns: 5
 
             Repeater {
-                model: Niri.allWorkspaces
+                model: Compositor.workspaces
 
                 Button {
                     required property var modelData
@@ -82,7 +82,7 @@ ColumnLayout {
                     readonly property bool isCurrent: root.client?.workspace_id === wsId
 
                     onClicked: {
-                        Niri.moveWindowToWorkspace(wsIdx);
+                        Compositor.moveWindowToWorkspace(wsIdx);
                     }
 
                     color: isCurrent ? Colours.tPalette.m3surfaceContainerHighest : Colours.palette.m3tertiaryContainer
@@ -110,21 +110,21 @@ ColumnLayout {
             color: Colours.palette.m3secondaryContainer
             onColor: Colours.palette.m3onSecondaryContainer
             text: root.client?.is_floating ? qsTr("Tile") : qsTr("Float")
-            onClicked: Niri.toggleWindowFloating(root.client?.id)
+            onClicked: Compositor.toggleWindowFloating(root.client?.id)
         }
 
         Button {
             color: Colours.palette.m3secondaryContainer
             onColor: Colours.palette.m3onSecondaryContainer
             text: qsTr("Maximize")
-            onClicked: Niri.toggleMaximize()
+            onClicked: Compositor.toggleMaximize()
         }
 
         Button {
             color: Colours.palette.m3errorContainer
             onColor: Colours.palette.m3onErrorContainer
             text: qsTr("Kill")
-            onClicked: Niri.closeWindow(root.client?.id)
+            onClicked: Compositor.closeWindow(root.client?.id)
         }
     }
 

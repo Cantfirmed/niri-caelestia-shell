@@ -68,16 +68,16 @@ fi
 # 3. Active Window Info Popout
 ACTIVE_WINDOW="modules/bar/popouts/ActiveWindow.qml"
 if [ -f "$ACTIVE_WINDOW" ]; then
-    if grep -q 'Niri\.lastFocusedWindow' "$ACTIVE_WINDOW" && \
+    if grep -qE '(Compositor|Niri)\.lastFocusedWindow' "$ACTIVE_WINDOW" && \
        grep -q 'detachRequested("winfo")' "$ACTIVE_WINDOW"; then
         if grep -q 'ScreencopyView' "$ACTIVE_WINDOW"; then
             fail "Active Window popout contains Hyprland ScreencopyView ($ACTIVE_WINDOW)" \
                  "ScreencopyView is Hyprland-specific and collapses popout width. Check NIRI-DELTAS.md Section 2.F."
         else
-            pass "Active Window popout uses Niri IPC and triggers winfo drawer ($ACTIVE_WINDOW)"
+            pass "Active Window popout uses Compositor/Niri IPC and triggers winfo drawer ($ACTIVE_WINDOW)"
         fi
     else
-        fail "Active Window popout not wired to Niri or winfo drawer ($ACTIVE_WINDOW)" \
+        fail "Active Window popout not wired to Compositor/Niri or winfo drawer ($ACTIVE_WINDOW)" \
              "Upstream replaced Niri popout. Check NIRI-DELTAS.md Section 2.F."
     fi
 else
@@ -209,9 +209,35 @@ else
     fail "File missing: $NEXUS_PLUGINS_PAGE" "File does not exist."
 fi
 
+# 13. Compositor Abstraction Layer (Compositor.qml and NiriCompositor.qml)
+COMPOSITOR_QML="services/Compositor.qml"
+NIRI_COMPOSITOR_QML="services/NiriCompositor.qml"
+if [ -f "$COMPOSITOR_QML" ] && [ -f "$NIRI_COMPOSITOR_QML" ]; then
+    if grep -q 'pragma Singleton' "$COMPOSITOR_QML" && \
+       grep -q 'readonly property string backendName' "$COMPOSITOR_QML" && \
+       grep -q 'readonly property string backendName: "niri"' "$NIRI_COMPOSITOR_QML"; then
+        pass "Compositor Abstraction Layer singletons present and valid ($COMPOSITOR_QML, $NIRI_COMPOSITOR_QML)"
+    else
+        fail "Compositor Abstraction Layer files corrupted" \
+             "services/Compositor.qml or services/NiriCompositor.qml missing core backend declarations."
+    fi
+else
+    fail "Compositor Abstraction Layer files missing" \
+         "services/Compositor.qml or services/NiriCompositor.qml does not exist."
+fi
+
+# 14. Zero Legacy Hyprland References in Generic Modules
+HYPR_LEGACY_HITS=$(grep -rnE '\bHypr\.' modules/ services/ 2>/dev/null || true)
+if [ -z "$HYPR_LEGACY_HITS" ] && [ ! -f "services/Hypr.qml" ]; then
+    pass "Zero legacy Hyprland references in modules/ and services/ (Hypr.qml removed)"
+else
+    fail "Legacy Hyprland references or services/Hypr.qml found" \
+         "Hyprland calls must be abstracted via Compositor. Found: $HYPR_LEGACY_HITS"
+fi
+
 echo "===================================================="
 if [ "$FAILED" -eq 0 ]; then
-    echo -e "${GREEN}All 12 delta verification checks passed!${NC}"
+    echo -e "${GREEN}All 14 delta verification checks passed!${NC}"
     exit 0
 else
     echo -e "${RED}Verification failed with $FAILED error(s).${NC}"

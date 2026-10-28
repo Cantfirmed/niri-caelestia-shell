@@ -27,13 +27,9 @@ Singleton {
 
     function getMonitor(query: string): var {
         if (query === "active") {
-            const focusedName = typeof Niri !== "undefined" ? Niri.focusedMonitorName : "";
+            const focusedName = Compositor.focusedMonitorName;
             if (focusedName) {
                 const found = monitors.find(m => m.modelData && m.modelData.name === focusedName);
-                if (found) return found;
-            }
-            if (typeof Hypr !== "undefined") {
-                const found = monitors.find(m => Hypr.monitorFor(m.modelData)?.focused);
                 if (found) return found;
             }
             return monitors.length > 0 ? monitors[0] : null;

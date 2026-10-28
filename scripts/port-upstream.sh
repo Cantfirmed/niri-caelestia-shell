@@ -75,6 +75,13 @@ if [ ! -s "$DIFF_FILE" ]; then
     exit 0
 fi
 
+# Check if upstream patch introduces legacy Hypr calls
+if grep -qE '^\+.*\<Hypr\.' "$DIFF_FILE"; then
+    echo "⚠️  WARNING: Incoming upstream diff introduces calls to 'Hypr.'!"
+    echo "   These must be mapped through Compositor.qml abstraction."
+    echo ""
+fi
+
 # Show summary
 echo "Changed files to be patched:"
 git diff "$FROM_REF" "$TO_REF" -- $(cat "$FILTER") "${PROTECTED_EXCLUDES[@]}" --stat

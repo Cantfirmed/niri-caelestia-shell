@@ -29,14 +29,15 @@ StyledRect {
     property real leading: workspaces.itemAt(currentWsIdx)?.y ?? 0
     property real trailing: workspaces.itemAt(currentWsIdx)?.y ?? 0
 
-    property real currentSize: workspaces.itemAt(currentWsIdx)?.size ?? 0
+    property real currentSize: workspaces.itemAt(currentWsIdx)?.indicatorSize ?? workspaces.itemAt(currentWsIdx)?.size ?? 0
     property real offset: Math.min(leading, trailing)
 
     property real size: {
         const s = Math.abs(leading - trailing) + currentSize;
         if (Config.bar.workspaces.activeTrail && lastWs > currentWsIdx) {
             const ws = workspaces.itemAt(lastWs);
-            return ws ? Math.min(ws.y + ws.size - offset, s) : 0;
+            const wsSize = ws?.indicatorSize ?? ws?.size ?? 0;
+            return ws ? Math.min(ws.y + wsSize - offset, s) : 0;
         }
         return s;
     }

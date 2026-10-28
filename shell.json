@@ -111,6 +111,7 @@
       "brightness": true
     },
     "workspaces": {
+      "style": "classic",
       "shown": 4,
       "activeIndicator": true,
       "occupiedBg": true,

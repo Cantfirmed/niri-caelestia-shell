@@ -21,27 +21,9 @@ StyledWindow {
 
     readonly property ScreenState screenState: ShellState.forScreen(screen)
 
-    readonly property bool hasFullscreen: {
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            const wsId = NiriIpc.focusedWorkspaceId;
-            return NiriIpc.windows.some(w => w.workspace_id === wsId && (w.is_fullscreen === true || w.fullscreen === true));
-        }
-        if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
-            return Hypr.focusedWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-        }
-        return false;
-    }
-
-    readonly property bool hasWindows: {
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            const activeWsId = NiriIpc.focusedWorkspaceId;
-            return activeWsId >= 0 && NiriIpc.windows.some(w => w.workspace_id === activeWsId);
-        }
-        if (typeof Hypr !== "undefined" && Hypr.focusedWorkspace) {
-            return (Hypr.focusedWorkspace?.lastIpcObject?.windows ?? 0) > 0;
-        }
-        return false;
-    }
+    readonly property bool hasFullscreen: Compositor.hasFullscreen
+    readonly property bool hasWindows: Compositor.activeWorkspaceHasWindows
+    readonly property bool _needsKeyboardFocus: screenState && ((screenState.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && screenState.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1))
 
     readonly property bool hasOpenPanels: screenState ? (screenState.launcher || screenState.dashboard || screenState.session || screenState.sidebar || screenState.utilities || screenState.manga || screenState.novel || screenState.displaySelect || screenState.soundPanel || screenState.shaderSelect || screenState.hotkeys || screenState.osd || screenState.calendar || (panels?.popouts?.hasCurrent ?? false)) : false
 
@@ -121,8 +103,6 @@ StyledWindow {
         panels: panels
         win: root
     }
-
-    readonly property bool _needsKeyboardFocus: screenState && ((screenState.sidebar && root.contentItem.Config.sidebar.enabled) || (!root.contentItem.Config.dashboard.showOnHover && screenState.dashboard && root.contentItem.Config.dashboard.enabled) || (panels.popouts.currentName.startsWith("traymenu") && (panels.popouts.current as StackView)?.depth > 1))
 
     Binding {
         target: QsWindow.window

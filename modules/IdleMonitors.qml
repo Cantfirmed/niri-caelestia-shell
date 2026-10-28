@@ -32,22 +32,11 @@ Scope {
         else if (action === "unlock")
             lock.lock.locked = false;
         else if (action === "dpms off") {
-            if (typeof Niri !== "undefined")
-                Quickshell.execDetached(["niri", "msg", "action", "power-off-monitors"]);
-            else if (typeof Hypr !== "undefined")
-                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.dpms({ action = "disable" })` : "dpms off");
-            else
-                Quickshell.execDetached(["wlr-randr", "--off"]);
+            Compositor.powerOffMonitors();
         } else if (action === "dpms on") {
-            if (typeof Niri !== "undefined")
-                Quickshell.execDetached(["niri", "msg", "action", "power-on-monitors"]);
-            else if (typeof Hypr !== "undefined")
-                Hypr.dispatch(Hypr.usingLua ? `hl.dsp.dpms({ action = "enable" })` : "dpms on");
+            Compositor.powerOnMonitors();
         } else if (typeof action === "string") {
-            if (typeof Hypr !== "undefined")
-                Hypr.dispatch(Hypr.usingLua && ["dpms off", "dpms on"].includes(action) ? `hl.dsp.dpms({ action = "${action === "dpms off" ? "disable" : "enable"}" })` : action);
-            else
-                Quickshell.execDetached(["sh", "-c", action]);
+            Quickshell.execDetached(["sh", "-c", action]);
         } else if (!SessionManager.exec(action)) {
             Quickshell.execDetached(action);
         }

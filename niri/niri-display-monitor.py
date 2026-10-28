@@ -210,9 +210,9 @@ def check_and_fix_displays():
         if now - LAST_REVERT_TIME >= 2.0:
             LAST_REVERT_TIME = now
             if external_is_present:
-                print("[DisplayMonitor] Lid opened with external monitor present. Extending desktop...", flush=True)
+                print("[DisplayMonitor] Lid opened with external monitor present. Restoring extended desktop...", flush=True)
                 if os.path.exists(display_script):
-                    subprocess.run([display_script, "extend-right"])
+                    subprocess.run([display_script, "restore-extended"])
                 elif internal_name:
                     run_cmd(f"niri msg output {internal_name} on")
             else:
@@ -292,9 +292,9 @@ def handle_cli_lid_event(event_type):
                 subprocess.run([display_script, "external"])
     elif event_type == "open":
         if ext_present:
-            print("[LidHandler] Lid opened with external display present. Extending desktop.", flush=True)
+            print("[LidHandler] Lid opened with external display present. Restoring extended desktop.", flush=True)
             if os.path.exists(display_script):
-                subprocess.run([display_script, "extend-right"])
+                subprocess.run([display_script, "restore-extended"])
         else:
             print("[LidHandler] Lid opened with no external display. Enabling laptop screen.", flush=True)
             if os.path.exists(display_script):

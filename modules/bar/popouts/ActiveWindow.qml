@@ -14,7 +14,7 @@ Item {
 
     required property PopoutState popouts
 
-    readonly property var client: Niri.lastFocusedWindow
+    readonly property var client: Compositor.lastFocusedWindow
     readonly property bool hasActiveWindow: !!client && client.id !== undefined && client.id !== null
 
     Component.onCompleted: {

@@ -11,5 +11,8 @@ plugin/src/Caelestia/Config/CMakeLists.txt
 scripts/launch-quickshell.sh
 services/NetworkUsage.qml
 services/Niri.qml
+services/Compositor.qml
+services/NiriCompositor.qml
+services/GameMode.qml
 modules/launcher/Content.qml
 services/Wallpapers.qml

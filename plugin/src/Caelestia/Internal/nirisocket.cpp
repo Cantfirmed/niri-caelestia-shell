@@ -1,21 +1,53 @@
 #include "nirisocket.hpp"
 
 #include <qdebug.h>
+#include <qdir.h>
+#include <qfileinfo.h>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
 #include <qlocalsocket.h>
 #include <QProcessEnvironment>
 #include <sys/socket.h>
-
-#include <memory>
+#include <unistd.h>
 
 namespace caelestia {
 
-static QString niriSocketPath() {
-    return QProcessEnvironment::systemEnvironment().value(QStringLiteral("NIRI_SOCKET"));
+QString resolveNiriSocketPath() {
+    const auto env = QProcessEnvironment::systemEnvironment();
+    const QString envSock = env.value(QStringLiteral("NIRI_SOCKET"));
+    if (!envSock.isEmpty() && QFileInfo::exists(envSock)) {
+        return envSock;
+    }
+
+    QStringList searchDirs;
+    const QString xdgRuntime = env.value(QStringLiteral("XDG_RUNTIME_DIR"));
+    if (!xdgRuntime.isEmpty()) {
+        searchDirs.append(xdgRuntime);
+    }
+    const QString runUserDir = QStringLiteral("/run/user/%1").arg(::getuid());
+    if (!searchDirs.contains(runUserDir)) {
+        searchDirs.append(runUserDir);
+    }
+
+    for (const QString& dirPath : searchDirs) {
+        QDir dir(dirPath);
+        if (!dir.exists()) {
+            continue;
+        }
+        const QFileInfoList entries = dir.entryInfoList(
+            {QStringLiteral("niri*.sock")},
+            QDir::System | QDir::Files,
+            QDir::Time
+        );
+        if (!entries.isEmpty()) {
+            return entries.first().absoluteFilePath();
+        }
+    }
+
+    return envSock;
 }
 
-// ── NiriEventSocket ──────────────────────────────────────────────────
+// ── NiriEventSocket ──────────────────────────────────────────────────────────
 
 NiriEventSocket::NiriEventSocket(QObject* parent)
     : QObject(parent)
@@ -31,9 +63,10 @@ NiriEventSocket::NiriEventSocket(QObject* parent)
 }
 
 void NiriEventSocket::connectToNiri() {
-    const QString path = niriSocketPath();
+    const QString path = resolveNiriSocketPath();
     if (path.isEmpty()) {
-        qWarning() << "NiriEventSocket: NIRI_SOCKET not set";
+        qWarning() << "NiriEventSocket: Could not locate Niri IPC socket";
+        scheduleReconnect();
         return;
     }
 
@@ -43,7 +76,6 @@ void NiriEventSocket::connectToNiri() {
 
     m_readBuffer.clear();
     m_handshakeDone = false;
-    m_reconnectDelay = 1000;
     m_socket->connectToServer(path);
 }
 
@@ -65,7 +97,7 @@ void NiriEventSocket::onConnected() {
         int rcvbuf = 1024 * 1024; // 1MB buffer to prevent overflows during event bursts
         ::setsockopt(static_cast<int>(fd), SOL_SOCKET, SO_RCVBUF, &rcvbuf, static_cast<socklen_t>(sizeof(rcvbuf)));
     }
-    m_socket->write("\"EventStream\"\n");
+    m_socket->write(QByteArrayLiteral("\"EventStream\"\n"));
     m_socket->flush();
 }
 
@@ -79,7 +111,7 @@ void NiriEventSocket::onDisconnected() {
 void NiriEventSocket::onReadyRead() {
     m_readBuffer.append(m_socket->readAll());
 
-    int pos;
+    int pos = 0;
     while ((pos = static_cast<int>(m_readBuffer.indexOf('\n'))) != -1) {
         const QByteArray line = m_readBuffer.left(pos).trimmed();
         m_readBuffer.remove(0, pos + 1);
@@ -100,9 +132,8 @@ void NiriEventSocket::processLine(const QByteArray& line) {
     const QJsonObject obj = doc.object();
 
     if (!m_handshakeDone) {
-        // First response is {"Ok":"Handled"} for EventStream
         if (!obj.contains(QStringLiteral("Ok"))) {
-            qWarning() << "NiriEventSocket: Critical handshake failure. Expected {\"Ok\":...}, got:" << doc.toJson(QJsonDocument::Compact);
+            qWarning() << "NiriEventSocket: Handshake failed. Expected {\"Ok\":...}, got:" << doc.toJson(QJsonDocument::Compact);
             disconnectFromNiri();
             return;
         }
@@ -115,7 +146,7 @@ void NiriEventSocket::processLine(const QByteArray& line) {
     }
 
     if (obj.isEmpty()) {
-        qWarning() << "NiriEventSocket: Received empty or invalid event JSON payload";
+        qWarning() << "NiriEventSocket: Received empty event JSON payload";
         return;
     }
 
@@ -123,7 +154,9 @@ void NiriEventSocket::processLine(const QByteArray& line) {
 }
 
 void NiriEventSocket::onError(QLocalSocket::LocalSocketError error) {
-    if (error == QLocalSocket::PeerClosedError) return;
+    if (error == QLocalSocket::PeerClosedError) {
+        return;
+    }
     qWarning() << "NiriEventSocket: Error:" << m_socket->errorString();
     scheduleReconnect();
 }
@@ -136,97 +169,165 @@ void NiriEventSocket::scheduleReconnect() {
     }
 }
 
-// ── NiriRequestSocket ────────────────────────────────────────────────
+// ── NiriRequestSocket ────────────────────────────────────────────────────────
 
 NiriRequestSocket::NiriRequestSocket(QObject* parent)
-    : QObject(parent) {}
+    : QObject(parent)
+    , m_socket(new QLocalSocket(this)) {
+
+    connect(m_socket, &QLocalSocket::connected, this, &NiriRequestSocket::onConnected);
+    connect(m_socket, &QLocalSocket::disconnected, this, &NiriRequestSocket::onDisconnected);
+    connect(m_socket, &QLocalSocket::readyRead, this, &NiriRequestSocket::onReadyRead);
+    connect(m_socket, &QLocalSocket::errorOccurred, this, &NiriRequestSocket::onError);
+}
 
 void NiriRequestSocket::request(const QByteArray& payload, Callback callback) {
     m_queue.push_back({payload, std::move(callback)});
-    if (!m_busy) {
+    if (!m_hasActive) {
         processQueue();
     }
 }
 
 void NiriRequestSocket::action(const QByteArray& payload) {
     m_queue.push_back({payload, nullptr});
-    if (!m_busy) {
+    if (!m_hasActive) {
         processQueue();
     }
 }
 
 void NiriRequestSocket::processQueue() {
+    if (m_hasActive) {
+        return;
+    }
     if (m_queue.empty()) {
-        m_busy = false;
         return;
     }
 
-    m_busy = true;
-    auto req = std::move(m_queue.front());
+    m_activeRequest = std::move(m_queue.front());
     m_queue.pop_front();
-    startRequest(req);
+    m_hasActive = true;
+    m_retriedCurrent = false;
+
+    if (m_socket->state() == QLocalSocket::ConnectedState) {
+        writeCurrent();
+        return;
+    }
+
+    if (m_socket->state() == QLocalSocket::ConnectingState) {
+        return;
+    }
+
+    const QString path = resolveNiriSocketPath();
+    if (path.isEmpty()) {
+        qWarning() << "NiriRequestSocket: Could not locate Niri IPC socket";
+        failCurrent();
+        return;
+    }
+
+    m_readBuffer.clear();
+    m_socket->connectToServer(path);
 }
 
-void NiriRequestSocket::startRequest(const PendingRequest& req) {
-    const QString path = niriSocketPath();
-    if (path.isEmpty()) {
-        qWarning() << "NiriRequestSocket: NIRI_SOCKET not set";
-        if (req.callback) req.callback(false, QJsonObject());
-        processQueue();
+void NiriRequestSocket::writeCurrent() {
+    if (!m_hasActive) {
         return;
     }
+    QByteArray line = m_activeRequest.payload;
+    if (!line.endsWith('\n')) {
+        line.append('\n');
+    }
+    m_socket->write(line);
+    m_socket->flush();
+}
 
-    auto* sock = new QLocalSocket(this);
-    auto payload = req.payload;
-    auto callback = req.callback;
+void NiriRequestSocket::onConnected() {
+    writeCurrent();
+}
 
-    connect(sock, &QLocalSocket::connected, this, [sock, payload]() {
-        sock->write(payload + "\n");
-        sock->flush();
-    });
+void NiriRequestSocket::onReadyRead() {
+    m_readBuffer.append(m_socket->readAll());
 
-    auto buffer = std::make_shared<QByteArray>();
-
-    connect(sock, &QLocalSocket::readyRead, this, [sock, buffer]() {
-        buffer->append(sock->readAll());
-        if (buffer->contains('\n')) {
-            sock->disconnectFromServer();
+    int nlPos = 0;
+    while ((nlPos = static_cast<int>(m_readBuffer.indexOf('\n'))) != -1) {
+        const QByteArray line = m_readBuffer.left(nlPos).trimmed();
+        m_readBuffer.remove(0, nlPos + 1);
+        if (line.isEmpty() || !m_hasActive) {
+            continue;
         }
-    });
 
-    connect(sock, &QLocalSocket::disconnected, this, [this, sock, buffer, callback]() {
-        if (callback) {
-            const QByteArray line = buffer->trimmed();
+        Callback cb = std::move(m_activeRequest.callback);
+        m_activeRequest = {};
+        m_hasActive = false;
+        m_retriedCurrent = false;
+
+        if (cb) {
             QJsonParseError err;
             const QJsonDocument doc = QJsonDocument::fromJson(line, &err);
             if (err.error != QJsonParseError::NoError) {
                 qWarning() << "NiriRequestSocket: JSON parse error:" << err.errorString();
-                callback(false, QJsonObject());
+                cb(false, QJsonObject());
             } else {
                 const QJsonObject obj = doc.object();
                 if (obj.contains(QStringLiteral("Err"))) {
-                    qWarning() << "NiriRequestSocket: IPC explicitly returned error:" << obj.value(QStringLiteral("Err"));
-                    callback(false, obj);
+                    qWarning() << "NiriRequestSocket: IPC returned error:" << obj.value(QStringLiteral("Err"));
+                    cb(false, obj);
                 } else if (obj.contains(QStringLiteral("Ok"))) {
-                    callback(true, QJsonObject{{QStringLiteral("result"), obj.value(QStringLiteral("Ok"))}});
+                    cb(true, QJsonObject{{QStringLiteral("result"), obj.value(QStringLiteral("Ok"))}});
                 } else {
-                    qWarning() << "NiriRequestSocket: Unrecognized IPC response schema (Missing 'Ok' or 'Err'):" << doc.toJson(QJsonDocument::Compact);
-                    callback(false, obj);
+                    qWarning() << "NiriRequestSocket: Unrecognized IPC response schema:" << doc.toJson(QJsonDocument::Compact);
+                    cb(false, obj);
                 }
             }
         }
-        sock->deleteLater();
-        processQueue();
-    });
 
-    connect(sock, &QLocalSocket::errorOccurred, this, [this, sock, buffer, callback](QLocalSocket::LocalSocketError) {
-        qWarning() << "NiriRequestSocket: Error:" << sock->errorString();
-        if (callback) callback(false, QJsonObject());
-        sock->deleteLater();
         processQueue();
-    });
+    }
+}
 
-    sock->connectToServer(path);
+void NiriRequestSocket::onDisconnected() {
+    m_readBuffer.clear();
+    if (!m_hasActive) {
+        return;
+    }
+
+    // If the persistent socket was closed by the peer while idle right before our write,
+    // transparently reconnect once before failing the in-flight request.
+    if (!m_retriedCurrent) {
+        m_retriedCurrent = true;
+        const QString path = resolveNiriSocketPath();
+        if (!path.isEmpty()) {
+            m_socket->connectToServer(path);
+            return;
+        }
+    }
+    failCurrent();
+}
+
+void NiriRequestSocket::onError(QLocalSocket::LocalSocketError error) {
+    if (error == QLocalSocket::PeerClosedError && !m_retriedCurrent && m_hasActive) {
+        // Handled in onDisconnected retry path
+        return;
+    }
+    qWarning() << "NiriRequestSocket: Socket error:" << m_socket->errorString();
+    m_socket->abort();
+    m_readBuffer.clear();
+    if (m_hasActive) {
+        failCurrent();
+    }
+}
+
+void NiriRequestSocket::failCurrent(const QJsonObject& errObj) {
+    if (!m_hasActive) {
+        return;
+    }
+    Callback cb = std::move(m_activeRequest.callback);
+    m_activeRequest = {};
+    m_hasActive = false;
+    m_retriedCurrent = false;
+    if (cb) {
+        cb(false, errObj);
+    }
+    processQueue();
 }
 
 } // namespace caelestia

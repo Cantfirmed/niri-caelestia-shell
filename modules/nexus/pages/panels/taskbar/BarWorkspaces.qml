@@ -69,6 +69,16 @@ PageBase {
         }
 
         ToggleRow {
+            text: Tr.trCtx("Niri ribbon mini-map", "bar workspaces")
+            subtext: Tr.tr("Visualize proportional scrolling ribbon columns and active viewport instead of classic icons")
+            checked: String(Config.bar.workspaces.style ?? "classic").toLowerCase() === "minimap"
+            onToggled: checked => {
+                if (typeof GlobalConfig.bar.workspaces.style !== "undefined")
+                    GlobalConfig.bar.workspaces.style = checked ? "minimap" : "classic";
+            }
+        }
+
+        ToggleRow {
             text: Tr.trCtx("Windows on special workspaces", "bar workspaces")
             checked: Config.bar.workspaces.showWindowsOnSpecialWorkspaces
             onToggled: GlobalConfig.bar.workspaces.showWindowsOnSpecialWorkspaces = checked

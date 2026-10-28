@@ -32,6 +32,7 @@ class BarPopouts : public settings::ObjectNode {
 class BarWorkspaces : public settings::ObjectNode {
     CONFIG_NODE(BarWorkspaces, settings::ObjectNode)
 
+    CONFIG_PROPERTY(QString, style, u"classic"_s)
     CONFIG_PROPERTY(int, shown, 5)
     CONFIG_PROPERTY(bool, activeIndicator, true)
     CONFIG_PROPERTY(bool, occupiedBg, false)

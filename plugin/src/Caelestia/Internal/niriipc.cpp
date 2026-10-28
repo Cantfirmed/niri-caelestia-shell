@@ -1,28 +1,29 @@
 #include "niriipc.hpp"
 
+#include <qdebug.h>
 #include <qdir.h>
 #include <qfile.h>
 #include <qjsonarray.h>
 #include <qjsondocument.h>
 #include <qjsonobject.h>
 #include <qjsonvalue.h>
-#include <qdebug.h>
 
 #include <algorithm>
+#include <utility>
 
 namespace caelestia {
 
-// ── NiriListModel ────────────────────────────────────────────────────
+// ── NiriListModel ────────────────────────────────────────────────────────────
 
 NiriListModel::NiriListModel(QObject* parent) : QAbstractListModel(parent) {}
 
 QHash<int, QByteArray> NiriListModel::roleNames() const {
-    return { {ObjectRole, "modelData"} };
+    return { {ObjectRole, QByteArrayLiteral("modelData")} };
 }
 
 int NiriListModel::rowCount(const QModelIndex& parent) const {
     Q_UNUSED(parent);
-    return m_items.size();
+    return static_cast<int>(m_items.size());
 }
 
 QVariant NiriListModel::data(const QModelIndex& index, int role) const {
@@ -38,7 +39,8 @@ void NiriListModel::resetData(const QVariantList& items) {
 }
 
 void NiriListModel::appendItem(const QVariantMap& item) {
-    beginInsertRows(QModelIndex(), m_items.size(), m_items.size());
+    const int pos = static_cast<int>(m_items.size());
+    beginInsertRows(QModelIndex(), pos, pos);
     m_items.append(item);
     endInsertRows();
 }
@@ -47,6 +49,11 @@ void NiriListModel::setItem(int idx, const QVariantMap& item) {
     if (idx < 0 || idx >= m_items.size()) return;
     m_items[idx] = item;
     emit dataChanged(index(idx), index(idx), {ObjectRole});
+}
+
+void NiriListModel::updateItemSilent(int idx, const QVariantMap& item) {
+    if (idx < 0 || idx >= m_items.size()) return;
+    m_items[idx] = item;
 }
 
 void NiriListModel::removeItem(int idx) {
@@ -60,7 +67,7 @@ const QVariantList& NiriListModel::items() const {
     return m_items;
 }
 
-// ── NiriIpc ──────────────────────────────────────────────────────────
+// ── NiriIpc ──────────────────────────────────────────────────────────────────
 
 NiriIpc::NiriIpc(QObject* parent)
     : QObject(parent)
@@ -70,6 +77,10 @@ NiriIpc::NiriIpc(QObject* parent)
     m_workspacesModel = new NiriListModel(this);
     m_windowsModel = new NiriListModel(this);
 
+    m_viewportThrottleTimer.setSingleShot(true);
+    m_viewportThrottleTimer.setInterval(30);
+    connect(&m_viewportThrottleTimer, &QTimer::timeout, this, &NiriIpc::viewportChanged);
+
     connect(&m_eventSocket, &NiriEventSocket::connected, this, &NiriIpc::onEventStreamConnected);
     connect(&m_eventSocket, &NiriEventSocket::disconnected, this, &NiriIpc::onEventStreamDisconnected);
     connect(&m_eventSocket, &NiriEventSocket::eventReceived, this, &NiriIpc::onEvent);
@@ -78,7 +89,7 @@ NiriIpc::NiriIpc(QObject* parent)
     m_eventSocket.connectToNiri();
 }
 
-// ── Property getters ─────────────────────────────────────────────────
+// ── Property getters ─────────────────────────────────────────────────────────
 
 bool NiriIpc::available() const { return m_available; }
 
@@ -127,7 +138,216 @@ QString NiriIpc::kbLayout() const {
 bool NiriIpc::capsLock() const { return m_capsLock; }
 bool NiriIpc::numLock() const { return m_numLock; }
 
-// ── Actions ──────────────────────────────────────────────────────────
+// ── Actions & Atomic Column Move Transactions ────────────────────────────────
+
+QByteArray NiriIpc::buildFocusWindowPayload(qint64 windowId) {
+    QJsonObject inner;
+    inner[QStringLiteral("id")] = windowId;
+    QJsonObject actionObj;
+    actionObj[QStringLiteral("FocusWindow")] = inner;
+    QJsonObject wrapper;
+    wrapper[QStringLiteral("Action")] = actionObj;
+    return QJsonDocument(wrapper).toJson(QJsonDocument::Compact);
+}
+
+QByteArray NiriIpc::buildMoveColumnPayload(int targetIndex) {
+    QJsonObject inner;
+    inner[QStringLiteral("index")] = targetIndex;
+    QJsonObject actionObj;
+    actionObj[QStringLiteral("MoveColumnToIndex")] = inner;
+    QJsonObject wrapper;
+    wrapper[QStringLiteral("Action")] = actionObj;
+    return QJsonDocument(wrapper).toJson(QJsonDocument::Compact);
+}
+
+bool NiriIpc::moveColumnToIndex(qint64 windowId, int targetIndex, bool restoreFocus) {
+    if (!m_available || windowId <= 0 || targetIndex < 1) {
+        return false;
+    }
+    if (findWindowIndexById(windowId) < 0) {
+        qWarning() << "NiriIpc::moveColumnToIndex: target window does not exist:" << windowId;
+        emit columnMoveCompleted(windowId, false);
+        return false;
+    }
+
+    const qint64 origFocus = m_focusedWindowId.isEmpty() ? -1 : m_focusedWindowId.toLongLong();
+
+    ColumnMoveTransaction tx;
+    tx.steps.append(ColumnMoveStep{windowId, targetIndex, false});
+    tx.originalFocusWindowId = origFocus;
+    tx.primaryWindowId = windowId;
+    tx.restoreFocus = restoreFocus;
+    enqueueMoveTransaction(std::move(tx));
+    return true;
+}
+
+bool NiriIpc::reorderColumn(qint64 windowId, int targetIndex) {
+    return moveColumnToIndex(windowId, targetIndex, true);
+}
+
+bool NiriIpc::moveGroupColumns(
+    const QVariantList& windowIds,
+    const QVariantList& targetIndices,
+    qint64 restoreFocusWindowId
+) {
+    if (!m_available || windowIds.isEmpty()) {
+        return false;
+    }
+
+    ColumnMoveTransaction tx;
+    const int fallbackIdx = targetIndices.isEmpty() ? 1 : qMax(1, targetIndices.first().toInt());
+
+    for (int i = 0; i < windowIds.size(); ++i) {
+        const qint64 wid = windowIds.at(i).toLongLong();
+        if (wid <= 0 || findWindowIndexById(wid) < 0) {
+            continue;
+        }
+        const int tIdx = (i < targetIndices.size())
+            ? qMax(1, targetIndices.at(i).toInt())
+            : fallbackIdx;
+        tx.steps.append(ColumnMoveStep{wid, tIdx, false});
+    }
+
+    if (tx.steps.isEmpty()) {
+        return false;
+    }
+
+    const qint64 currentFocus = m_focusedWindowId.isEmpty() ? -1 : m_focusedWindowId.toLongLong();
+    tx.originalFocusWindowId = (restoreFocusWindowId > 0) ? restoreFocusWindowId : currentFocus;
+    tx.primaryWindowId = tx.steps.first().windowId;
+    tx.restoreFocus = true;
+    enqueueMoveTransaction(std::move(tx));
+    return true;
+}
+
+void NiriIpc::enqueueMoveTransaction(ColumnMoveTransaction tx) {
+    m_moveQueue.push_back(std::move(tx));
+    if (!m_moveInFlight) {
+        processNextMoveTransaction();
+    }
+}
+
+void NiriIpc::processNextMoveTransaction() {
+    if (m_moveInFlight || m_moveQueue.empty()) {
+        return;
+    }
+
+    m_activeMoveTx = std::move(m_moveQueue.front());
+    m_moveQueue.pop_front();
+    m_moveInFlight = true;
+    executeNextMoveStep();
+}
+
+void NiriIpc::executeNextMoveStep() {
+    if (!m_moveInFlight) {
+        return;
+    }
+
+    while (m_activeMoveTx.currentStep < m_activeMoveTx.steps.size()) {
+        const auto& step = m_activeMoveTx.steps.at(m_activeMoveTx.currentStep);
+        if (!step.cancelled && step.windowId > 0 && findWindowIndexById(step.windowId) >= 0) {
+            break;
+        }
+        ++m_activeMoveTx.currentStep;
+    }
+
+    if (m_activeMoveTx.currentStep >= m_activeMoveTx.steps.size()) {
+        finishActiveMoveTransaction();
+        return;
+    }
+
+    const int stepIdx = m_activeMoveTx.currentStep;
+    const qint64 targetWinId = m_activeMoveTx.steps.at(stepIdx).windowId;
+    const int targetColIdx = m_activeMoveTx.steps.at(stepIdx).targetIndex;
+
+    // Step 1: Send FocusWindow and wait for compositor socket confirmation
+    m_requestSocket.request(buildFocusWindowPayload(targetWinId), [this, stepIdx, targetWinId, targetColIdx](bool focusOk, const QJsonObject&) {
+        if (!m_moveInFlight || stepIdx != m_activeMoveTx.currentStep) {
+            return;
+        }
+
+        // Guard against target window closing mid-transaction before dispatching MoveColumnToIndex
+        const bool stillAlive = !m_activeMoveTx.steps.at(stepIdx).cancelled && findWindowIndexById(targetWinId) >= 0;
+        if (!focusOk || !stillAlive) {
+            qWarning() << "NiriIpc: Aborting column move step; window closed or FocusWindow failed:" << targetWinId;
+            ++m_activeMoveTx.currentStep;
+            executeNextMoveStep();
+            return;
+        }
+
+        // Step 2: Immediately dispatch MoveColumnToIndex on socket confirmation
+        m_requestSocket.request(buildMoveColumnPayload(targetColIdx), [this, stepIdx, targetWinId](bool moveOk, const QJsonObject&) {
+            if (!m_moveInFlight || stepIdx != m_activeMoveTx.currentStep) {
+                return;
+            }
+            if (moveOk) {
+                m_activeMoveTx.anyMoved = true;
+                m_activeMoveTx.lastMovedWindowId = targetWinId;
+            }
+            ++m_activeMoveTx.currentStep;
+            executeNextMoveStep();
+        });
+    });
+}
+
+void NiriIpc::finishActiveMoveTransaction() {
+    if (!m_moveInFlight) {
+        return;
+    }
+
+    const qint64 origFocus = m_activeMoveTx.originalFocusWindowId;
+    const bool needRestore = m_activeMoveTx.restoreFocus
+        && origFocus > 0
+        && origFocus != m_activeMoveTx.lastMovedWindowId
+        && findWindowIndexById(origFocus) >= 0;
+
+    const qint64 primaryId = m_activeMoveTx.primaryWindowId;
+    const bool success = m_activeMoveTx.anyMoved;
+    auto cb = std::move(m_activeMoveTx.callback);
+
+    auto completeTx = [this, primaryId, success, cb = std::move(cb)]() {
+        m_activeMoveTx = {};
+        m_moveInFlight = false;
+        if (cb) {
+            cb(success);
+        }
+        emit columnMoveCompleted(primaryId, success);
+        processNextMoveTransaction();
+    };
+
+    if (needRestore) {
+        // Step 3: Immediately restore original focus on socket confirmation
+        m_requestSocket.request(buildFocusWindowPayload(origFocus), [completeTx = std::move(completeTx)](bool, const QJsonObject&) mutable {
+            completeTx();
+        });
+    } else {
+        completeTx();
+    }
+}
+
+void NiriIpc::invalidateClosedWindowInTransactions(qint64 closedId) {
+    if (m_moveInFlight) {
+        for (auto& step : m_activeMoveTx.steps) {
+            if (step.windowId == closedId) {
+                step.cancelled = true;
+            }
+        }
+        if (m_activeMoveTx.originalFocusWindowId == closedId) {
+            m_activeMoveTx.originalFocusWindowId = -1;
+        }
+    }
+
+    for (auto& tx : m_moveQueue) {
+        for (auto& step : tx.steps) {
+            if (step.windowId == closedId) {
+                step.cancelled = true;
+            }
+        }
+        if (tx.originalFocusWindowId == closedId) {
+            tx.originalFocusWindowId = -1;
+        }
+    }
+}
 
 bool NiriIpc::action(const QString& actionName, const QVariantList& args) {
     if (!m_available) return false;
@@ -144,17 +364,12 @@ bool NiriIpc::action(const QString& actionName, const QVariantList& args) {
         }
     }
 
-    // Build the inner action object based on niri's expected JSON format.
-    // Each action has a specific schema; we match the patterns used by the QML layer.
     QJsonObject actionObj;
     QJsonValue innerValue;
 
     if (args.size() >= 2 && args.at(0).toString() == QStringLiteral("--id")) {
-        // Actions with --id: FocusWindow, CloseWindow, ToggleWindowFloating
-        // Format: {"ActionName": {"id": N}}
         const qint64 id = args.at(1).toLongLong();
         if (pascalName == QStringLiteral("FocusWorkspace")) {
-            // FocusWorkspace by global ID: {"FocusWorkspace": {"reference": {"Id": N}}}
             QJsonObject ref;
             ref[QStringLiteral("Id")] = id;
             QJsonObject inner;
@@ -166,13 +381,10 @@ bool NiriIpc::action(const QString& actionName, const QVariantList& args) {
             innerValue = inner;
         }
     } else if (args.size() == 2 && args.at(0).toString() == QStringLiteral("-d")) {
-        // DoScreenTransition with delay: {"DoScreenTransition": {"delay_ms": N}}
         QJsonObject inner;
         inner[QStringLiteral("delay_ms")] = args.at(1).toInt();
         innerValue = inner;
     } else if (args.isEmpty()) {
-        // No-arg actions.
-        // Most accept {} but some need specific defaults.
         if (pascalName == QStringLiteral("ScreenshotWindow")) {
             QJsonObject inner;
             inner[QStringLiteral("id")] = QJsonValue::Null;
@@ -188,19 +400,16 @@ bool NiriIpc::action(const QString& actionName, const QVariantList& args) {
             innerValue = QJsonObject();
         }
     } else if (args.size() == 1) {
-        // Single positional arg — meaning depends on the action.
         bool isNumber = false;
         const qint64 num = args.at(0).toLongLong(&isNumber);
 
         if (pascalName == QStringLiteral("FocusWorkspace")) {
-            // {"FocusWorkspace": {"reference": {"Index": N}}}
             QJsonObject ref;
             ref[QStringLiteral("Index")] = num;
             QJsonObject inner;
             inner[QStringLiteral("reference")] = ref;
             innerValue = inner;
         } else if (pascalName == QStringLiteral("MoveWindowToWorkspace")) {
-            // {"MoveWindowToWorkspace": {"window_id": null, "reference": {"Index": N}, "focus": true}}
             QJsonObject ref;
             ref[QStringLiteral("Index")] = num;
             QJsonObject inner;
@@ -208,18 +417,16 @@ bool NiriIpc::action(const QString& actionName, const QVariantList& args) {
             inner[QStringLiteral("reference")] = ref;
             inner[QStringLiteral("focus")] = true;
             innerValue = inner;
-        } else if (pascalName == QStringLiteral("MoveColumnToIndex")) {
-            // {"MoveColumnToIndex": {"index": N}}
+        } else if (pascalName == QStringLiteral("MoveColumnToIndex") ||
+                   pascalName == QStringLiteral("FocusColumn")) {
             QJsonObject inner;
             inner[QStringLiteral("index")] = num;
             innerValue = inner;
         } else if (isNumber) {
-            // Generic numeric arg — wrap as object with reasonable key
             QJsonObject inner;
             inner[QStringLiteral("id")] = num;
             innerValue = inner;
         } else {
-            // String argument
             innerValue = args.at(0).toString();
         }
     } else {
@@ -263,7 +470,7 @@ QVariantList NiriIpc::getWindowsByWorkspaceId(int wsId) const {
 QVariantList NiriIpc::getWindowsByWorkspaceIndex(int index) const {
     const auto& wsList = m_workspacesModel->items();
     if (index < 0 || index >= wsList.size()) return {};
-    int wsId = wsList.at(index).toMap().value(QStringLiteral("id")).toInt();
+    const int wsId = wsList.at(index).toMap().value(QStringLiteral("id")).toInt();
     return getWindowsByWorkspaceId(wsId);
 }
 
@@ -283,7 +490,7 @@ QVariantList NiriIpc::getActiveWorkspaceWindows() const {
     return getWindowsByWorkspaceId(m_focusedWorkspaceId);
 }
 
-// ── Event Stream Slots ───────────────────────────────────────────────
+// ── Event Stream Slots ───────────────────────────────────────────────────────
 
 void NiriIpc::onEventStreamConnected() {
     qDebug() << "NiriIpc: Event stream connected";
@@ -308,7 +515,7 @@ void NiriIpc::onEvent(const QJsonObject& event) {
         if (focused) {
             m_focusedWorkspaceId = id;
         }
-        
+
         QVariantList currentWs = m_workspacesModel->items();
         bool found = false;
         for (int i = 0; i < currentWs.size(); ++i) {
@@ -319,7 +526,6 @@ void NiriIpc::onEvent(const QJsonObject& event) {
                     m_focusedWorkspaceIndex = i;
                     m_focusedMonitorName = ws.value(QStringLiteral("output")).toString();
                 }
-                // Update active/focused flags on same output
                 const QString output = ws.value(QStringLiteral("output")).toString();
                 for (int j = 0; j < currentWs.size(); ++j) {
                     auto w = currentWs.at(j).toMap();
@@ -338,8 +544,7 @@ void NiriIpc::onEvent(const QJsonObject& event) {
             }
         }
         if (!found) {
-            // Workspace was newly created by niri without prior WorkspacesChanged event. Fetch full state.
-            m_requestSocket.request("\"Workspaces\"", [this](bool ok, const QJsonObject& resp) {
+            m_requestSocket.request(QByteArrayLiteral("\"Workspaces\""), [this](bool ok, const QJsonObject& resp) {
                 if (!ok) return;
                 const auto result = resp.value(QStringLiteral("result")).toObject();
                 QJsonObject d;
@@ -348,6 +553,7 @@ void NiriIpc::onEvent(const QJsonObject& event) {
             });
         }
         updateCurrentOutputWorkspaces();
+        emit workspaceActivated(id, focused);
         emit workspacesChanged();
         emit focusedWorkspaceChanged();
     } else if (event.contains(QStringLiteral("WindowsChanged"))) {
@@ -372,40 +578,28 @@ void NiriIpc::onEvent(const QJsonObject& event) {
     }
 }
 
-// ── Initial State ────────────────────────────────────────────────────
+// ── Initial State ────────────────────────────────────────────────────────────
 
 void NiriIpc::fetchInitialState() {
-    // Initial query responses have PascalCase keys wrapping the data:
-    //   {"Ok":{"Workspaces":[...]}}  -> result = {"Workspaces":[...]}
-    // But event handlers expect lowercase keys matching the event format:
-    //   {"WorkspacesChanged":{"workspaces":[...]}}
-    // So we must unwrap the PascalCase key and re-wrap with the event format.
-
-    // Fetch workspaces
-    m_requestSocket.request("\"Workspaces\"", [this](bool ok, const QJsonObject& resp) {
+    m_requestSocket.request(QByteArrayLiteral("\"Workspaces\""), [this](bool ok, const QJsonObject& resp) {
         if (!ok) return;
         const auto result = resp.value(QStringLiteral("result")).toObject();
-        // result = {"Workspaces": [...]} -> unwrap to event format {"workspaces": [...]}
         QJsonObject data;
         data[QStringLiteral("workspaces")] = result.value(QStringLiteral("Workspaces"));
         handleWorkspacesChanged(data);
     });
 
-    // Fetch windows
-    m_requestSocket.request("\"Windows\"", [this](bool ok, const QJsonObject& resp) {
+    m_requestSocket.request(QByteArrayLiteral("\"Windows\""), [this](bool ok, const QJsonObject& resp) {
         if (!ok) return;
         const auto result = resp.value(QStringLiteral("result")).toObject();
-        // result = {"Windows": [...]} -> {"windows": [...]}
         QJsonObject data;
         data[QStringLiteral("windows")] = result.value(QStringLiteral("Windows"));
         handleWindowsChanged(data);
     });
 
-    // Fetch focused window
-    m_requestSocket.request("\"FocusedWindow\"", [this](bool ok, const QJsonObject& resp) {
+    m_requestSocket.request(QByteArrayLiteral("\"FocusedWindow\""), [this](bool ok, const QJsonObject& resp) {
         if (!ok) return;
         const auto result = resp.value(QStringLiteral("result")).toObject();
-        // result = {"FocusedWindow": {id, title, ...}} or {"FocusedWindow": null}
         const auto win = result.value(QStringLiteral("FocusedWindow"));
         if (win.isObject()) {
             QJsonObject d;
@@ -414,15 +608,11 @@ void NiriIpc::fetchInitialState() {
         }
     });
 
-    // Fetch outputs
     fetchOutputs();
 
-    // Fetch keyboard layouts
-    m_requestSocket.request("\"KeyboardLayouts\"", [this](bool ok, const QJsonObject& resp) {
+    m_requestSocket.request(QByteArrayLiteral("\"KeyboardLayouts\""), [this](bool ok, const QJsonObject& resp) {
         if (!ok) return;
         const auto result = resp.value(QStringLiteral("result")).toObject();
-        // result = {"KeyboardLayouts": {"names":[...], "current_idx":0}}
-        // Event format: {"keyboard_layouts": {"names":[...], "current_idx":0}}
         QJsonObject data;
         data[QStringLiteral("keyboard_layouts")] = result.value(QStringLiteral("KeyboardLayouts"));
         handleKeyboardLayoutsChanged(data);
@@ -430,22 +620,18 @@ void NiriIpc::fetchInitialState() {
 }
 
 void NiriIpc::fetchOutputs() {
-    qDebug() << "NiriIpc: fetchOutputs() called";
-    m_requestSocket.request("\"Outputs\"", [this](bool ok, const QJsonObject& resp) {
+    m_requestSocket.request(QByteArrayLiteral("\"Outputs\""), [this](bool ok, const QJsonObject& resp) {
         if (!ok) {
-            qDebug() << "NiriIpc: fetchOutputs() request failed";
             return;
         }
         const auto result = resp.value(QStringLiteral("result")).toObject();
-        // result = {"Outputs": {"eDP-1": {...}}} -> unwrap to the map of outputs
         const auto outputs = result.value(QStringLiteral("Outputs")).toObject();
         m_outputs = outputs.toVariantMap();
-        qDebug() << "NiriIpc: fetchOutputs() request succeeded, outputs count:" << m_outputs.size();
         emit outputsChanged();
     });
 }
 
-// ── Event Handlers ───────────────────────────────────────────────────
+// ── Event Handlers ───────────────────────────────────────────────────────────
 
 static QVariantMap jsonObjectToVariantMap(const QJsonObject& obj) {
     return obj.toVariantMap();
@@ -460,7 +646,6 @@ void NiriIpc::handleWorkspacesChanged(const QJsonObject& data) {
 
     QVariantList wsList = jsonArrayToVariantList(wsArray);
 
-    // Sort by output, then by idx
     std::sort(wsList.begin(), wsList.end(), [](const QVariant& a, const QVariant& b) {
         const auto mapA = a.toMap();
         const auto mapB = b.toMap();
@@ -471,10 +656,8 @@ void NiriIpc::handleWorkspacesChanged(const QJsonObject& data) {
              < mapB.value(QStringLiteral("idx")).toInt();
     });
 
-
     m_workspacesModel->resetData(wsList);
 
-    // Find focused workspace
     m_focusedWorkspaceIndex = -1;
     m_focusedWorkspaceId = -1;
     for (int i = 0; i < wsList.size(); ++i) {
@@ -498,7 +681,7 @@ void NiriIpc::handleWorkspacesChanged(const QJsonObject& data) {
 
     QSet<QString> currentWorkspaceOutputs;
     for (const auto& v : wsList) {
-        QString out = v.toMap().value(QStringLiteral("output")).toString();
+        const QString out = v.toMap().value(QStringLiteral("output")).toString();
         if (!out.isEmpty()) {
             currentWorkspaceOutputs.insert(out);
         }
@@ -513,7 +696,6 @@ void NiriIpc::handleWindowsChanged(const QJsonObject& data) {
     const QJsonArray winArray = data.value(QStringLiteral("windows")).toArray();
     QVariantList winList = jsonArrayToVariantList(winArray);
 
-    // Ensure all windows have a layout object
     for (int i = 0; i < winList.size(); ++i) {
         auto w = winList.at(i).toMap();
         if (!w.contains(QStringLiteral("layout"))) {
@@ -529,6 +711,7 @@ void NiriIpc::handleWindowsChanged(const QJsonObject& data) {
     updateFocusedWindowFields();
     updateWorkspaceHasWindows();
     emit windowsChanged();
+    emit layoutChanged();
 }
 
 void NiriIpc::handleWindowOpenedOrChanged(const QJsonObject& data) {
@@ -538,11 +721,9 @@ void NiriIpc::handleWindowOpenedOrChanged(const QJsonObject& data) {
     const QVariantMap window = jsonObjectToVariantMap(winObj);
     const qint64 winId = window.value(QStringLiteral("id")).toLongLong();
 
-    // O(1) lookup via hash index
     const int existingIdx = findWindowIndexById(winId);
 
     if (existingIdx >= 0) {
-        // Merge updated fields into existing
         auto existing = m_windowsModel->items().at(existingIdx).toMap();
         for (auto it = window.begin(); it != window.end(); ++it) {
             existing[it.key()] = it.value();
@@ -563,13 +744,16 @@ void NiriIpc::handleWindowOpenedOrChanged(const QJsonObject& data) {
     updateFocusedWindowFields();
     updateWorkspaceHasWindows();
     emit windowsChanged();
+    emit layoutChanged();
     emit windowOpenedOrChanged(window);
 }
 
 void NiriIpc::handleWindowClosed(const QJsonObject& data) {
     const qint64 closedId = data.value(QStringLiteral("id")).toInteger();
 
-    // O(1) lookup via hash
+    // Protect any in-flight or queued column move transactions referencing this window
+    invalidateClosedWindowInTransactions(closedId);
+
     const int idx = findWindowIndexById(closedId);
     if (idx >= 0) {
         m_windowsModel->removeItem(idx);
@@ -578,20 +762,24 @@ void NiriIpc::handleWindowClosed(const QJsonObject& data) {
 
     updateFocusedWindowFields();
     updateWorkspaceHasWindows();
+    emit windowClosed(closedId);
     emit windowsChanged();
+    emit layoutChanged();
 }
 
 void NiriIpc::handleWindowFocusChanged(const QJsonObject& data) {
+    qint64 focusId = -1;
     if (data.contains(QStringLiteral("id")) && !data.value(QStringLiteral("id")).isNull()) {
-        const qint64 id = data.value(QStringLiteral("id")).toInteger();
-        m_focusedWindowId = QString::number(id);
-        m_focusedWindowIndex = findWindowIndexById(id);
+        focusId = data.value(QStringLiteral("id")).toInteger();
+        m_focusedWindowId = QString::number(focusId);
+        m_focusedWindowIndex = findWindowIndexById(focusId);
     } else {
         m_focusedWindowId.clear();
         m_focusedWindowIndex = -1;
     }
 
     updateFocusedWindowFields();
+    emit windowFocusChanged(focusId);
 }
 
 void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
@@ -600,6 +788,7 @@ void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
 
     bool structuralChange = false;
     bool sizeChange = false;
+    bool viewportChange = false;
 
     for (const auto& change : changes) {
         const QJsonArray pair = change.toArray();
@@ -608,7 +797,6 @@ void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
         const qint64 id = pair.at(0).toInteger();
         const auto newLayout = pair.at(1).toObject().toVariantMap();
 
-        // O(1) lookup via hash index
         const int idx = findWindowIndexById(id);
         if (idx >= 0) {
             auto w = m_windowsModel->items().at(idx).toMap();
@@ -622,22 +810,35 @@ void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
 
             const auto oldSize = oldLayout.value(QStringLiteral("window_size")).toList();
             const auto newSize = newLayout.value(QStringLiteral("window_size")).toList();
-            if (oldSize != newSize) {
+            const auto oldTile = oldLayout.value(QStringLiteral("tile_size")).toList();
+            const auto newTile = newLayout.value(QStringLiteral("tile_size")).toList();
+            if (oldSize != newSize || oldTile != newTile) {
                 sizeChange = true;
             }
 
-            if (oldPos != newPos || oldSize != newSize) {
+            const auto oldView = oldLayout.value(QStringLiteral("tile_pos_in_workspace_view")).toList();
+            const auto newView = newLayout.value(QStringLiteral("tile_pos_in_workspace_view")).toList();
+            if (oldView != newView) {
+                viewportChange = true;
+            }
+
+            if (oldPos != newPos || oldSize != newSize || oldTile != newTile) {
                 w[QStringLiteral("layout")] = newLayout;
                 m_windowsModel->setItem(idx, w);
+            } else if (oldView != newView) {
+                // Silent O(1) update without model reset or row dataChanged() (GEMINI.md §7 invariant)
+                w[QStringLiteral("layout")] = newLayout;
+                m_windowsModel->updateItemSilent(idx, w);
             }
         }
     }
 
     if (!structuralChange && !sizeChange) {
-        // Viewport scroll updates (tile_pos_in_workspace_view changes) are emitted
-        // continuously at high frequency (up to 144Hz) during window scrolling animations.
-        // Neither pos_in_scrolling_layout nor window_size changed, so skip model reset
-        // and signal emissions to prevent saturating the Qt event loop and overflowing Niri's IPC buffer.
+        // Sub-pixel viewport scroll frames do NOT trigger resetData() or windowsChanged().
+        // Coalesce lightweight viewportChanged() notifications (~33Hz) for RibbonStrip mini-map.
+        if (viewportChange && !m_viewportThrottleTimer.isActive()) {
+            m_viewportThrottleTimer.start();
+        }
         return;
     }
 
@@ -645,7 +846,6 @@ void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
         sortWindowsList();
         rebuildWindowIndex();
 
-        // Re-find focused index after sort via hash
         if (!m_focusedWindowId.isEmpty()) {
             m_focusedWindowIndex = findWindowIndexById(m_focusedWindowId.toLongLong());
         }
@@ -653,15 +853,15 @@ void NiriIpc::handleWindowLayoutsChanged(const QJsonObject& data) {
 
     updateFocusedWindowFields();
     emit windowsChanged();
+    emit layoutChanged();
+    emit viewportChanged();
 }
 
 void NiriIpc::handleOutputsChanged(const QJsonObject& data) {
-    // Event format: {"outputs": {"eDP-1": {...}, ...}}
     const auto outputs = data.value(QStringLiteral("outputs"));
     if (outputs.isObject()) {
         m_outputs = outputs.toObject().toVariantMap();
     } else {
-        // Fallback: data itself is the outputs map
         m_outputs = data.toVariantMap();
     }
     emit outputsChanged();
@@ -670,7 +870,6 @@ void NiriIpc::handleOutputsChanged(const QJsonObject& data) {
 void NiriIpc::handleKeyboardLayoutsChanged(const QJsonObject& data) {
     const QJsonObject kb = data.value(QStringLiteral("keyboard_layouts")).toObject();
     if (kb.isEmpty()) {
-        // Direct format from initial fetch: {"names":[...],"current_idx":0}
         const QJsonArray names = data.value(QStringLiteral("names")).toArray();
         if (!names.isEmpty()) {
             m_kbLayoutsArray = jsonArrayToVariantList(names);
@@ -714,7 +913,7 @@ void NiriIpc::handleOverviewOpenedOrClosed(const QJsonObject& data) {
     }
 }
 
-// ── Internal Helpers ─────────────────────────────────────────────────
+// ── Internal Helpers ─────────────────────────────────────────────────────────
 
 void NiriIpc::updateCurrentOutputWorkspaces() {
     if (m_focusedMonitorName.isEmpty()) {
@@ -760,7 +959,6 @@ void NiriIpc::updateFocusedWindowFields() {
     if (m_focusedWindowIndex >= 0 && m_focusedWindowIndex < winList.size()) {
         const auto win = winList.at(m_focusedWindowIndex).toMap();
         QString title = win.value(QStringLiteral("title")).toString();
-        // Clean non-printable prefix characters
         while (!title.isEmpty() && title.at(0).unicode() < 0x20) {
             title.remove(0, 1);
         }
@@ -768,7 +966,6 @@ void NiriIpc::updateFocusedWindowFields() {
         m_focusedWindowClass = win.value(QStringLiteral("app_id")).toString();
         m_focusedWindow = win;
 
-        // Track scroll direction
         const auto layout = win.value(QStringLiteral("layout")).toMap();
         const auto pos = layout.value(QStringLiteral("pos_in_scrolling_layout")).toList();
         if (pos.size() >= 2) {
@@ -823,11 +1020,11 @@ void NiriIpc::rebuildWindowIndex() {
 }
 
 int NiriIpc::findWindowIndexById(qint64 id) const {
-    auto it = m_windowIndex.find(id);
+    const auto it = m_windowIndex.find(id);
     return (it != m_windowIndex.end()) ? it.value() : -1;
 }
 
-// ── LED Watchers (capslock/numlock via /sys/class/leds) ──────────────
+// ── LED Watchers (capslock/numlock via /sys/class/leds) ──────────────────────
 
 void NiriIpc::setupLedWatchers() {
     QDir ledsDir(QStringLiteral("/sys/class/leds"));
@@ -845,10 +1042,8 @@ void NiriIpc::setupLedWatchers() {
         }
     }
 
-    // Initial read
     readLedState();
 
-    // Poll sysfs since inotify doesn't work on virtual files
     if (!m_capsLockPath.isEmpty() || !m_numLockPath.isEmpty()) {
         m_ledPollTimer.setInterval(1000);
         connect(&m_ledPollTimer, &QTimer::timeout, this, &NiriIpc::readLedState);

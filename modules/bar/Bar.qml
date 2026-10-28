@@ -7,7 +7,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Caelestia.Config
-import Caelestia.Internal
 import qs.components
 import qs.services
 
@@ -124,19 +123,7 @@ ColumnLayout {
     function handleWheel(y: real, angleDelta: point): void {
         const ch = childAt(width / 2, y);
         if (ch?.entryId === "workspaces" && Config.bar.scrollActions.workspaces) {
-            if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-                if (angleDelta.y < 0)
-                    NiriIpc.action("focus-workspace-down");
-                else if (angleDelta.y > 0)
-                    NiriIpc.action("focus-workspace-up");
-            } else if (typeof Hypr !== "undefined") {
-                const mon = Hypr.monitorFor(screen);
-                const specialWs = mon?.lastIpcObject?.specialWorkspace?.name;
-                if (specialWs?.length > 0)
-                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.workspace.toggle_special("${specialWs.slice(8)}")` : `togglespecialworkspace ${specialWs.slice(8)}`);
-                else if (angleDelta.y < 0 || (mon?.activeWorkspace?.id ?? 0) > 1)
-                    Hypr.dispatch(Hypr.usingLua ? `hl.dsp.focus({ workspace = "r${angleDelta.y > 0 ? "-" : "+"}1" })` : `workspace r${angleDelta.y > 0 ? "-" : "+"}1`);
-            }
+            Compositor.focusWorkspaceRelative(angleDelta.y < 0 ? 1 : -1);
         } else if (y < screen.height / 2 && Config.bar.scrollActions.volume) {
             // Volume scroll on top half
             if (angleDelta.y > 0)

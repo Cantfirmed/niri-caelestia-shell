@@ -14,29 +14,15 @@ Singleton {
     property alias enabled: props.enabled
 
     function setDynamicConfs(): void {
-        if (typeof Hypr !== "undefined" && Hypr.extras) {
-            Hypr.extras.applyOptions({
-                "animations:enabled": 0,
-                "decoration:shadow:enabled": 0,
-                "decoration:blur:enabled": 0,
-                "general:gaps_in": 0,
-                "general:gaps_out": 0,
-                "general:border_size": 1,
-                "decoration:rounding": 0,
-                "general:allow_tearing": 1
-            });
-        }
+        Compositor.setPerformanceMode(props.enabled);
     }
 
     onEnabledChanged: {
+        setDynamicConfs();
         if (enabled) {
-            setDynamicConfs();
             if (GlobalConfig.utilities.toasts.gameModeChanged)
                 Toaster.toast(Tr.tr("Game mode enabled"), Tr.tr("Optimized performance mode active"), "gamepad");
         } else {
-            if (typeof Hypr !== "undefined" && Hypr.extras) {
-                Hypr.extras.message("reload");
-            }
             if (GlobalConfig.utilities.toasts.gameModeChanged)
                 Toaster.toast(Tr.tr("Game mode disabled"), Tr.tr("Standard settings restored"), "gamepad");
         }
@@ -70,4 +56,3 @@ Singleton {
         target: "gameMode"
     }
 }
-

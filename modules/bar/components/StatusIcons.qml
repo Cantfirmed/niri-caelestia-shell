@@ -36,9 +36,7 @@ StyledRect {
     // Entries that can shrink to nothing, spacing included
     function collapsed(entry: var): bool {
         if (entry.id === "lockStatus") {
-            const caps = (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.capsLock : (typeof Hypr !== "undefined" ? Hypr.capsLock : false);
-            const num = (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.numLock : (typeof Hypr !== "undefined" ? Hypr.numLock : false);
-            return !caps && !num;
+            return !Compositor.capsLock && !Compositor.numLock;
         }
         return false;
     }
@@ -168,7 +166,7 @@ StyledRect {
         id: kbLayoutComp
         StyledText {
             animate: true
-            text: (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.kbLayout : (typeof Hypr !== "undefined" ? Hypr.kbLayout : "EN")
+            text: Compositor.kbLayout.length > 0 ? Compositor.kbLayout : "EN"
             color: root.colour
             font: Tokens.font.mono.medium
             horizontalAlignment: Text.AlignHCenter

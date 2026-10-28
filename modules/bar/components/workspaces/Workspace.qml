@@ -21,14 +21,14 @@ ColumnLayout {
     required property Item windowPopoutSignal
 
     readonly property bool isWorkspace: true // Flag for finding workspace children
+    readonly property string workspaceStyle: String(Config.bar.workspaces.style ?? GlobalConfig.bar?.workspaces?.style ?? "classic").toLowerCase()
+    readonly property bool isMinimap: workspaceStyle === "minimap"
     readonly property int size: isWorkspace ? implicitHeight + (hasWindows ? Appearance.padding.xs : 0) : 0
+    readonly property int indicatorSize: isMinimap && hasWindows ? wsIcon.implicitHeight : size
     readonly property int ws: virtualIdx
     readonly property bool isOccupied: workspaceId > 0 && (occupied && (occupied[ws.toString()] ?? false))
     readonly property bool hasWindows: isOccupied && (GlobalConfig.bar?.workspaces?.showWindows ?? true)
     readonly property bool isWsFocused: workspaceId > 0 && activeWsId === ws
-
-    onIsOccupiedChanged: console.log("Workspace.qml: ws:", ws, "isOccupied:", isOccupied, "occupied keys:", JSON.stringify(Object.keys(occupied || {})))
-    onHasWindowsChanged: console.log("Workspace.qml: ws:", ws, "hasWindows:", hasWindows, "showWindows:", GlobalConfig.bar.workspaces.showWindows)
 
     Behavior on scale {
         Anim {}
@@ -44,6 +44,7 @@ ColumnLayout {
     spacing: 0
 
     WorkspaceIcon {
+        id: wsIcon
         workspace: root
     }
 
@@ -51,27 +52,40 @@ ColumnLayout {
         id: windows
 
         Layout.alignment: Qt.AlignCenter
-        // Layout.fillHeight: true
-        Layout.topMargin: -Tokens.sizes.bar.innerWidth / 10
+        Layout.topMargin: root.isMinimap ? 2 : -(Tokens.sizes.bar.innerWidth ?? 40) / 10
 
         visible: active
         asynchronous: true
         activeState: root.hasWindows
 
-        sourceComponent: DraggableWindowColumn {
-            id: dragDropLayout
-            spacing: 0
+        sourceComponent: root.isMinimap ? minimapComp : classicComp
 
-            workspace: root
-            focusedWindowId: root.focusedWindowId
-            activeWsId: root.activeWsId
-            ws: root.ws
-            windowPopoutSignal: root.windowPopoutSignal
-            idx: root.index
-            groupOffset: root.groupOffset
-            outputName: root.outputName
+        Component {
+            id: classicComp
+
+            DraggableWindowColumn {
+                spacing: 0
+                workspace: root
+                focusedWindowId: root.focusedWindowId
+                activeWsId: root.activeWsId
+                ws: root.ws
+                windowPopoutSignal: root.windowPopoutSignal
+                idx: root.index
+                groupOffset: root.groupOffset
+                outputName: root.outputName
+            }
+        }
+
+        Component {
+            id: minimapComp
+
+            RibbonStrip {
+                workspace: root
+                workspaceId: root.workspaceId
+                outputName: root.outputName
+                focusedWindowId: root.focusedWindowId
+                isWsFocused: root.isWsFocused
+            }
         }
     }
-
-    Component.onCompleted: console.log("Workspace.qml onCompleted: ws:", ws, "isOccupied:", isOccupied, "hasWindows:", hasWindows, "occupied keys:", JSON.stringify(Object.keys(occupied || {})))
 }

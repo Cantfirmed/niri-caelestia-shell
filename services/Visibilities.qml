@@ -21,14 +21,14 @@ Singleton {
     readonly property bool hasPhysicalScreens: activeScreens.length > 0
 
     function load(screen: ShellScreen, visibilities: var): void {
-        const targetName = screen && screen.name ? screen.name : Niri.focusedMonitorName;
+        const targetName = screen && screen.name ? screen.name : Compositor.focusedMonitorName;
         if (!targetName)
             return;
         screens[targetName] = visibilities;
     }
 
     function getForActive(): PersistentProperties {
-        const targetName = Niri.focusedMonitorName;
+        const targetName = Compositor.focusedMonitorName;
         if (targetName && screens[targetName])
             return screens[targetName];
 

@@ -1,0 +1,658 @@
+pragma Singleton
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import Caelestia
+import Caelestia.Internal
+import Caelestia.Config
+import qs.services
+import qs.utils
+
+Singleton {
+    id: root
+
+    // --- Core Properties ---
+    readonly property string backendName: "niri"
+    readonly property bool available: NiriIpc.available
+    readonly property bool niriAvailable: NiriIpc.available
+
+    // --- Outputs ---
+    readonly property var outputs: NiriIpc.outputs
+    readonly property string focusedMonitorName: NiriIpc.focusedMonitorName
+    readonly property bool hasExternalMonitor: {
+        const out = root.outputs;
+        if (!out) return false;
+        const keys = Object.keys(out);
+        return keys.some(k => {
+            const lower = k.toLowerCase();
+            return !lower.startsWith("edp") && !lower.startsWith("lvds") && !lower.startsWith("dsi");
+        });
+    }
+
+    // --- Workspaces ---
+    readonly property var workspaces: NiriIpc.workspaces
+    readonly property var allWorkspaces: NiriIpc.workspaces
+    readonly property int focusedWorkspaceIndex: NiriIpc.focusedWorkspaceIndex
+    readonly property int focusedWorkspaceId: NiriIpc.focusedWorkspaceId
+    readonly property var currentOutputWorkspaces: NiriIpc.currentOutputWorkspaces
+    readonly property var workspaceHasWindows: {
+        const ws = root.allWorkspaces;
+        let map = {};
+        const wins = root.windows;
+        for (let i = 0; i < wins.length; i++) {
+            const win = wins[i];
+            const wsIdx = root.getWorkspaceIdxById(win.workspace_id);
+            if (wsIdx >= 0) {
+                map[(wsIdx).toString()] = true;
+            }
+        }
+        return map;
+    }
+    readonly property bool activeWorkspaceHasWindows: {
+        const currentWsId = root.focusedWorkspaceId;
+        if (currentWsId === undefined || currentWsId < 0) return false;
+        return root.windows.some(w => w && w.workspace_id === currentWsId);
+    }
+
+    // --- Windows ---
+    readonly property var windows: NiriIpc.windows
+    readonly property int focusedWindowIndex: NiriIpc.focusedWindowIndex
+    readonly property string focusedWindowId: NiriIpc.focusedWindowId
+    readonly property string activeWindowId: NiriIpc.focusedWindowId
+    readonly property string focusedWindowTitle: NiriIpc.focusedWindowTitle
+    readonly property string activeWindowTitle: NiriIpc.focusedWindowTitle
+    readonly property string focusedWindowClass: NiriIpc.focusedWindowClass
+    readonly property string activeWindowClass: NiriIpc.focusedWindowClass
+    readonly property var focusedWindow: NiriIpc.focusedWindow
+    readonly property var activeWindow: NiriIpc.focusedWindow
+    readonly property var lastFocusedWindow: NiriIpc.lastFocusedWindow
+    readonly property string scrollDirection: NiriIpc.scrollDirection
+    readonly property bool inOverview: NiriIpc.inOverview
+    readonly property bool hasFullscreen: {
+        if (!NiriIpc.available || root.focusedWorkspaceId === undefined) return false;
+        return root.windows.some(w => w && w.workspace_id === root.focusedWorkspaceId && (w.is_fullscreen || w.is_fullscreen_in_output));
+    }
+
+    // --- Keyboard & Lock ---
+    readonly property var kbLayoutsArray: NiriIpc.kbLayoutsArray
+    readonly property int kbLayoutIndex: NiriIpc.kbLayoutIndex
+    readonly property string kbLayouts: NiriIpc.kbLayouts
+    readonly property string defaultKbLayout: NiriIpc.defaultKbLayout
+    readonly property string kbLayout: NiriIpc.kbLayout
+    readonly property bool capsLock: NiriIpc.capsLock
+    readonly property bool numLock: NiriIpc.numLock
+
+    // --- UI Context Menu State ---
+    property bool wsContextExpanded: false
+    property var wsContextAnchor: null
+    property string wsContextType: "none"
+    property bool _lockKeysInitialized: false
+
+    // --- Layout Config (Gaps) ---
+    readonly property string layoutConfigPath: `${Paths.home}/.config/niri/niri/layout.kdl`
+    property int gaps: 0
+    readonly property bool gapsEnabled: gaps > 0
+
+    // --- Signals ---
+    signal windowOpenedOrChanged(var windowData)
+    signal keyboardChanged()
+
+    // --- Functions ---
+    function cleanWindowTitle(title: string): string {
+        if (!title) return "";
+        return title.replace(/\s*—\s*Mozilla Firefox$/i, "")
+                    .replace(/\s*—\s*Zen Browser$/i, "")
+                    .replace(/\s*-\s*Visual Studio Code$/i, "")
+                    .replace(/\s*-\s*VSCodium$/i, "")
+                    .replace(/\s*-\s*Google Chrome$/i, "")
+                    .replace(/\s*-\s*Chromium$/i, "")
+                    .trim();
+    }
+
+    function refreshOutputs(): void {
+        NiriIpc.fetchOutputs();
+    }
+
+    function powerOffMonitors(): void {
+        if (NiriIpc.available)
+            NiriIpc.action("power-off-monitors", []);
+        else
+            Quickshell.execDetached(["niri", "msg", "action", "power-off-monitors"]);
+    }
+
+    function powerOnMonitors(): void {
+        if (NiriIpc.available)
+            NiriIpc.action("power-on-monitors", []);
+        else
+            Quickshell.execDetached(["niri", "msg", "action", "power-on-monitors"]);
+    }
+
+    function getWorkspaceIdxById(workspaceId: int): int {
+        if (typeof NiriIpc.getWorkspaceIdxById === "function") {
+            try {
+                const idx = NiriIpc.getWorkspaceIdxById(workspaceId);
+                if (idx !== undefined && idx >= 0) return idx;
+            } catch (e) {}
+        }
+        if (!allWorkspaces || !Array.isArray(allWorkspaces)) return -1;
+        const ws = allWorkspaces.find(w => w && w.id === workspaceId);
+        return ws ? (ws.idx ?? -1) : -1;
+    }
+
+    function getWorkspacesForOutput(outputName: string): var {
+        if (!outputName) return [];
+        if (typeof NiriIpc.getWorkspacesForOutput === "function") {
+            try {
+                const list = NiriIpc.getWorkspacesForOutput(outputName);
+                if (list && list.length > 0) return Array.from(list);
+            } catch (e) {}
+        }
+        if (!allWorkspaces || allWorkspaces.length === undefined) return [];
+        const all = Array.from(allWorkspaces);
+        return all.filter(ws => ws && (!ws.output || ws.output === outputName));
+    }
+
+    function getActiveWorkspaceIndexForOutput(outputName: string): int {
+        const wsList = getWorkspacesForOutput(outputName);
+        for (let i = 0; i < wsList.length; i++) {
+            if (wsList[i].is_focused) return i;
+        }
+        return wsList.length > 0 ? 0 : -1;
+    }
+
+    function getFocusedWorkspaceIdForOutput(outputName: string): int {
+        const wsList = getWorkspacesForOutput(outputName);
+        for (let i = 0; i < wsList.length; i++) {
+            if (wsList[i].is_active) return wsList[i].id;
+        }
+        return wsList.length > 0 ? wsList[0].id : -1;
+    }
+
+    function getActiveWorkspaceName(): string {
+        if (allWorkspaces && focusedWorkspaceIndex >= 0 && focusedWorkspaceIndex < allWorkspaces.length) {
+            return allWorkspaces[focusedWorkspaceIndex].name || "";
+        }
+        return "";
+    }
+
+    function getWorkspaceNameByIndex(idx: int): string {
+        if (allWorkspaces && idx >= 0 && idx < allWorkspaces.length) {
+            return allWorkspaces[idx].name || "";
+        }
+        return "";
+    }
+
+    function getWorkspaceNameByOutputIndex(outputName: string, idx: int): string {
+        const wsList = getWorkspacesForOutput(outputName);
+        if (idx >= 0 && idx < wsList.length) {
+            return wsList[idx].name || "";
+        }
+        return "";
+    }
+
+    function getWorkspaceNameById(id: int): string {
+        if (allWorkspaces && id >= 0) {
+            const ws = allWorkspaces.find(w => w.id === id);
+            return ws?.name || "";
+        }
+        return "";
+    }
+
+    function getWorkspaceByIndex(index: int): var {
+        if (index >= 0 && index < allWorkspaces.length) {
+            return allWorkspaces[index];
+        }
+        return null;
+    }
+
+    function getWorkspaceCount(): int {
+        return allWorkspaces.length;
+    }
+
+    function getOccupiedWorkspaceCount(): int {
+        return allWorkspaces.filter(w => w.active_window_id !== "").length;
+    }
+
+    function getCurrentOutputWorkspaceNumbers(): var {
+        return currentOutputWorkspaces.map(w => w.idx + 1);
+    }
+
+    function getCurrentWorkspaceNumber(): int {
+        if (focusedWorkspaceIndex >= 0 && focusedWorkspaceIndex < allWorkspaces.length) {
+            return allWorkspaces[focusedWorkspaceIndex].idx;
+        }
+        return 1;
+    }
+
+    function switchToWorkspace(workspaceId: var): bool {
+        if (!available) return false;
+        return NiriIpc.action("focus-workspace", [workspaceId.toString()]);
+    }
+
+    function switchToWorkspaceById(workspaceId: var): bool {
+        if (!available) return false;
+        return NiriIpc.action("focus-workspace", ["--id", workspaceId.toString()]);
+    }
+
+    function focusWorkspace(workspaceIdxOrId: var): bool {
+        return switchToWorkspace(workspaceIdxOrId);
+    }
+
+    function focusWorkspaceById(workspaceId: var): bool {
+        return switchToWorkspaceById(workspaceId);
+    }
+
+    function focusWorkspaceRelative(delta: int): bool {
+        if (!available) return false;
+        if (delta > 0)
+            return NiriIpc.action("focus-workspace-down", []);
+        else if (delta < 0)
+            return NiriIpc.action("focus-workspace-up", []);
+        return false;
+    }
+
+    function switchToWorkspaceUpDown(direction: string): bool {
+        if (!available) return false;
+        return NiriIpc.action("focus-workspace-" + direction, []);
+    }
+
+    function switchToWorkspaceByIndex(index: int): bool {
+        if (!available || index < 0 || index >= allWorkspaces.length) return false;
+        return switchToWorkspace(allWorkspaces[index].idx);
+    }
+
+    function switchToWorkspaceByNumber(number: int, output: string): bool {
+        if (!available) return false;
+        const targetOutput = output || focusedMonitorName;
+        if (!targetOutput) {
+            console.warn("NiriCompositor: No output specified for workspace switching");
+            return false;
+        }
+        const outputWorkspaces = allWorkspaces
+            .filter(w => w.output === targetOutput)
+            .sort((a, b) => a.idx - b.idx);
+        if (number >= 1 && number <= outputWorkspaces.length) {
+            return switchToWorkspace(outputWorkspaces[number - 1].idx);
+        }
+        console.warn("NiriCompositor: No workspace", number, "found on output", targetOutput);
+        return false;
+    }
+
+    function moveWindowToWorkspace(workspaceIdx: var): bool {
+        if (!available) return false;
+        return NiriIpc.action("move-window-to-workspace", [workspaceIdx.toString()]);
+    }
+
+    function getActiveWorkspaceWindows(): var {
+        if (!allWorkspaces || focusedWorkspaceIndex === undefined) return [];
+        const currentWs = allWorkspaces[focusedWorkspaceIndex];
+        if (!currentWs?.id) return [];
+        return windows.filter(w => w.workspace_id === currentWs.id);
+    }
+
+    function getWindowsByWorkspaceId(wsid: var): var {
+        return windows.filter(w => w.workspace_id === wsid);
+    }
+
+    function getWindowsByWorkspaceIndex(index: int): var {
+        if (index < 0 || index >= allWorkspaces.length) return [];
+        const wsId = allWorkspaces[index].id;
+        return windows.filter(w => w.workspace_id === wsId);
+    }
+
+    function getWindowsInScreen(screenX: real, screenY: real, screenWidth: real, screenHeight: real, windowBorder: real, padding: real): var {
+        if (!focusedWindow?.layout?.pos_in_scrolling_layout) return [];
+
+        const focusedCol = focusedWindow.layout.pos_in_scrolling_layout[0];
+        const focusedRow = focusedWindow.layout.pos_in_scrolling_layout[1];
+
+        return getActiveWorkspaceWindows().map(window => {
+            if (!window.layout?.pos_in_scrolling_layout || !window.layout?.window_size) return null;
+
+            const colOffset = window.layout.pos_in_scrolling_layout[0] - focusedCol;
+            const rowOffset = window.layout.pos_in_scrolling_layout[1] - focusedRow;
+            const focusedWidth = focusedWindow.layout.window_size[0];
+
+            let focusedScreenX;
+            if (focusedWidth < screenWidth - windowBorder) {
+                focusedScreenX = scrollDirection === "left" ? 5 : screenWidth - focusedWidth;
+            } else {
+                focusedScreenX = 0;
+            }
+
+            const winX = focusedScreenX + (colOffset * window.layout.window_size[0]) - windowBorder;
+            const winY = rowOffset * window.layout.window_size[1] + windowBorder;
+            const winW = window.layout.window_size[0] - padding * 2;
+            const winH = window.layout.window_size[1] - padding * 2;
+
+            if (winX < screenWidth + windowBorder && winY < screenHeight && winX + winW > 0 && winY + winH > 0) {
+                return { window: window, screenX: winX, screenY: winY, screenW: winW, screenH: winH };
+            }
+            return null;
+        }).filter(item => item !== null);
+    }
+
+    function focusWindow(windowID: var): bool {
+        if (!available) return false;
+        if (Number(windowID) === Number(focusedWindowId) && Config.bar.workspaces.doubleClickToCenter) {
+            return centerWindow();
+        }
+        return NiriIpc.action("focus-window", ["--id", windowID.toString()]);
+    }
+
+    function closeWindow(windowId: var): bool {
+        if (!available) return false;
+        const id = windowId ? windowId.toString() : focusedWindowId.toString();
+        return NiriIpc.action("close-window", ["--id", id]);
+    }
+
+    function closeFocusedWindow(): bool {
+        if (!available) return false;
+        return NiriIpc.action("close-window", []);
+    }
+
+    function toggleWindowFloating(windowId: var): bool {
+        if (!available) return false;
+        const id = windowId ? windowId.toString() : focusedWindowId.toString();
+        return NiriIpc.action("toggle-window-floating", ["--id", id]);
+    }
+
+    function toggleWindowOpacity(): bool {
+        if (!available) return false;
+        return NiriIpc.action("toggle-window-rule-opacity", []);
+    }
+
+    function expandColumnToAvailable(): bool {
+        if (!available) return false;
+        return NiriIpc.action("expand-column-to-available-width", []);
+    }
+
+    function centerWindow(): bool {
+        if (!available) return false;
+        return NiriIpc.action("center-window", []);
+    }
+
+    function screenshotWindow(): bool {
+        if (!available) return false;
+        return NiriIpc.action("screenshot-window", []);
+    }
+
+    function keyboardShortcutsInhibitWindow(): bool {
+        if (!available) return false;
+        return NiriIpc.action("toggle-keyboard-shortcuts-inhibit", []);
+    }
+
+    function toggleWindowedFullscreen(): bool {
+        if (!available) return false;
+        return NiriIpc.action("toggle-windowed-fullscreen", []);
+    }
+
+    function toggleFullscreen(): bool {
+        if (!available) return false;
+        return NiriIpc.action("fullscreen-window", []);
+    }
+
+    function toggleMaximize(): bool {
+        if (!available) return false;
+        return NiriIpc.action("maximize-column", []);
+    }
+
+    function toggleOverview(): bool {
+        if (!available) return false;
+        return NiriIpc.action("toggle-overview", []);
+    }
+
+    function doScreenTransition(delayMs: int): bool {
+        if (!available) return false;
+        var delay = delayMs !== undefined ? delayMs : 500;
+        return NiriIpc.action("do-screen-transition", ["-d", delay.toString()]);
+    }
+
+    function centerColumn(): bool {
+        if (!available) return false;
+        return NiriIpc.action("center-column", []);
+    }
+
+    function focusColumnLeft(): bool {
+        if (!available) return false;
+        return NiriIpc.action("focus-column-left", []);
+    }
+
+    function focusColumnRight(): bool {
+        if (!available) return false;
+        return NiriIpc.action("focus-column-right", []);
+    }
+
+    function reorderColumn(windowId: var, index: var): bool {
+        if (!available) return false;
+        return NiriIpc.reorderColumn(Number(windowId), Number(index));
+    }
+
+    function moveColumnToIndex(windowId: var, index: var, restoreFocus = false): bool {
+        if (!available) return false;
+        return NiriIpc.moveColumnToIndex(Number(windowId), Number(index), Boolean(restoreFocus));
+    }
+
+    function moveColumnToIndexAfterFocus(windowId: var, index: var): bool {
+        if (!available) return false;
+        return NiriIpc.moveColumnToIndex(Number(windowId), Number(index), true);
+    }
+
+    function moveGroupColumnsSequential(initialWindowId: var, windowIds: var, targetIndicesOrIndex: var): bool {
+        if (!available || !windowIds || windowIds.length === 0) return false;
+        const ids = windowIds.map(id => Number(id));
+        const indices = Array.isArray(targetIndicesOrIndex)
+            ? targetIndicesOrIndex.map(idx => Number(idx))
+            : ids.map(() => Number(targetIndicesOrIndex));
+        const restoreId = initialWindowId ? Number(initialWindowId) : -1;
+        return NiriIpc.moveGroupColumns(ids, indices, isNaN(restoreId) ? -1 : restoreId);
+    }
+
+    function switchKeyboardLayout(indexOrAction: var): void {
+        if (typeof indexOrAction === "number")
+            NiriIpc.action("switch-layout", [indexOrAction.toString()]);
+        else
+            NiriIpc.action("switch-layout", ["next"]);
+    }
+
+    function setPerformanceMode(enabled: bool): void {
+        console.log("NiriCompositor: setPerformanceMode", enabled);
+    }
+
+    function reloadDynamicConfs(): void {
+        NiriIpc.action("load-config-file", []);
+    }
+
+    function sortWindows(windowList: var): var {
+        return windowList.slice().sort((a, b) => {
+            const aPos = Array.isArray(a.layout?.pos_in_scrolling_layout)
+                ? a.layout.pos_in_scrolling_layout : [0, 0];
+            const bPos = Array.isArray(b.layout?.pos_in_scrolling_layout)
+                ? b.layout.pos_in_scrolling_layout : [0, 0];
+            if (aPos[0] !== bPos[0]) return aPos[0] - bPos[0];
+            return aPos[1] - bPos[1];
+        });
+    }
+
+    function groupWindowsByApp(windowList: var): var {
+        windowList = sortWindows(windowList);
+        var groups = {};
+
+        for (var j = 0; j < windowList.length; j++) {
+            var w = windowList[j];
+            var appId = w.app_id || "unknown";
+            if (!groups[appId]) {
+                groups[appId] = {
+                    app_id: appId,
+                    id: w.id,
+                    title: w.title,
+                    index: w.index,
+                    windows: []
+                };
+            }
+            groups[appId].windows.push(w);
+        }
+
+        var result = [];
+        for (var key in groups) {
+            var g = groups[key];
+            g.count = g.windows.length;
+            g.main = g.windows[0];
+            result.push(g);
+        }
+        return result;
+    }
+
+    function groupWindowsByLayoutAndId(windowList: var): var {
+        windowList = sortWindows(windowList);
+        var groups = [];
+        var currentGroup = null;
+
+        for (var j = 0; j < windowList.length; j++) {
+            var w = windowList[j];
+            if (!currentGroup || currentGroup.app_id !== w.app_id) {
+                currentGroup = {
+                    app_id: w.app_id,
+                    windows: [w],
+                    count: 1,
+                    title: w.title,
+                    id: w.id,
+                    main: w
+                };
+                groups.push(currentGroup);
+            } else {
+                currentGroup.windows.push(w);
+                currentGroup.count = currentGroup.windows.length;
+            }
+        }
+        return groups;
+    }
+
+    function setGaps(val: int): void {
+        val = Math.max(0, val);
+        const content = layoutConfigFile.text();
+        if (!content) return;
+
+        let newContent = content;
+        if (/gaps\s+\d+/.test(content)) {
+            newContent = content.replace(/gaps\s+\d+/, `gaps ${val}`);
+        } else {
+            newContent = content.replace(/(layout\s*\{)/, `$1\n    gaps ${val}`);
+        }
+
+        if (newContent !== content) {
+            layoutConfigFile.watchChanges = false;
+            layoutConfigFile.setText(newContent);
+            layoutConfigFile.watchChanges = true;
+            root.gaps = val;
+
+            if (!NiriIpc.action("load-config-file", []))
+                Quickshell.execDetached(["niri", "msg", "action", "load-config-file"]);
+        }
+    }
+
+    function toggleGaps(): void {
+        setGaps(gaps > 0 ? 0 : 20);
+    }
+
+    onWsContextAnchorChanged: {
+        wsAnchorClearTimer.stop();
+        if (wsContextAnchor === null) {
+            wsAnchorClearTimer.start();
+        }
+    }
+
+    onCapsLockChanged: {
+        if (!_lockKeysInitialized || !Config.utilities.toasts.capsLockChanged)
+            return;
+        if (capsLock)
+            Toaster.toast(qsTr("Caps lock enabled"), qsTr("Caps lock is currently enabled"), "keyboard_capslock_badge");
+        else
+            Toaster.toast(qsTr("Caps lock disabled"), qsTr("Caps lock is currently disabled"), "keyboard_capslock");
+    }
+
+    onNumLockChanged: {
+        if (!_lockKeysInitialized || !Config.utilities.toasts.numLockChanged)
+            return;
+        if (numLock)
+            Toaster.toast(qsTr("Num lock enabled"), qsTr("Num lock is currently enabled"), "looks_one");
+        else
+            Toaster.toast(qsTr("Num lock disabled"), qsTr("Num lock is currently disabled"), "timer_1");
+    }
+
+    onKbLayoutChanged: {
+        if (!_lockKeysInitialized || !Config.utilities.toasts.kbLayoutChanged)
+            return;
+        Toaster.toast(qsTr("Keyboard layout changed"), qsTr("Layout changed to: %1").arg(kbLayout), "keyboard");
+    }
+
+    Timer {
+        id: wsAnchorClearTimer
+
+        interval: Appearance.anim.durations.normal
+        repeat: false
+        onTriggered: {
+            if (root.wsContextAnchor === null) {
+                root.wsContextType = "none";
+            }
+        }
+    }
+
+    Timer {
+        interval: 1500
+        running: true
+        onTriggered: root._lockKeysInitialized = true
+    }
+
+    Connections {
+        target: root.wsContextAnchor
+        ignoreUnknownSignals: true
+        function onDestroyed() {
+            root.wsContextAnchor = null;
+            Qt.callLater(() => {
+                if (root.wsContextAnchor === null) {
+                    root.wsContextType = "none";
+                }
+            });
+        }
+    }
+
+    Connections {
+        target: NiriIpc
+        function onWindowOpenedOrChanged(windowData) {
+            root.windowOpenedOrChanged(windowData);
+        }
+        function onWorkspacesChanged() {
+            root.workspacesChanged();
+        }
+        function onFocusedWorkspaceChanged() {
+            root.workspacesChanged();
+        }
+        function onFocusedWindowChanged() {
+            root.activeWindowChanged();
+        }
+        function onKeyboardChanged() {
+            root.keyboardChanged();
+        }
+    }
+
+    FileView {
+        id: layoutConfigFile
+
+        path: root.layoutConfigPath
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+        onLoaded: {
+            const content = text();
+            const match = content.match(/gaps\s+(\d+)/);
+            if (match) {
+                root.gaps = parseInt(match[1]);
+            }
+        }
+    }
+
+    Component.onCompleted: console.log("NiriCompositor: Initialized using native C++ IPC")
+}

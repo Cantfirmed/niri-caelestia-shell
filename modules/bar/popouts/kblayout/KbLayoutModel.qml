@@ -5,8 +5,8 @@ import Quickshell
 import Quickshell.Io
 import Caelestia
 import Caelestia.Config
-import Caelestia.Internal
 import Caelestia.I18n
+import qs.services
 
 Item {
     id: model
@@ -19,35 +19,22 @@ Item {
 
     function start() {
         xkbXmlBase.running = true;
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            _updateFromNiri();
-        } else {
-            getKbLayoutOpt.running = true;
-        }
+        _updateFromCompositor();
     }
 
     function refresh() {
         _notifiedLimit = false;
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            _updateFromNiri();
-        } else {
-            getKbLayoutOpt.running = true;
-        }
+        _updateFromCompositor();
     }
 
     function switchTo(idx) {
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            NiriIpc.action("switch-layout");
-            _updateFromNiri();
-        } else {
-            switchProc.command = ["hyprctl", "switchxkblayout", "all", String(idx)];
-            switchProc.running = true;
-        }
+        Compositor.switchKeyboardLayout(idx);
+        _updateFromCompositor();
     }
 
-    function _updateFromNiri() {
-        const layouts = NiriIpc.kbLayoutsArray;
-        const currentIdx = NiriIpc.kbLayoutIndex;
+    function _updateFromCompositor() {
+        const layouts = Compositor.kbLayoutsArray;
+        const currentIdx = Compositor.kbLayoutIndex;
 
         layoutsModel.clear();
         for (let i = 0; i < layouts.length; i++) {
@@ -97,13 +84,9 @@ Item {
             }
             layoutsModel.clear();
             tmp.forEach(t => layoutsModel.append(t));
-            if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-                model.activeLabel = (model.activeIndex >= 0 && model.activeIndex < layoutsModel.count)
-                    ? layoutsModel.get(model.activeIndex).label : "";
-                _rebuildVisible();
-            } else {
-                fetchActiveLayouts.running = true;
-            }
+            model.activeLabel = (model.activeIndex >= 0 && model.activeIndex < layoutsModel.count)
+                ? layoutsModel.get(model.activeIndex).label : "";
+            _rebuildVisible();
         }
     }
 
@@ -116,26 +99,6 @@ Item {
         const code = (region.split(/[,\s-]/)[0] || region).slice(0, 2).toUpperCase();
         // TRANSLATORS: %1 = language, %2 = layout code
         return Tr.trCtx("%1 (%2)", "keyboard layout language and code").arg(lang).arg(code);
-    }
-
-    function _setLayouts(raw) {
-        const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
-        layoutsModel.clear();
-
-        const seen = new Set();
-        let idx = 0;
-
-        for (const p of parts) {
-            if (seen.has(p))
-                continue;
-            seen.add(p);
-            layoutsModel.append({
-                layoutIndex: idx,
-                token: p,
-                label: _pretty(p)
-            });
-            idx++;
-        }
     }
 
     function _rebuildVisible() {
@@ -196,78 +159,10 @@ Item {
     }
 
     Connections {
-        target: (typeof NiriIpc !== "undefined") ? NiriIpc : null
         function onKeyboardChanged() {
-            model._updateFromNiri();
+            model._updateFromCompositor();
         }
-    }
 
-    Process {
-        id: getKbLayoutOpt
-
-        command: ["hyprctl", "-j", "getoption", "input:kb_layout"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const j = JSON.parse(text);
-                    const raw = (j?.str || j?.value || "").toString().trim();
-                    if (raw.length) {
-                        model._setLayouts(raw);
-                        fetchActiveLayouts.running = true;
-                        return;
-                    }
-                } catch (e) {}
-                fetchLayoutsFromDevices.running = true;
-            }
-        }
-    }
-
-    Process {
-        id: fetchLayoutsFromDevices
-
-        command: ["hyprctl", "-j", "devices"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const dev = JSON.parse(text);
-                    const kb = dev?.keyboards?.find(k => k.main) || dev?.keyboards?.[0];
-                    const raw = (kb?.layout || "").trim();
-                    if (raw.length)
-                        model._setLayouts(raw);
-                } catch (e) {}
-                fetchActiveLayouts.running = true;
-            }
-        }
-    }
-
-    Process {
-        id: fetchActiveLayouts
-
-        command: ["hyprctl", "-j", "devices"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const dev = JSON.parse(text);
-                    const kb = dev?.keyboards?.find(k => k.main) || dev?.keyboards?.[0];
-                    const idx = kb?.active_layout_index ?? -1;
-
-                    model.activeIndex = idx >= 0 ? idx : -1;
-                    model.activeLabel = (idx >= 0 && idx < layoutsModel.count) ? layoutsModel.get(idx).label : "";
-                } catch (e) {
-                    model.activeIndex = -1;
-                    model.activeLabel = "";
-                }
-
-                model._rebuildVisible();
-            }
-        }
-    }
-
-    Process {
-        id: switchProc
-
-        onRunningChanged: if (!running)
-            fetchActiveLayouts.running = true
+        target: Compositor
     }
 }
-

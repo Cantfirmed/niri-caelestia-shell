@@ -8,12 +8,12 @@ ColumnLayout {
     spacing: Tokens.spacing.small
 
     StyledText {
-        readonly property bool capsActive: ((typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.capsLock : (typeof Hypr !== "undefined" ? Hypr.capsLock : false))
+        readonly property bool capsActive: Compositor.capsLock
         text: capsActive ? Tr.tr("Caps lock enabled") : Tr.tr("Caps lock disabled")
     }
 
     StyledText {
-        readonly property bool numActive: ((typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.numLock : (typeof Hypr !== "undefined" ? Hypr.numLock : false))
+        readonly property bool numActive: Compositor.numLock
         text: numActive ? Tr.tr("Num lock enabled") : Tr.tr("Num lock disabled")
     }
 }

@@ -118,7 +118,7 @@ Item {
 
         sourceComponent: WindowInfo {
             screen: root.screen
-            client: (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.lastFocusedWindow : (typeof Hypr !== "undefined" ? Hypr.activeToplevel : null)
+            client: Compositor.lastFocusedWindow
             onClose: root.close()
         }
     }

@@ -57,22 +57,7 @@ QtObject {
     readonly property bool isNetwork: Notifs.isNetworkNotif(notif)
     readonly property bool isReboot: Notifs.isRebootNotif(notif)
 
-    readonly property bool hasFullscreen: {
-        if (typeof NiriIpc !== "undefined" && NiriIpc.available) {
-            const wsId = NiriIpc.focusedWorkspaceId;
-            return NiriIpc.windows.some(w => w.workspace_id === wsId && (w.is_fullscreen === true || w.fullscreen === true));
-        }
-        if (typeof Hypr !== "undefined" && Hypr.focusedMonitor) {
-            const monitor = Hypr.focusedMonitor;
-            const specialName = monitor?.lastIpcObject.specialWorkspace?.name;
-            if (specialName) {
-                const specialWs = Hypr.workspaces.values.find(ws => ws.name === specialName);
-                return specialWs?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-            }
-            return monitor?.activeWorkspace?.toplevels.values.some(t => t.lastIpcObject.fullscreen > 1) ?? false;
-        }
-        return false;
-    }
+    readonly property bool hasFullscreen: Compositor.hasFullscreen
 
 
     readonly property Timer timer: Timer {

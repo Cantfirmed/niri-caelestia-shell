@@ -50,7 +50,7 @@ ColumnLayout {
         text: {
             const wsId = root.client?.workspace_id;
             if (wsId !== undefined && wsId !== null) {
-                const name = Niri.getWorkspaceNameById(wsId);
+                const name = Compositor.getWorkspaceNameById(wsId);
                 return name ? qsTr("Workspace: %1 (%2)").arg(name).arg(wsId) : qsTr("Workspace ID: %1").arg(wsId);
             }
             return qsTr("Workspace: unknown");
@@ -63,7 +63,7 @@ ColumnLayout {
         text: {
             const wsId = root.client?.workspace_id;
             if (wsId !== undefined && wsId !== null) {
-                const ws = Niri.allWorkspaces.find(w => w.id === wsId);
+                const ws = Compositor.workspaces.find(w => w.id === wsId);
                 if (ws) {
                     return qsTr("Monitor: %1").arg(ws.output);
                 }

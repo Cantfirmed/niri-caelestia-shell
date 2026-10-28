@@ -15,7 +15,7 @@ Item {
     property color colour: Colours.palette.m3primary
 
     readonly property string windowTitle: {
-        const title = (typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.focusedWindowTitle : (typeof Hypr !== "undefined" ? Hypr.activeToplevel?.title : "");
+        const title = Compositor.activeWindowTitle;
         if (!title)
             return Tr.trCtx("Desktop", "shown when no window is focused");
         if (Config.bar.activeWindow.compact) {
@@ -73,7 +73,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
 
         animate: true
-        text: Icons.getAppCategoryIcon((typeof Niri !== "undefined" && Niri.niriAvailable) ? Niri.focusedWindowClass : (typeof Hypr !== "undefined" ? Hypr.activeToplevel?.lastIpcObject.class : ""), "desktop_windows")
+        text: Icons.getAppCategoryIcon(Compositor.activeWindowClass, "desktop_windows")
         color: root.colour
     }
 
