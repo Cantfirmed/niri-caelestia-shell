@@ -51,7 +51,9 @@ Singleton {
     readonly property bool gapsEnabled: NiriCompositor.gapsEnabled
 
     signal workspacesChanged()
+    signal activeWindowChanged()
     signal windowOpenedOrChanged(var windowData)
+    signal keyboardChanged()
 
     function cleanWindowTitle(title: string): string {
         return NiriCompositor.cleanWindowTitle(title);
@@ -258,8 +260,16 @@ Singleton {
             root.workspacesChanged();
         }
 
+        function onActiveWindowChanged() {
+            root.activeWindowChanged();
+        }
+
         function onWindowOpenedOrChanged(windowData) {
             root.windowOpenedOrChanged(windowData);
+        }
+
+        function onKeyboardChanged() {
+            root.keyboardChanged();
         }
 
         target: NiriCompositor

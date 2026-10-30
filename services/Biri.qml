@@ -294,8 +294,9 @@ Singleton {
         onLoaded: {
             const raw = text();
             if (raw && raw.trim().length > 0) {
+                let data = null;
                 try {
-                    const data = JSON.parse(raw);
+                    data = JSON.parse(raw);
                     if (data) {
                         if (data.pipFloatingEnabled !== undefined) root.pipFloatingEnabled = data.pipFloatingEnabled;
                         if (data.pipFloatAboveFullscreen !== undefined) root.pipFloatAboveFullscreen = data.pipFloatAboveFullscreen;

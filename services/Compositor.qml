@@ -303,14 +303,6 @@ Singleton {
     }
 
     Connections {
-        function onWorkspacesChanged() {
-            root.workspacesChanged();
-        }
-
-        function onActiveWindowChanged() {
-            root.activeWindowChanged();
-        }
-
         function onWindowOpenedOrChanged(windowData) {
             root.windowOpenedOrChanged(windowData);
         }

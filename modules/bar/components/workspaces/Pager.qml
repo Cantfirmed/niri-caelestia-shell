@@ -13,20 +13,21 @@ StyledRect {
 
     readonly property var outputWorkspaces: {
         const _ = Niri.allWorkspaces;
-        return Niri.getWorkspacesForOutput(outputName);
+        return Niri.getWorkspacesForOutput(outputName) ?? [];
     }
 
     Component.onCompleted: active = true
     property bool active: false
-    property bool entered: GlobalConfig.bar.workspaces.shown < outputWorkspaces.length && active
+    property bool entered: outputWorkspaces && GlobalConfig.bar.workspaces.shown < outputWorkspaces.length && active
 
     property bool dying: false
     Component.onDestruction: dying = true
 
-    readonly property int wsCount: outputWorkspaces.length
+    readonly property int wsCount: outputWorkspaces?.length ?? 0
     readonly property int focusedIdx: {
+        if (!outputWorkspaces) return -1;
         for (let i = 0; i < outputWorkspaces.length; i++) {
-            if (outputWorkspaces[i].is_focused) return i;
+            if (outputWorkspaces[i]?.is_focused) return i;
         }
         return -1;
     }

@@ -624,15 +624,6 @@ Singleton {
         function onWindowOpenedOrChanged(windowData) {
             root.windowOpenedOrChanged(windowData);
         }
-        function onWorkspacesChanged() {
-            root.workspacesChanged();
-        }
-        function onFocusedWorkspaceChanged() {
-            root.workspacesChanged();
-        }
-        function onFocusedWindowChanged() {
-            root.activeWindowChanged();
-        }
         function onKeyboardChanged() {
             root.keyboardChanged();
         }
