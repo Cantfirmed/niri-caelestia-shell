@@ -149,7 +149,7 @@ Card {
                 }
 
                 StyledText {
-                    text: qsTr("· Press 0-5 to switch quickly")
+                    text: qsTr("· Press 0-7 to switch quickly")
                     font: Tokens.font.body.small
                     color: Colours.palette.m3outline
                 }

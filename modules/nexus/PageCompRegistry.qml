@@ -133,6 +133,14 @@ QtObject {
 
         // System
         Component {
+            // Displays
+            StackPage {
+                Component {
+                    DisplayPage {}
+                }
+            }
+        },
+        Component {
             PlaceholderComp {}
         },
         Component {

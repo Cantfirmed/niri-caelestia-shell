@@ -140,7 +140,7 @@ Item {
                 anchors.fill: parent
                 nState.screen: root.screen
                 nState.animatingContainer: nexus.opacity < 1
-                nState.currentPageIdx: Math.max(0, ["appearance", "blur", "biri", "shaders", "network", "vpn", "bluetooth", "audio"].indexOf(root.queuedMode))
+                nState.currentPageIdx: Math.max(0, ["appearance", "blur", "biri", "shaders", "network", "vpn", "bluetooth", "audio", "display"].indexOf(root.queuedMode))
                 onClose: root.close()
             }
         }

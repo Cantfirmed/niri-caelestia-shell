@@ -1,25 +1,23 @@
 pragma ComponentBehavior: Bound
 
-import ".."
-import "../components"
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
+import Caelestia.Config
+import Caelestia.Internal
+import Caelestia.I18n
 import qs.components
 import qs.components.controls
 import qs.components.effects
 import qs.components.containers
 import qs.services
-import Caelestia.Config
-import Caelestia.Internal
-import Quickshell
-import Quickshell.Widgets
-import QtQuick
-import QtQuick.Layouts
+import qs.modules.nexus.common
 
-Item {
+PageBase {
     id: root
 
-    required property NexusState nState
-
-    anchors.fill: parent
+    title: Tr.tr("Displays")
 
     property var outputsArray: []
     property var localOutputs: []
@@ -188,8 +186,14 @@ Item {
         if (localOutputs.length !== outputsArray.length)
             return false;
         for (let i = 0; i < localOutputs.length; i++) {
-            if (localOutputs[i].x !== outputsArray[i].x || localOutputs[i].y !== outputsArray[i].y)
-                return true;
+            const loc = localOutputs[i];
+            const act = outputsArray.find(o => o.connector === loc.connector);
+            if (!act)
+                continue;
+            if (loc.active && act.active) {
+                if (Math.round(loc.x) !== Math.round(act.x) || Math.round(loc.y) !== Math.round(act.y))
+                    return true;
+            }
         }
         return false;
     }
@@ -436,19 +440,6 @@ Item {
         refreshTimer.restart();
     }
 
-    Timer {
-        id: confirmCountdownTimer
-        interval: 1000
-        repeat: true
-        onTriggered: {
-            root.confirmRemaining--;
-            if (root.confirmRemaining <= 0) {
-                // Safety revert when unconfirmed!
-                root.revertDisplayChanges();
-            }
-        }
-    }
-
     function execNiriOutput(argsList: var): void {
         const fullArgs = ["niri", "msg", "output"].concat(argsList);
         Quickshell.execDetached(fullArgs);
@@ -457,7 +448,7 @@ Item {
     }
 
     function applyPositions(): void {
-        root.beginDisplayConfirm(qsTr("Updated multi-monitor arrangement"));
+        root.beginDisplayConfirm(Tr.tr("Updated multi-monitor arrangement"));
         for (let i = 0; i < localOutputs.length; i++) {
             const out = localOutputs[i];
             if (!out.active)
@@ -467,19 +458,19 @@ Item {
     }
 
     function applyScale(connector: string, newScale: real): void {
-        root.beginDisplayConfirm(qsTr("%1 scale → %2x").arg(connector).arg(newScale.toFixed(2)));
+        root.beginDisplayConfirm(Tr.tr("%1 scale → %2x").arg(connector).arg(newScale.toFixed(2)));
         root.execNiriOutput([connector, "scale", String(newScale)]);
     }
 
     function applyMode(connector: string, width: int, height: int, refreshHz: real): void {
         const modeStr = width + "x" + height + "@" + refreshHz.toFixed(3);
-        root.beginDisplayConfirm(qsTr("%1 mode → %2×%3 @ %4 Hz").arg(connector).arg(width).arg(height).arg(refreshHz.toFixed(2)));
+        root.beginDisplayConfirm(Tr.tr("%1 mode → %2×%3 @ %4 Hz").arg(connector).arg(width).arg(height).arg(refreshHz.toFixed(2)));
         root.execNiriOutput([connector, "mode", modeStr]);
     }
 
     function applyTransform(connector: string, transformVal: string): void {
         const norm = root.normalizeTransform(transformVal);
-        root.beginDisplayConfirm(qsTr("%1 rotation → %2").arg(connector).arg(norm));
+        root.beginDisplayConfirm(Tr.tr("%1 rotation → %2").arg(connector).arg(norm));
         root.execNiriOutput([connector, "transform", norm]);
     }
 
@@ -490,7 +481,7 @@ Item {
     function applyOutputEnabled(connector: string, enabled: bool): void {
         if (!enabled && root.activeOutputCount <= 1)
             return; // Never allow disabling the sole active display
-        root.beginDisplayConfirm(qsTr("%1 %2").arg(connector).arg(enabled ? qsTr("enabled") : qsTr("disabled")));
+        root.beginDisplayConfirm(Tr.tr("%1 %2").arg(connector).arg(enabled ? Tr.tr("enabled") : Tr.tr("disabled")));
         root.execNiriOutput([connector, enabled ? "on" : "off"]);
     }
 
@@ -523,12 +514,6 @@ Item {
     }
 
     property bool savedRecently: false
-    Timer {
-        id: saveFeedbackTimer
-        interval: 2500
-        repeat: false
-        onTriggered: root.savedRecently = false
-    }
 
     function updateOutputs(): void {
         const res = [];
@@ -614,13 +599,6 @@ Item {
 
     Component.onCompleted: updateOutputs()
 
-    Connections {
-        target: Niri
-        function onOutputsChanged(): void {
-            root.updateOutputs();
-        }
-    }
-
     property int selectedIndex: 0
     readonly property var selectedOutput: outputsArray.length > selectedIndex ? outputsArray[selectedIndex] : null
     readonly property var selectedResolutionGroup: {
@@ -633,845 +611,865 @@ Item {
         return selectedOutput.resolutions.length > 0 ? selectedOutput.resolutions[0] : null;
     }
 
-    Timer {
-        id: refreshTimer
-        interval: 350
-        repeat: true
-        property int count: 0
-        onTriggered: {
-            NiriIpc.fetchOutputs();
-            count++;
-            if (count >= 5) {
-                running = false;
-                count = 0;
-            }
-        }
-    }
-
-    // Empty / error state
     ColumnLayout {
-        anchors.fill: parent
-        visible: root.outputsArray.length === 0
+        id: mainLayout
 
-        MaterialIcon {
-            text: "error"
-            font.pointSize: 48
-            color: Colours.palette.m3error
-            Layout.alignment: Qt.AlignHCenter
-        }
-        StyledText {
-            text: qsTr("No display data available")
-            color: Colours.palette.m3outline
-            Layout.alignment: Qt.AlignHCenter
-        }
-        StyledText {
-            text: "Niri Available: " + Niri.niriAvailable
-            Layout.alignment: Qt.AlignHCenter
-        }
-        TextButton {
-            text: qsTr("Retry Fetch")
-            Layout.alignment: Qt.AlignHCenter
-            onClicked: {
-                NiriIpc.fetchOutputs();
-                root.updateOutputs();
-            }
-        }
-    }
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        width: root.cappedWidth
+        spacing: Tokens.spacing.extraSmall / 2
 
-    ColumnLayout {
-        anchors.fill: parent
-        spacing: 0
-        visible: root.outputsArray.length > 0
-
-        StyledText {
-            text: qsTr("Display")
-            font.pointSize: Appearance.font.size.titleLarge
-            font.weight: 500
-            Layout.topMargin: Appearance.padding.xs
-            Layout.leftMargin: Appearance.padding.xl
-            Layout.bottomMargin: Appearance.padding.sm
-        }
-
-        SplitPaneLayout {
+        // ── Empty State ──
+        StyledRect {
+            visible: root.outputsArray.length === 0
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            color: Colours.tPalette.m3surfaceContainer
+            radius: Tokens.rounding.large
+            implicitHeight: 200
 
-            leftContent: Component {
-                StyledFlickable {
-                    id: leftFlickable
-                    flickableDirection: Flickable.VerticalFlick
-                    contentHeight: leftContentLayout.implicitHeight
+            ColumnLayout {
+                anchors.centerIn: parent
+                spacing: Tokens.spacing.medium
 
-                    StyledScrollBar.vertical: StyledScrollBar {
-                        flickable: leftFlickable
-                    }
-
-                    ColumnLayout {
-                        id: leftContentLayout
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        spacing: Appearance.spacing.md
-
-                        Repeater {
-                            model: root.outputsArray
-
-                            delegate: StyledRect {
-                                required property var modelData
-                                required property int index
-
-                                Layout.fillWidth: true
-                                color: root.selectedIndex === index ? Colours.layer(Colours.palette.m3surfaceContainer, 2) : "transparent"
-                                radius: Appearance.rounding.normal
-
-                                StateLayer {
-                                    function onClicked(): void {
-                                        root.selectedIndex = index;
-                                    }
-                                }
-
-                                RowLayout {
-                                    id: rowLayout
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    anchors.margins: Appearance.padding.md
-                                    spacing: Appearance.spacing.md
-
-                                    MaterialIcon {
-                                        text: modelData.connector.startsWith("eDP") ? "laptop_chromebook" : "monitor"
-                                        font: Tokens.font.icon.medium
-                                        color: modelData.active ? Colours.palette.m3primary : Colours.palette.m3outline
-                                    }
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 2
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: Appearance.spacing.xs
-
-                                            StyledText {
-                                                text: modelData.connector
-                                                font.weight: root.selectedIndex === index ? 600 : 400
-                                            }
-
-                                            StyledRect {
-                                                visible: !modelData.active
-                                                radius: Appearance.rounding.small
-                                                color: Colours.palette.m3surfaceContainerHighest
-                                                implicitWidth: offBadge.implicitWidth + 8
-                                                implicitHeight: offBadge.implicitHeight + 2
-
-                                                StyledText {
-                                                    id: offBadge
-                                                    anchors.centerIn: parent
-                                                    text: qsTr("OFF")
-                                                    font.pointSize: Appearance.font.size.labelSmall
-                                                    color: Colours.palette.m3outline
-                                                }
-                                            }
-                                        }
-
-                                        StyledText {
-                                            Layout.fillWidth: true
-                                            text: modelData.name
-                                            font.pointSize: Appearance.font.size.bodySmall
-                                            color: Colours.palette.m3outline
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-                                }
-                                implicitHeight: rowLayout.implicitHeight + Appearance.padding.md * 2
-                            }
-                        }
-                    }
+                MaterialIcon {
+                    text: "desktop_access_disabled"
+                    font: Tokens.font.icon.large
+                    color: Colours.palette.m3outline
+                    Layout.alignment: Qt.AlignHCenter
                 }
-            }
-
-            rightContent: Component {
-                StyledFlickable {
-                    id: rightFlickable
-                    flickableDirection: Flickable.VerticalFlick
-                    contentHeight: rightContentLayout.implicitHeight
-
-                    StyledScrollBar.vertical: StyledScrollBar {
-                        flickable: rightFlickable
-                    }
-
-                    ColumnLayout {
-                        id: rightContentLayout
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        spacing: Appearance.spacing.xl
-
-                        ColumnLayout {
-                            visible: root.selectedOutput !== null
-                            Layout.fillWidth: true
-                            spacing: Appearance.spacing.lg
-
-                            // ── Positioning & Magnetic Snapping ──
-                            SectionHeader {
-                                title: qsTr("Arrangement & Positioning")
-                                description: qsTr("Drag displays to arrange virtual layout with magnetic edge snapping")
-                            }
-
-                            SectionContainer {
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Appearance.spacing.md
-
-                                    Item {
-                                        id: displayCanvas
-                                        Layout.fillWidth: true
-                                        height: 240
-                                        clip: true
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            color: Colours.layer(Colours.palette.m3surface, 1)
-                                            radius: Appearance.rounding.normal
-                                            border.color: Colours.palette.m3outlineVariant
-                                            border.width: 1
-                                        }
-
-                                        // Vertical magnetic snap guide line
-                                        Rectangle {
-                                            visible: root.isDragging && !isNaN(root.snapGuideX)
-                                            x: displayCanvas.width / 2 + (root.snapGuideX - root.currentBoxCenterX) * root.currentScale
-                                            y: 4
-                                            width: 1
-                                            height: parent.height - 8
-                                            color: Colours.palette.m3tertiary
-                                            opacity: 0.85
-                                        }
-
-                                        // Horizontal magnetic snap guide line
-                                        Rectangle {
-                                            visible: root.isDragging && !isNaN(root.snapGuideY)
-                                            x: 4
-                                            y: displayCanvas.height / 2 + (root.snapGuideY - root.currentBoxCenterY) * root.currentScale
-                                            width: parent.width - 8
-                                            height: 1
-                                            color: Colours.palette.m3tertiary
-                                            opacity: 0.85
-                                        }
-
-                                        Repeater {
-                                            id: canvasRepeater
-                                            model: root.localOutputs
-
-                                            delegate: Rectangle {
-                                                id: screenItem
-                                                required property var modelData
-                                                required property int index
-
-                                                visible: modelData.active
-
-                                                x: displayCanvas.width / 2 + (modelData.x - root.currentBoxCenterX) * root.currentScale
-                                                y: displayCanvas.height / 2 + (modelData.y - root.currentBoxCenterY) * root.currentScale
-                                                width: Math.max(24, modelData.logicalWidth * root.currentScale)
-                                                height: Math.max(18, modelData.logicalHeight * root.currentScale)
-
-                                                radius: Appearance.rounding.small
-                                                border.width: root.selectedIndex === index ? 2 : 1
-                                                border.color: root.selectedIndex === index ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
-                                                color: root.selectedIndex === index ? Colours.layer(Colours.palette.m3primaryContainer, 1) : Colours.layer(Colours.palette.m3surfaceContainer, 3)
-
-                                                Behavior on x { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-                                                Behavior on y { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-                                                Behavior on width { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-                                                Behavior on height { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-
-                                                clip: true
-
-                                                ColumnLayout {
-                                                    anchors.centerIn: parent
-                                                    width: parent.width - 8
-                                                    spacing: 2
-                                                    visible: parent.width >= 50 && parent.height >= 35
-
-                                                    StyledText {
-                                                        text: modelData.connector + (modelData.transform !== "normal" ? " (" + modelData.transform + ")" : "")
-                                                        font.weight: 600
-                                                        font.pointSize: 9.5
-                                                        color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
-                                                        Layout.alignment: Qt.AlignHCenter
-                                                        elide: Text.ElideRight
-                                                    }
-
-                                                    StyledText {
-                                                        text: modelData.logicalWidth + "×" + modelData.logicalHeight + " (" + modelData.scale.toFixed(2) + "x)"
-                                                        font.pointSize: 8
-                                                        color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
-                                                        Layout.alignment: Qt.AlignHCenter
-                                                        elide: Text.ElideRight
-                                                    }
-
-                                                    StyledText {
-                                                        text: "X: " + modelData.x + " Y: " + modelData.y
-                                                        font.pointSize: 7.5
-                                                        color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
-                                                        Layout.alignment: Qt.AlignHCenter
-                                                        elide: Text.ElideRight
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: dragIndex >= 0 ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-
-                                            property int dragIndex: -1
-                                            property real dragStartX: 0
-                                            property real dragStartY: 0
-                                            property real dragStartLogicalX: 0
-                                            property real dragStartLogicalY: 0
-
-                                            function hitTest(mx: real, my: real): int {
-                                                for (let i = canvasRepeater.count - 1; i >= 0; i--) {
-                                                    const item = canvasRepeater.itemAt(i);
-                                                    if (!item || !item.visible || !item.modelData.active)
-                                                        continue;
-                                                    if (mx >= item.x && mx <= item.x + item.width &&
-                                                        my >= item.y && my <= item.y + item.height) {
-                                                        return i;
-                                                    }
-                                                }
-                                                return -1;
-                                            }
-
-                                            onPressed: (mouse) => {
-                                                const idx = hitTest(mouse.x, mouse.y);
-                                                if (idx < 0)
-                                                    return;
-
-                                                dragIndex = idx;
-                                                root.selectedIndex = idx;
-
-                                                const out = root.localOutputs[idx];
-                                                dragStartX = mouse.x;
-                                                dragStartY = mouse.y;
-                                                dragStartLogicalX = out.x;
-                                                dragStartLogicalY = out.y;
-
-                                                root.freezeMapping();
-                                            }
-
-                                            onPositionChanged: (mouse) => {
-                                                if (dragIndex < 0)
-                                                    return;
-
-                                                const dx = mouse.x - dragStartX;
-                                                const dy = mouse.y - dragStartY;
-                                                const dxLogical = dx / root.currentScale;
-                                                const dyLogical = dy / root.currentScale;
-
-                                                let newX = Math.round(dragStartLogicalX + dxLogical);
-                                                let newY = Math.round(dragStartLogicalY + dyLogical);
-
-                                                if (root.enableSnapping) {
-                                                    const snapped = root.snapPosition(dragIndex, newX, newY);
-                                                    newX = Math.round(snapped.x);
-                                                    newY = Math.round(snapped.y);
-                                                    root.snapGuideX = snapped.guideX;
-                                                    root.snapGuideY = snapped.guideY;
-                                                } else {
-                                                    root.snapGuideX = NaN;
-                                                    root.snapGuideY = NaN;
-                                                }
-
-                                                root.updateLocalPosition(dragIndex, newX, newY);
-                                            }
-
-                                            onReleased: {
-                                                dragIndex = -1;
-                                                root.unfreezeMapping();
-                                            }
-                                        }
-                                    }
-
-                                    SwitchRow {
-                                        label: qsTr("Magnetic Monitor Snapping")
-                                        checked: root.enableSnapping
-                                        onToggled: (checked) => {
-                                            root.enableSnapping = checked;
-                                        }
-                                    }
-
-                                    SwitchRow {
-                                        visible: root.outputsArray.length > 1
-                                        label: qsTr("Enable Display (%1)").arg(root.selectedOutput ? root.selectedOutput.connector : "")
-                                        checked: root.selectedOutput ? root.selectedOutput.active : false
-                                        enabled: root.selectedOutput ? (!root.selectedOutput.active || root.activeOutputCount > 1) : false
-                                        onToggled: (checked) => {
-                                            if (root.selectedOutput)
-                                                root.applyOutputEnabled(root.selectedOutput.connector, checked);
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: Appearance.spacing.md
-
-                                        StyledText {
-                                            text: root.hasUnappliedChanges ? qsTr("Unapplied position changes") : qsTr("Arrangement synchronized")
-                                            font.pointSize: Appearance.font.size.bodySmall
-                                            color: root.hasUnappliedChanges ? Colours.palette.m3tertiary : Colours.palette.m3outline
-                                            Layout.fillWidth: true
-                                        }
-
-                                        TextButton {
-                                            text: qsTr("Reset Layout")
-                                            stateLayer.disabled: !root.hasUnappliedChanges
-                                            opacity: root.hasUnappliedChanges ? 1.0 : 0.5
-                                            onClicked: {
-                                                if (root.hasUnappliedChanges)
-                                                    root.initializeLocalOutputs();
-                                            }
-                                        }
-
-                                        TextButton {
-                                            text: qsTr("Apply Layout")
-                                            type: TextButton.Filled
-                                            stateLayer.disabled: !root.hasUnappliedChanges
-                                            opacity: root.hasUnappliedChanges ? 1.0 : 0.5
-                                            onClicked: {
-                                                if (root.hasUnappliedChanges)
-                                                    root.applyPositions();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // ── Scale & Rotation ──
-                            SectionHeader {
-                                title: qsTr("Scaling & Rotation")
-                                description: qsTr("Configure fractional scaling and orientation for %1").arg(root.selectedOutput ? root.selectedOutput.connector : "")
-                            }
-
-                            SectionContainer {
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Appearance.spacing.md
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        StyledText {
-                                            text: qsTr("Fractional Scale")
-                                            Layout.fillWidth: true
-                                        }
-                                        StyledText {
-                                            text: root.selectedOutput ? (root.selectedOutput.scale.toFixed(2) + "x") : ""
-                                            font.weight: 600
-                                            color: Colours.palette.m3primary
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: Appearance.spacing.xs
-
-                                        Repeater {
-                                            model: root.scalePresets
-
-                                            delegate: TextButton {
-                                                required property real modelData
-                                                Layout.fillWidth: true
-                                                text: modelData + "x"
-                                                isToggle: false
-                                                readonly property bool isCurrentScale: root.selectedOutput ? Math.abs(root.selectedOutput.scale - modelData) < 0.02 : false
-                                                type: isCurrentScale ? TextButton.Filled : TextButton.Tonal
-                                                onClicked: {
-                                                    if (root.selectedOutput)
-                                                        root.applyScale(root.selectedOutput.connector, modelData);
-                                                }
-                                            }
-                                        }
-
-                                        StyledInputField {
-                                            id: scaleInput
-                                            placeholderText: qsTr("Custom")
-                                            horizontalAlignment: TextInput.AlignHCenter
-                                            Layout.preferredWidth: 78
-                                            Layout.fillHeight: true
-
-                                            validator: DoubleValidator { bottom: 0.25; top: 8.0; decimals: 2 }
-
-                                            function updateText(): void {
-                                                if (!root.selectedOutput) {
-                                                    text = "";
-                                                    return;
-                                                }
-                                                const sc = root.selectedOutput.scale;
-                                                const matchesPreset = root.scalePresets.some(val => Math.abs(sc - val) < 0.02);
-                                                text = matchesPreset ? "" : sc.toFixed(2);
-                                            }
-
-                                            Component.onCompleted: updateText()
-
-                                            onEditingFinished: {
-                                                if (!root.selectedOutput)
-                                                    return;
-                                                const val = parseFloat(text);
-                                                if (!isNaN(val) && val >= 0.25 && val <= 8.0)
-                                                    root.applyScale(root.selectedOutput.connector, val);
-                                            }
-
-                                            Connections {
-                                                target: root
-                                                function onOutputsArrayChanged(): void {
-                                                    if (!scaleInput.activeFocus)
-                                                        scaleInput.updateText();
-                                                }
-                                                function onSelectedIndexChanged(): void {
-                                                    if (!scaleInput.activeFocus)
-                                                        scaleInput.updateText();
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
-
-                                    // Display Rotation / Transform
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        StyledText {
-                                            text: qsTr("Orientation / Transform")
-                                            Layout.fillWidth: true
-                                        }
-                                        StyledText {
-                                            text: root.selectedOutput ? root.selectedOutput.transform : "normal"
-                                            font.weight: 600
-                                            color: Colours.palette.m3primary
-                                        }
-                                    }
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: Appearance.spacing.sm
-
-                                        Repeater {
-                                            model: root.rotationOptions
-
-                                            delegate: StyledRect {
-                                                required property var modelData
-                                                Layout.fillWidth: true
-                                                implicitHeight: 42
-                                                radius: Appearance.rounding.normal
-                                                readonly property bool isSelectedRot: root.selectedOutput
-                                                    ? (root.baseRotation(root.selectedOutput.transform) === modelData.value)
-                                                    : false
-                                                color: isSelectedRot ? Colours.palette.m3primary : Colours.palette.m3secondaryContainer
-
-                                                StateLayer {
-                                                    function onClicked(): void {
-                                                        if (!root.selectedOutput)
-                                                            return;
-                                                        const flipped = root.isTransformFlipped(root.selectedOutput.transform);
-                                                        const nextTransform = root.composeTransform(modelData.value, flipped);
-                                                        root.applyTransform(root.selectedOutput.connector, nextTransform);
-                                                    }
-                                                }
-
-                                                RowLayout {
-                                                    anchors.centerIn: parent
-                                                    spacing: Appearance.spacing.xs
-
-                                                    MaterialIcon {
-                                                        text: modelData.icon
-                                                        font: Tokens.font.icon.small
-                                                        color: parent.parent.isSelectedRot ? Colours.palette.m3onPrimary : Colours.palette.m3onSecondaryContainer
-                                                    }
-
-                                                    StyledText {
-                                                        text: modelData.label
-                                                        font.weight: parent.parent.isSelectedRot ? 600 : 400
-                                                        color: parent.parent.isSelectedRot ? Colours.palette.m3onPrimary : Colours.palette.m3onSecondaryContainer
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    SwitchRow {
-                                        label: qsTr("Flip / Mirror Horizontally")
-                                        checked: root.selectedOutput ? root.isTransformFlipped(root.selectedOutput.transform) : false
-                                        onToggled: (checked) => {
-                                            if (!root.selectedOutput)
-                                                return;
-                                            const rot = root.baseRotation(root.selectedOutput.transform);
-                                            root.applyTransform(root.selectedOutput.connector, root.composeTransform(rot, checked));
-                                        }
-                                    }
-                                }
-                            }
-
-                            // ── Resolution, Refresh Rate & VRR ──
-                            SectionHeader {
-                                title: qsTr("Resolution, Refresh Rate & VRR")
-                                description: qsTr("Select display timing and adaptive sync capabilities")
-                            }
-
-                            SectionContainer {
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: Appearance.spacing.md
-
-                                    SwitchRow {
-                                        label: root.selectedOutput && !root.selectedOutput.vrrSupported
-                                            ? qsTr("Variable Refresh Rate (Unsupported by Display)")
-                                            : qsTr("Variable Refresh Rate (Adaptive Sync / VRR)")
-                                        checked: root.selectedOutput ? root.selectedOutput.vrrEnabled : false
-                                        enabled: root.selectedOutput ? root.selectedOutput.vrrSupported : false
-                                        opacity: enabled ? 1.0 : 0.6
-                                        onToggled: (checked) => {
-                                            if (root.selectedOutput && root.selectedOutput.vrrSupported)
-                                                root.applyVrr(root.selectedOutput.connector, checked);
-                                        }
-                                    }
-
-                                    Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
-
-                                    // Refresh Rate Pills for Current Resolution
-                                    StyledText {
-                                        text: qsTr("Refresh Rate (%1)").arg(
-                                            root.selectedResolutionGroup ? (root.selectedResolutionGroup.width + "×" + root.selectedResolutionGroup.height) : ""
-                                        )
-                                        font.weight: 500
-                                    }
-
-                                    Flow {
-                                        Layout.fillWidth: true
-                                        spacing: Appearance.spacing.xs
-
-                                        Repeater {
-                                            model: root.selectedResolutionGroup ? root.selectedResolutionGroup.rates : []
-
-                                            delegate: TextButton {
-                                                required property var modelData
-                                                text: modelData.refresh_rate.toFixed(2) + " Hz"
-                                                isToggle: false
-                                                type: modelData.is_current ? TextButton.Filled : TextButton.Tonal
-                                                onClicked: {
-                                                    if (root.selectedOutput)
-                                                        root.applyMode(root.selectedOutput.connector, modelData.width, modelData.height, modelData.refresh_rate);
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
-
-                                    // Resolution List
-                                    StyledText {
-                                        text: qsTr("Resolution")
-                                        font.weight: 500
-                                    }
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: Appearance.spacing.xs
-
-                                        Repeater {
-                                            model: root.selectedOutput ? root.selectedOutput.resolutions : []
-
-                                            delegate: StyledRect {
-                                                required property var modelData
-                                                Layout.fillWidth: true
-                                                implicitHeight: 44
-                                                radius: Appearance.rounding.small
-                                                color: modelData.is_current ? Colours.palette.m3primaryContainer : "transparent"
-
-                                                StateLayer {
-                                                    function onClicked(): void {
-                                                        if (!root.selectedOutput || modelData.rates.length === 0)
-                                                            return;
-                                                        // Pick preferred or highest refresh rate for that resolution
-                                                        let chosen = modelData.rates[0];
-                                                        for (let i = 0; i < modelData.rates.length; i++) {
-                                                            if (modelData.rates[i].is_preferred) {
-                                                                chosen = modelData.rates[i];
-                                                                break;
-                                                            }
-                                                        }
-                                                        root.applyMode(root.selectedOutput.connector, chosen.width, chosen.height, chosen.refresh_rate);
-                                                    }
-                                                }
-
-                                                RowLayout {
-                                                    anchors.fill: parent
-                                                    anchors.margins: Appearance.padding.md
-
-                                                    StyledText {
-                                                        text: modelData.width + " × " + modelData.height
-                                                        color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
-                                                        font.weight: modelData.is_current ? 600 : 400
-                                                        Layout.fillWidth: true
-                                                    }
-
-                                                    StyledText {
-                                                        text: modelData.rates.length > 0
-                                                            ? (qsTr("up to %1 Hz").arg(modelData.rates[0].refresh_rate.toFixed(0)))
-                                                            : ""
-                                                        font.pointSize: Appearance.font.size.bodySmall
-                                                        color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
-                                                    }
-
-                                                    MaterialIcon {
-                                                        visible: modelData.is_preferred
-                                                        text: "star"
-                                                        font: Tokens.font.icon.small
-                                                        color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3primary
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // ── Persist Configuration to output.kdl ──
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: Appearance.spacing.md
-
-                                TextButton {
-                                    Layout.fillWidth: true
-                                    type: TextButton.Filled
-                                    text: root.savedRecently
-                                        ? qsTr("Saved to ~/.config/niri/niri/output.kdl ✓")
-                                        : qsTr("Save Display Configuration as Default")
-                                    onClicked: root.saveDefaults()
-                                }
-                            }
-                        }
+                StyledText {
+                    text: Tr.tr("No displays detected")
+                    font: Tokens.font.title.medium
+                    color: Colours.palette.m3outline
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                StyledText {
+                    text: Tr.tr("Niri Available: %1").arg(Niri.niriAvailable)
+                    font: Tokens.font.body.small
+                    color: Colours.palette.m3outlineVariant
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                TextButton {
+                    text: Tr.tr("Retry Fetch")
+                    Layout.alignment: Qt.AlignHCenter
+                    type: TextButton.Tonal
+                    onClicked: {
+                        NiriIpc.fetchOutputs();
+                        root.updateOutputs();
                     }
                 }
             }
         }
-    }
 
-    // ── 15-Second Safety Confirmation Modal Overlay ──
-    Rectangle {
-        id: confirmModalBackdrop
-        anchors.fill: parent
-        z: 100
-        color: Qt.rgba(0, 0, 0, 0.55)
-        opacity: root.confirmPending ? 1.0 : 0.0
-        visible: opacity > 0
-
-        Behavior on opacity {
-            NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: root.confirmPending
-            hoverEnabled: true
-            onClicked: {} // Block clicks from leaking behind modal
+        // ── Section 1: Arrangement & Positioning ──
+        SectionHeader {
+            first: true
+            visible: root.outputsArray.length > 0
+            text: Tr.tr("Arrangement & Positioning")
         }
 
         StyledRect {
-            id: confirmDialogCard
-            anchors.centerIn: parent
-            width: Math.min(parent.width - 48, 460)
-            height: dialogCol.implicitHeight + Tokens.padding.extraLarge * 2
+            visible: root.outputsArray.length > 0
+            Layout.fillWidth: true
+            color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.large
-            color: Colours.palette.m3surfaceContainerHigh
-            border.width: 1
-            border.color: Colours.palette.m3outlineVariant
 
             ColumnLayout {
-                id: dialogCol
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: Tokens.padding.extraLarge
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.medium
+
+                StyledText {
+                    text: Tr.tr("Drag displays to arrange virtual layout with magnetic edge snapping")
+                    color: Colours.palette.m3outline
+                    font: Tokens.font.body.small
+                }
+
+                Item {
+                    id: displayCanvas
+                    Layout.fillWidth: true
+                    height: 240
+                    clip: true
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: Colours.layer(Colours.palette.m3surface, 1)
+                        radius: Tokens.rounding.medium
+                        border.color: Colours.palette.m3outlineVariant
+                        border.width: 1
+                    }
+
+                    // Vertical magnetic snap guide line
+                    Rectangle {
+                        visible: root.isDragging && !isNaN(root.snapGuideX)
+                        x: displayCanvas.width / 2 + (root.snapGuideX - root.currentBoxCenterX) * root.currentScale
+                        y: 4
+                        width: 1
+                        height: parent.height - 8
+                        color: Colours.palette.m3tertiary
+                        opacity: 0.85
+                    }
+
+                    // Horizontal magnetic snap guide line
+                    Rectangle {
+                        visible: root.isDragging && !isNaN(root.snapGuideY)
+                        x: 4
+                        y: displayCanvas.height / 2 + (root.snapGuideY - root.currentBoxCenterY) * root.currentScale
+                        width: parent.width - 8
+                        height: 1
+                        color: Colours.palette.m3tertiary
+                        opacity: 0.85
+                    }
+
+                    Repeater {
+                        id: canvasRepeater
+                        model: root.localOutputs
+
+                        delegate: Rectangle {
+                            id: screenItem
+                            required property var modelData
+                            required property int index
+
+                            visible: modelData.active
+
+                            x: displayCanvas.width / 2 + (modelData.x - root.currentBoxCenterX) * root.currentScale
+                            y: displayCanvas.height / 2 + (modelData.y - root.currentBoxCenterY) * root.currentScale
+                            width: Math.max(24, modelData.logicalWidth * root.currentScale)
+                            height: Math.max(18, modelData.logicalHeight * root.currentScale)
+
+                            radius: Tokens.rounding.small
+                            border.width: root.selectedIndex === index ? 2 : 1
+                            border.color: root.selectedIndex === index ? Colours.palette.m3primary : Colours.palette.m3outlineVariant
+                            color: root.selectedIndex === index ? Colours.layer(Colours.palette.m3primaryContainer, 1) : Colours.layer(Colours.palette.m3surfaceContainer, 3)
+
+                            Behavior on x { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                            Behavior on y { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                            Behavior on width { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                            Behavior on height { enabled: !root.isDragging; NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+
+                            clip: true
+
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                width: parent.width - 8
+                                spacing: 2
+                                visible: parent.width >= 50 && parent.height >= 35
+
+                                StyledText {
+                                    text: modelData.connector + (modelData.transform !== "normal" ? " (" + modelData.transform + ")" : "")
+                                    font.weight: 600
+                                    font.pointSize: 9.5
+                                    color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
+                                    Layout.alignment: Qt.AlignHCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                StyledText {
+                                    text: modelData.logicalWidth + "×" + modelData.logicalHeight + " (" + modelData.scale.toFixed(2) + "x)"
+                                    font.pointSize: 8
+                                    color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
+                                    Layout.alignment: Qt.AlignHCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                StyledText {
+                                    text: "X: " + modelData.x + " Y: " + modelData.y
+                                    font.pointSize: 7.5
+                                    color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
+                                    Layout.alignment: Qt.AlignHCenter
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: dragIndex >= 0 ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+
+                        property int dragIndex: -1
+                        property real dragStartX: 0
+                        property real dragStartY: 0
+                        property real dragStartLogicalX: 0
+                        property real dragStartLogicalY: 0
+
+                        function hitTest(mx: real, my: real): int {
+                            for (let i = canvasRepeater.count - 1; i >= 0; i--) {
+                                const item = canvasRepeater.itemAt(i);
+                                if (!item || !item.visible || !item.modelData.active)
+                                    continue;
+                                if (mx >= item.x && mx <= item.x + item.width &&
+                                    my >= item.y && my <= item.y + item.height) {
+                                    return i;
+                                }
+                            }
+                            return -1;
+                        }
+
+                        onPressed: (mouse) => {
+                            const idx = hitTest(mouse.x, mouse.y);
+                            if (idx < 0)
+                                return;
+
+                            dragIndex = idx;
+                            root.selectedIndex = idx;
+
+                            const out = root.localOutputs[idx];
+                            dragStartX = mouse.x;
+                            dragStartY = mouse.y;
+                            dragStartLogicalX = out.x;
+                            dragStartLogicalY = out.y;
+
+                            root.freezeMapping();
+                        }
+
+                        onPositionChanged: (mouse) => {
+                            if (dragIndex < 0)
+                                return;
+
+                            const dx = mouse.x - dragStartX;
+                            const dy = mouse.y - dragStartY;
+                            const dxLogical = dx / root.currentScale;
+                            const dyLogical = dy / root.currentScale;
+
+                            let newX = Math.round(dragStartLogicalX + dxLogical);
+                            let newY = Math.round(dragStartLogicalY + dyLogical);
+
+                            if (root.enableSnapping) {
+                                const snapped = root.snapPosition(dragIndex, newX, newY);
+                                newX = Math.round(snapped.x);
+                                newY = Math.round(snapped.y);
+                                root.snapGuideX = snapped.guideX;
+                                root.snapGuideY = snapped.guideY;
+                            } else {
+                                root.snapGuideX = NaN;
+                                root.snapGuideY = NaN;
+                            }
+
+                            root.updateLocalPosition(dragIndex, newX, newY);
+                        }
+
+                        onReleased: {
+                            dragIndex = -1;
+                            root.unfreezeMapping();
+                        }
+                    }
+                }
+
+                ToggleRow {
+                    text: Tr.tr("Magnetic monitor snapping")
+                    subtext: Tr.tr("Snap adjacent edges and centers while dragging displays")
+                    checked: root.enableSnapping
+                    onToggled: checked => root.enableSnapping = checked
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.medium
+
+                    StyledText {
+                        text: root.hasUnappliedChanges ? Tr.tr("Unapplied position changes") : Tr.tr("Arrangement synchronized")
+                        font: Tokens.font.body.small
+                        color: root.hasUnappliedChanges ? Colours.palette.m3tertiary : Colours.palette.m3outline
+                        Layout.fillWidth: true
+                    }
+
+                    TextButton {
+                        text: Tr.tr("Reset Layout")
+                        type: TextButton.Tonal
+                        stateLayer.disabled: !root.hasUnappliedChanges
+                        opacity: root.hasUnappliedChanges ? 1.0 : 0.5
+                        onClicked: {
+                            if (root.hasUnappliedChanges)
+                                root.initializeLocalOutputs();
+                        }
+                    }
+
+                    TextButton {
+                        text: Tr.tr("Apply Layout")
+                        type: TextButton.Filled
+                        stateLayer.disabled: !root.hasUnappliedChanges
+                        opacity: root.hasUnappliedChanges ? 1.0 : 0.5
+                        onClicked: {
+                            if (root.hasUnappliedChanges)
+                                root.applyPositions();
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Section 2: Connected Displays Picker ──
+        SectionHeader {
+            visible: root.outputsArray.length > 0
+            text: Tr.tr("Connected Displays")
+        }
+
+        RowLayout {
+            visible: root.outputsArray.length > 0
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.small
+
+            Repeater {
+                model: root.outputsArray
+
+                delegate: StyledRect {
+                    id: outputChip
+                    required property var modelData
+                    required property int index
+
+                    Layout.fillWidth: true
+                    radius: Tokens.rounding.medium
+                    color: root.selectedIndex === index
+                        ? Colours.layer(Colours.palette.m3secondaryContainer, 2)
+                        : Colours.tPalette.m3surfaceContainer
+
+                    border.width: root.selectedIndex === index ? 2 : 1
+                    border.color: root.selectedIndex === index
+                        ? Colours.palette.m3primary
+                        : Colours.palette.m3outlineVariant
+
+                    StateLayer {
+                        function onClicked(): void {
+                            root.selectedIndex = index;
+                        }
+                    }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: Tokens.padding.medium
+                        spacing: Tokens.spacing.medium
+
+                        MaterialIcon {
+                            text: modelData.connector.startsWith("eDP") ? "laptop_chromebook" : "monitor"
+                            font: Tokens.font.icon.medium
+                            color: modelData.active ? Colours.palette.m3primary : Colours.palette.m3outline
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Tokens.spacing.extraSmall
+
+                                StyledText {
+                                    text: modelData.connector
+                                    font: root.selectedIndex === index ? Tokens.font.title.small : Tokens.font.body.medium
+                                }
+
+                                StyledRect {
+                                    visible: !modelData.active
+                                    radius: Tokens.rounding.small
+                                    color: Colours.palette.m3surfaceContainerHighest
+                                    implicitWidth: offBadge.implicitWidth + 8
+                                    implicitHeight: offBadge.implicitHeight + 2
+
+                                    StyledText {
+                                        id: offBadge
+                                        anchors.centerIn: parent
+                                        text: Tr.tr("OFF")
+                                        font: Tokens.font.label.small
+                                        color: Colours.palette.m3outline
+                                    }
+                                }
+                            }
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: modelData.name
+                                font: Tokens.font.body.small
+                                color: Colours.palette.m3outline
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                    implicitHeight: 64
+                }
+            }
+        }
+
+        // ── Section 3: Display Power Toggle ──
+        SectionHeader {
+            visible: root.selectedOutput !== null
+            text: Tr.tr("Display Settings — %1").arg(root.selectedOutput ? root.selectedOutput.connector : "")
+        }
+
+        StyledRect {
+            visible: root.selectedOutput !== null
+            Layout.fillWidth: true
+            color: Colours.tPalette.m3surfaceContainer
+            radius: Tokens.rounding.large
+
+            ColumnLayout {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.medium
+
+                ToggleRow {
+                    first: true
+                    last: true
+                    visible: root.outputsArray.length > 1
+                    text: Tr.tr("Enable display output")
+                    subtext: root.selectedOutput && root.selectedOutput.active
+                        ? Tr.tr("Currently active (%1)").arg(root.selectedOutput.connector)
+                        : Tr.tr("Currently turned off")
+                    checked: root.selectedOutput ? root.selectedOutput.active : false
+                    enabled: root.selectedOutput ? (!root.selectedOutput.active || root.activeOutputCount > 1) : false
+                    onToggled: checked => {
+                        if (root.selectedOutput)
+                            root.applyOutputEnabled(root.selectedOutput.connector, checked);
+                    }
+                }
+            }
+        }
+
+        // ── Section 4: Scaling & Rotation ──
+        SectionHeader {
+            visible: root.selectedOutput !== null
+            text: Tr.tr("Scaling & Rotation")
+        }
+
+        StyledRect {
+            visible: root.selectedOutput !== null
+            Layout.fillWidth: true
+            color: Colours.tPalette.m3surfaceContainer
+            radius: Tokens.rounding.large
+
+            ColumnLayout {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: Tokens.padding.large
                 spacing: Tokens.spacing.medium
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing.medium
-
-                    MaterialIcon {
-                        text: "settings_backup_restore"
-                        font: Tokens.font.icon.large
-                        color: Colours.palette.m3primary
-                    }
-
-                    ColumnLayout {
+                    StyledText {
+                        text: Tr.tr("Fractional Scale")
+                        font: Tokens.font.body.medium
                         Layout.fillWidth: true
-                        spacing: 2
-
-                        StyledText {
-                            text: qsTr("Keep these display settings?")
-                            font.pointSize: Appearance.font.size.titleMedium
-                            font.weight: 600
-                            color: Colours.palette.m3onSurface
-                        }
-
-                        StyledText {
-                            visible: root.confirmSummary !== ""
-                            text: root.confirmSummary
-                            font.pointSize: Appearance.font.size.bodySmall
-                            color: Colours.palette.m3primary
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                        }
                     }
-                }
-
-                StyledText {
-                    Layout.fillWidth: true
-                    wrapMode: Text.WordWrap
-                    text: qsTr("Applying new display configuration. Click Confirm to keep, reverting in %1 seconds...").arg(root.confirmRemaining)
-                    color: Colours.palette.m3onSurfaceVariant
-                    font.pointSize: Appearance.font.size.bodyMedium
-                }
-
-                // Countdown progress bar
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 6
-                    radius: 3
-                    color: Colours.palette.m3surfaceContainerHighest
-
-                    Rectangle {
-                        width: parent.width * Math.max(0, Math.min(1, root.confirmRemaining / 15.0))
-                        height: parent.height
-                        radius: 3
-                        color: root.confirmRemaining <= 5 ? Colours.palette.m3error : Colours.palette.m3primary
-
-                        Behavior on width {
-                            NumberAnimation { duration: 900; easing.type: Easing.Linear }
-                        }
+                    StyledText {
+                        text: root.selectedOutput ? (root.selectedOutput.scale.toFixed(2) + "x") : ""
+                        font: Tokens.font.title.small
+                        color: Colours.palette.m3primary
                     }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: Tokens.spacing.medium
+                    spacing: Tokens.spacing.extraSmall
 
-                    Item { Layout.fillWidth: true }
+                    Repeater {
+                        model: root.scalePresets
 
-                    TextButton {
-                        text: qsTr("Revert Now")
-                        type: TextButton.Tonal
-                        onClicked: root.revertDisplayChanges()
+                        delegate: TextButton {
+                            required property real modelData
+                            Layout.fillWidth: true
+                            text: modelData + "x"
+                            isToggle: false
+                            readonly property bool isCurrentScale: root.selectedOutput ? Math.abs(root.selectedOutput.scale - modelData) < 0.02 : false
+                            type: isCurrentScale ? TextButton.Filled : TextButton.Tonal
+                            onClicked: {
+                                if (root.selectedOutput)
+                                    root.applyScale(root.selectedOutput.connector, modelData);
+                            }
+                        }
                     }
 
-                    TextButton {
-                        text: qsTr("Confirm (%1s)").arg(root.confirmRemaining)
-                        type: TextButton.Filled
-                        onClicked: root.acceptDisplayChanges()
+                    StyledInputField {
+                        id: scaleInput
+                        placeholderText: Tr.tr("Custom")
+                        horizontalAlignment: TextInput.AlignHCenter
+                        Layout.preferredWidth: 78
+                        Layout.fillHeight: true
+
+                        onEditingFinished: {
+                            const val = parseFloat(text);
+                            if (!isNaN(val) && val >= 0.25 && val <= 4.0 && root.selectedOutput) {
+                                root.applyScale(root.selectedOutput.connector, val);
+                                text = "";
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    StyledText {
+                        text: Tr.tr("Orientation & Transform")
+                        font: Tokens.font.body.medium
+                        Layout.fillWidth: true
+                    }
+                    StyledText {
+                        text: root.selectedOutput ? root.selectedOutput.transform : ""
+                        font: Tokens.font.title.small
+                        color: Colours.palette.m3primary
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.small
+
+                    Repeater {
+                        model: root.rotationOptions
+
+                        delegate: IconTextButton {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            icon: modelData.icon
+                            text: modelData.label
+                            readonly property string currentBase: root.selectedOutput ? root.baseRotation(root.selectedOutput.transform) : "normal"
+                            readonly property bool isCurrentRot: currentBase === modelData.value
+                            type: isCurrentRot ? TextButton.Filled : TextButton.Tonal
+                            onClicked: {
+                                if (root.selectedOutput) {
+                                    const flipped = root.isTransformFlipped(root.selectedOutput.transform);
+                                    const nextTransform = root.composeTransform(modelData.value, flipped);
+                                    root.applyTransform(root.selectedOutput.connector, nextTransform);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ToggleRow {
+                    last: true
+                    text: Tr.tr("Flip horizontal (mirrored)")
+                    subtext: Tr.tr("Invert display orientation horizontally")
+                    checked: root.selectedOutput ? root.isTransformFlipped(root.selectedOutput.transform) : false
+                    onToggled: checked => {
+                        if (root.selectedOutput) {
+                            const baseRot = root.baseRotation(root.selectedOutput.transform);
+                            const nextTransform = root.composeTransform(baseRot, checked);
+                            root.applyTransform(root.selectedOutput.connector, nextTransform);
+                        }
                     }
                 }
             }
         }
+
+        // ── Section 5: Resolution, Refresh Rate & VRR ──
+        SectionHeader {
+            visible: root.selectedOutput !== null
+            text: Tr.tr("Resolution, Refresh Rate & VRR")
+        }
+
+        StyledRect {
+            visible: root.selectedOutput !== null
+            Layout.fillWidth: true
+            color: Colours.tPalette.m3surfaceContainer
+            radius: Tokens.rounding.large
+
+            ColumnLayout {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.medium
+
+                ToggleRow {
+                    first: true
+                    text: Tr.tr("Variable Refresh Rate (Adaptive Sync / VRR)")
+                    subtext: root.selectedOutput && !root.selectedOutput.vrrSupported
+                        ? Tr.tr("Unsupported by this display")
+                        : Tr.tr("Eliminates screen tearing and reduces stuttering")
+                    checked: root.selectedOutput ? root.selectedOutput.vrrEnabled : false
+                    enabled: root.selectedOutput ? root.selectedOutput.vrrSupported : false
+                    opacity: enabled ? 1.0 : 0.6
+                    onToggled: checked => {
+                        if (root.selectedOutput && root.selectedOutput.vrrSupported)
+                            root.applyVrr(root.selectedOutput.connector, checked);
+                    }
+                }
+
+                Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
+
+                StyledText {
+                    text: Tr.tr("Refresh Rate (%1)").arg(
+                        root.selectedResolutionGroup ? (root.selectedResolutionGroup.width + "×" + root.selectedResolutionGroup.height) : ""
+                    )
+                    font: Tokens.font.title.small
+                }
+
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
+
+                    Repeater {
+                        model: root.selectedResolutionGroup ? root.selectedResolutionGroup.rates : []
+
+                        delegate: TextButton {
+                            required property var modelData
+                            text: modelData.refresh_rate.toFixed(2) + " Hz"
+                            isToggle: false
+                            type: modelData.is_current ? TextButton.Filled : TextButton.Tonal
+                            onClicked: {
+                                if (root.selectedOutput)
+                                    root.applyMode(root.selectedOutput.connector, modelData.width, modelData.height, modelData.refresh_rate);
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
+
+                StyledText {
+                    text: Tr.tr("Resolution")
+                    font: Tokens.font.title.small
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: Tokens.spacing.extraSmall
+
+                    Repeater {
+                        model: root.selectedOutput ? root.selectedOutput.resolutions : []
+
+                        delegate: StyledRect {
+                            id: resCard
+                            required property var modelData
+                            required property int index
+
+                            Layout.fillWidth: true
+                            implicitHeight: 40
+                            radius: Tokens.rounding.small
+                            color: modelData.is_current
+                                ? Colours.palette.m3primaryContainer
+                                : (root.selectedResolutionGroup && root.selectedResolutionGroup.key === modelData.key
+                                    ? Colours.palette.m3surfaceContainerHighest
+                                    : "transparent")
+
+                            StateLayer {
+                                function onClicked(): void {
+                                    if (modelData.rates && modelData.rates.length > 0 && root.selectedOutput) {
+                                        const bestRate = modelData.rates[0];
+                                        root.applyMode(root.selectedOutput.connector, bestRate.width, bestRate.height, bestRate.refresh_rate);
+                                    }
+                                }
+                            }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.margins: Tokens.padding.medium
+                                spacing: Tokens.spacing.medium
+
+                                StyledText {
+                                    text: modelData.width + " × " + modelData.height
+                                    font: modelData.is_current ? Tokens.font.title.small : Tokens.font.body.medium
+                                    color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
+                                }
+
+                                StyledText {
+                                    text: {
+                                        const r = modelData.width / modelData.height;
+                                        if (Math.abs(r - 16/9) < 0.05) return "16:9";
+                                        if (Math.abs(r - 16/10) < 0.05) return "16:10";
+                                        if (Math.abs(r - 4/3) < 0.05) return "4:3";
+                                        if (Math.abs(r - 21/9) < 0.05) return "21:9";
+                                        return "";
+                                    }
+                                    color: Colours.palette.m3outline
+                                    font: Tokens.font.body.small
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                MaterialIcon {
+                                    visible: modelData.is_preferred
+                                    text: "star"
+                                    font: Tokens.font.icon.small
+                                    color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3primary
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Section 6: Persist Configuration ──
+        RowLayout {
+            visible: root.outputsArray.length > 0
+            Layout.fillWidth: true
+            Layout.topMargin: Tokens.spacing.medium
+            Layout.bottomMargin: Tokens.spacing.extraLarge
+
+            TextButton {
+                Layout.fillWidth: true
+                type: TextButton.Filled
+                text: root.savedRecently
+                    ? Tr.tr("Saved to ~/.config/niri/niri/output.kdl ✓")
+                    : Tr.tr("Save Display Configuration as Default")
+                onClicked: root.saveDefaults()
+            }
+        }
     }
+
+    data: [
+        Timer {
+            id: confirmCountdownTimer
+            interval: 1000
+            repeat: true
+            onTriggered: {
+                root.confirmRemaining--;
+                if (root.confirmRemaining <= 0) {
+                    root.revertDisplayChanges();
+                }
+            }
+        },
+
+        Timer {
+            id: saveFeedbackTimer
+            interval: 2500
+            repeat: false
+            onTriggered: root.savedRecently = false
+        },
+
+        Connections {
+            target: Niri
+            function onOutputsChanged(): void {
+                root.updateOutputs();
+            }
+        },
+
+        Timer {
+            id: refreshTimer
+            interval: 350
+            repeat: true
+            property int count: 0
+            onTriggered: {
+                NiriIpc.fetchOutputs();
+                count++;
+                if (count >= 5) {
+                    running = false;
+                    count = 0;
+                }
+            }
+        },
+
+        // ── 15-Second Safety Confirmation Modal Overlay ──
+        Rectangle {
+            id: confirmModalBackdrop
+            anchors.fill: root
+            z: 9999
+            color: Qt.rgba(0, 0, 0, 0.55)
+            opacity: root.confirmPending ? 1.0 : 0.0
+            visible: opacity > 0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 150; easing.type: Easing.OutQuad }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: root.confirmPending
+                hoverEnabled: true
+                onClicked: {} // Block clicks from leaking behind modal
+            }
+
+            StyledRect {
+                id: confirmDialogCard
+                anchors.centerIn: parent
+                width: Math.min(parent.width - 48, 460)
+                height: dialogCol.implicitHeight + Tokens.padding.extraLarge * 2
+                radius: Tokens.rounding.large
+                color: Colours.palette.m3surfaceContainerHigh
+                border.width: 1
+                border.color: Colours.palette.m3outlineVariant
+
+                ColumnLayout {
+                    id: dialogCol
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: Tokens.padding.extraLarge
+                    spacing: Tokens.spacing.medium
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.medium
+
+                        MaterialIcon {
+                            text: "settings_backup_restore"
+                            font: Tokens.font.icon.large
+                            color: Colours.palette.m3primary
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            StyledText {
+                                text: Tr.tr("Keep these display settings?")
+                                font: Tokens.font.title.medium
+                                color: Colours.palette.m3onSurface
+                            }
+
+                            StyledText {
+                                visible: root.confirmSummary !== ""
+                                text: root.confirmSummary
+                                font: Tokens.font.body.small
+                                color: Colours.palette.m3primary
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        text: Tr.tr("Applying new display configuration. Click Confirm to keep, reverting in %1 seconds...").arg(root.confirmRemaining)
+                        color: Colours.palette.m3onSurfaceVariant
+                        font: Tokens.font.body.medium
+                    }
+
+                    // Countdown progress bar
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 6
+                        radius: 3
+                        color: Colours.palette.m3surfaceContainerHighest
+
+                        Rectangle {
+                            width: parent.width * Math.max(0, Math.min(1, root.confirmRemaining / 15.0))
+                            height: parent.height
+                            radius: 3
+                            color: root.confirmRemaining <= 5 ? Colours.palette.m3error : Colours.palette.m3primary
+
+                            Behavior on width {
+                                NumberAnimation { duration: 900; easing.type: Easing.Linear }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Tokens.spacing.medium
+
+                        Item { Layout.fillWidth: true }
+
+                        TextButton {
+                            text: Tr.tr("Revert Now")
+                            type: TextButton.Tonal
+                            onClicked: root.revertDisplayChanges()
+                        }
+
+                        TextButton {
+                            text: Tr.tr("Confirm (%1s)").arg(root.confirmRemaining)
+                            type: TextButton.Filled
+                            onClicked: root.acceptDisplayChanges()
+                        }
+                    }
+                }
+            }
+        }
+    ]
 }

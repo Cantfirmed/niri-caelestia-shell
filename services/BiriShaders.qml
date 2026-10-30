@@ -374,6 +374,26 @@ Singleton {
         const colTertiary = toVec3(Colours.palette.m3tertiary);
         const colSurface = toVec3(Colours.palette.m3surface);
 
+        const tmpl = focusRingTemplateFile.text();
+        if (tmpl && tmpl.trim().length > 0) {
+            let res = tmpl
+                .replace(/\{\{THEME_PRIMARY\}\}/g, colPrimary)
+                .replace(/\{\{THEME_SECONDARY\}\}/g, colSecondary)
+                .replace(/\{\{THEME_TERTIARY\}\}/g, colTertiary)
+                .replace(/\{\{THEME_SURFACE\}\}/g, colSurface)
+                .replace(/\{\{PULSE_SPEED\}\}/g, pSpeed);
+
+            if (!root.pulseMatchTheme || root.pulseColorMode === "cyan") {
+                res = res.replace(/vec3 col = mix\(THEME_PRIMARY, THEME_TERTIARY, 0\.5 \+ 0\.5 \* sin\(niri_time \* PULSE_SPEED \* 1\.2\)\);/g, "vec3 col = vec3(0.15, 0.8, 1.0);");
+            } else if (root.pulseColorMode === "primary") {
+                res = res.replace(/vec3 col = mix\(THEME_PRIMARY, THEME_TERTIARY, 0\.5 \+ 0\.5 \* sin\(niri_time \* PULSE_SPEED \* 1\.2\)\);/g, "vec3 col = THEME_PRIMARY;");
+            } else if (root.pulseColorMode === "spectrum") {
+                const specCode = "float t = fract(niri_time * PULSE_SPEED * 0.25);\n    vec3 col = (t < 0.333) ? mix(THEME_PRIMARY, THEME_SECONDARY, t * 3.0) : ((t < 0.666) ? mix(THEME_SECONDARY, THEME_TERTIARY, (t - 0.333) * 3.0) : mix(THEME_TERTIARY, THEME_PRIMARY, (t - 0.666) * 3.0));";
+                res = res.replace(/vec3 col = mix\(THEME_PRIMARY, THEME_TERTIARY, 0\.5 \+ 0\.5 \* sin\(niri_time \* PULSE_SPEED \* 1\.2\)\);/g, specCode);
+            }
+            return res;
+        }
+
         let glsl = "// Biri Focus Ring - Dynamic Background / Theme Pulse Shader\n";
         glsl += "// Generated automatically by Caelestia Biri Shaders to match desktop wallpaper.\n";
         glsl += `const vec3 THEME_PRIMARY = ${colPrimary};\n`;
@@ -467,11 +487,19 @@ Singleton {
                 const themeCol = toVec3(Colours.palette.m3primary);
                 const themeTertiary = toVec3(Colours.palette.m3tertiary);
 
-                kdl += "animations {\n";
-                kdl += "    window-open {\n";
-                kdl += `        duration-ms ${duration}\n`;
-                kdl += "        curve \"linear\"\n";
-                kdl += "        custom-shader r\"\n";
+                const animTmpl = windowAnimTemplateFile.text();
+                if (animTmpl && animTmpl.trim().length > 0 && !root.animThemeTint) {
+                    kdl += animTmpl
+                        .replace(/\{\{DURATION\}\}/g, String(duration))
+                        .replace(/\{\{THEME_PRIMARY\}\}/g, themeCol)
+                        .replace(/\{\{TWIST\}\}/g, twist)
+                        .replace(/\{\{DAMPING\}\}/g, damp) + "\n\n";
+                } else {
+                    kdl += "animations {\n";
+                    kdl += "    window-open {\n";
+                    kdl += `        duration-ms ${duration}\n`;
+                    kdl += "        curve \"linear\"\n";
+                    kdl += "        custom-shader r\"\n";
                 kdl += `            const vec3 THEME_COL = ${themeCol};\n`;
                 kdl += `            const float TWIST = ${twist};\n`;
                 kdl += `            const float DAMP = ${damp};\n`;
@@ -535,6 +563,7 @@ Singleton {
                 kdl += "        \"\n";
                 kdl += "    }\n";
                 kdl += "}\n\n";
+                }
             } else {
                 const animFile = `${root.shadersDir}/close/close-${root.windowAnimPreset}.kdl`;
                 kdl += `include "${animFile}"\n\n`;
@@ -547,45 +576,67 @@ Singleton {
             if (root.cursorPresets.includes(root.globalShaderPreset)) {
                 const shaderFile = `${root.shadersDir}/cursor/${root.globalShaderPreset}.kdl`;
                 kdl += `include "${shaderFile}"\n\n`;
-            } else if (root.globalShaderPreset === "crt") {
-                const scanDens = root.scanlineDensity.toFixed(2);
-                const scanDark = root.scanlineDarkness.toFixed(2);
+            } else if (root.globalShaderPreset === "crt" || root.globalShaderPreset === "vignette") {
+                const screenTmpl = screenFxTemplateFile.text();
+                const vig = (root.globalShaderPreset === "vignette" || root.vignetteStrength > 0) ? root.vignetteStrength.toFixed(2) : "0.0";
+                const scanDens = (root.globalShaderPreset === "crt") ? root.scanlineDensity.toFixed(2) : "0.0";
+                const scanDark = (root.globalShaderPreset === "crt") ? root.scanlineDarkness.toFixed(2) : "0.0";
                 const aber = root.chromaticAberration.toFixed(4);
-                kdl += "global-shader {\n";
-                kdl += "    enable\n";
-                kdl += "    source r\"\n";
-                kdl += `        const float SCAN_DENS = ${scanDens};\n`;
-                kdl += `        const float SCAN_DARK = ${scanDark};\n`;
-                kdl += `        const float ABER = ${aber};\n`;
-                kdl += "        vec4 global_color(vec3 c) {\n";
-                kdl += "            vec2 uv = c.xy;\n";
-                kdl += "            vec3 s;\n";
-                kdl += "            if (ABER > 0.0001) {\n";
-                kdl += "                float r = tex2D_screen(uv + vec2(ABER, 0.0)).r;\n";
-                kdl += "                float g = tex2D_screen(uv).g;\n";
-                kdl += "                float b = tex2D_screen(uv - vec2(ABER, 0.0)).b;\n";
-                kdl += "                s = vec3(r, g, b);\n";
-                kdl += "            } else {\n";
-                kdl += "                s = tex2D_screen(uv).rgb;\n";
-                kdl += "            }\n";
-                kdl += "            float scan = 1.0 - SCAN_DARK * (0.5 + 0.5 * sin(uv.y * niri_size.y * 3.14159 * SCAN_DENS));\n";
-                kdl += "            return vec4(s * scan, 1.0);\n";
-                kdl += "        }\n";
-                kdl += "    \"\n";
-                kdl += "}\n\n";
-            } else if (root.globalShaderPreset === "vignette") {
-                const vig = root.vignetteStrength.toFixed(2);
-                kdl += "global-shader {\n";
-                kdl += "    enable\n";
-                kdl += "    source r\"\n";
-                kdl += `        const float VIG_STRENGTH = ${vig};\n`;
-                kdl += "        vec4 global_color(vec3 c) {\n";
-                kdl += "            vec3 s = tex2D_screen(c.xy).rgb;\n";
-                kdl += "            float v = smoothstep(0.85, 0.35, length(c.xy - 0.5) * VIG_STRENGTH);\n";
-                kdl += "            return vec4(s * mix(1.0 - VIG_STRENGTH * 0.5, 1.0, v), 1.0);\n";
-                kdl += "        }\n";
-                kdl += "    \"\n";
-                kdl += "}\n\n";
+                const colPrimary = toVec3(Colours.palette.m3primary);
+
+                if (screenTmpl && screenTmpl.trim().length > 0) {
+                    kdl += screenTmpl
+                        .replace(/\{\{THEME_PRIMARY\}\}/g, colPrimary)
+                        .replace(/\{\{VIGNETTE_STRENGTH\}\}/g, vig)
+                        .replace(/\{\{SCANLINE_DENSITY\}\}/g, scanDens)
+                        .replace(/\{\{SCANLINE_DARKNESS\}\}/g, scanDark)
+                        .replace(/\{\{ABERRATION\}\}/g, aber) + "\n\n";
+                } else if (root.globalShaderPreset === "crt") {
+                    kdl += "global-shader {\n";
+                    kdl += "    enable\n";
+                    kdl += "    source r\"\n";
+                    kdl += `        const float SCAN_DENS = ${scanDens};\n`;
+                    kdl += `        const float SCAN_DARK = ${scanDark};\n`;
+                    kdl += `        const float ABER = ${aber};\n`;
+                    kdl += "        vec4 global_color(vec3 c) {\n";
+                    kdl += "            vec2 uv = c.xy;\n";
+                    kdl += "            vec3 s;\n";
+                    kdl += "            if (ABER > 0.0001) {\n";
+                    kdl += "                float r = tex2D_screen(uv + vec2(ABER, 0.0)).r;\n";
+                    kdl += "                float g = tex2D_screen(uv).g;\n";
+                    kdl += "                float b = tex2D_screen(uv - vec2(ABER, 0.0)).b;\n";
+                    kdl += "                s = vec3(r, g, b);\n";
+                    kdl += "            } else {\n";
+                    kdl += "                s = tex2D_screen(uv).rgb;\n";
+                    kdl += "            }\n";
+                    kdl += "            float scan = 1.0 - SCAN_DARK * (0.5 + 0.5 * sin(uv.y * niri_size.y * 3.14159 * SCAN_DENS));\n";
+                    kdl += "            return vec4(s * scan, 1.0);\n";
+                    kdl += "        }\n";
+                    kdl += "    \"\n";
+                    kdl += "}\n\n";
+                } else if (root.globalShaderPreset === "vignette") {
+                    kdl += "global-shader {\n";
+                    kdl += "    enable\n";
+                    kdl += "    source r\"\n";
+                    kdl += `        const float VIG_STRENGTH = ${vig};\n`;
+                    kdl += `        const float ABER = ${aber};\n`;
+                    kdl += "        vec4 global_color(vec3 c) {\n";
+                    kdl += "            vec2 uv = c.xy;\n";
+                    kdl += "            vec3 s;\n";
+                    kdl += "            if (ABER > 0.0001) {\n";
+                    kdl += "                float r = tex2D_screen(uv + vec2(ABER, 0.0)).r;\n";
+                    kdl += "                float g = tex2D_screen(uv).g;\n";
+                    kdl += "                float b = tex2D_screen(uv - vec2(ABER, 0.0)).b;\n";
+                    kdl += "                s = vec3(r, g, b);\n";
+                    kdl += "            } else {\n";
+                    kdl += "                s = tex2D_screen(uv).rgb;\n";
+                    kdl += "            }\n";
+                    kdl += "            float v = smoothstep(0.85, 0.35, length(uv - 0.5) * VIG_STRENGTH);\n";
+                    kdl += "            return vec4(s * mix(1.0 - VIG_STRENGTH * 0.5, 1.0, v), 1.0);\n";
+                    kdl += "        }\n";
+                    kdl += "    \"\n";
+                    kdl += "}\n\n";
+                }
             } else if (root.screenPresets.includes(root.globalShaderPreset)) {
                 const shaderFile = `${root.shadersDir}/screen/${root.globalShaderPreset}.kdl`;
                 kdl += `include "${shaderFile}"\n\n`;
@@ -712,13 +763,27 @@ Singleton {
         }
     }
     onCurrentThemePrimaryChanged: {
-        if (root.loaded) updatePulseShader();
+        if (root.loaded) {
+            updatePulseShader();
+            if (root.windowAnimEnabled && root.windowAnimPreset === "whirlpool")
+                requestSave();
+            if (root.globalShaderEnabled && (root.globalShaderPreset === "crt" || root.globalShaderPreset === "vignette"))
+                requestSave();
+        }
     }
     onCurrentThemeSecondaryChanged: {
-        if (root.loaded) updatePulseShader();
+        if (root.loaded) {
+            updatePulseShader();
+            if (root.windowAnimEnabled && root.windowAnimPreset === "whirlpool")
+                requestSave();
+        }
     }
     onCurrentThemeTertiaryChanged: {
-        if (root.loaded) updatePulseShader();
+        if (root.loaded) {
+            updatePulseShader();
+            if (root.windowAnimEnabled && root.windowAnimPreset === "whirlpool")
+                requestSave();
+        }
     }
 
     onWindowAnimEnabledChanged: requestSave()
@@ -844,5 +909,26 @@ Singleton {
 
         path: `${root.shadersDir}/focus-ring/pulse.frag`
         printErrors: true
+    }
+
+    FileView {
+        id: focusRingTemplateFile
+
+        path: `${root.shadersDir}/templates/focus-ring.frag.template`
+        printErrors: false
+    }
+
+    FileView {
+        id: windowAnimTemplateFile
+
+        path: `${root.shadersDir}/templates/window-anim.kdl.template`
+        printErrors: false
+    }
+
+    FileView {
+        id: screenFxTemplateFile
+
+        path: `${root.shadersDir}/templates/screen-fx.kdl.template`
+        printErrors: false
     }
 }

@@ -71,6 +71,13 @@ QtObject {
 
         // System
         {
+            label: Tr.tr("Displays"),
+            icon: "display_settings",
+            description: Tr.tr("Resolution, scaling, arrangement, rotation"),
+            category: "system",
+            keywords: "display displays monitor screen resolution scale scaling arrangement rotation vrr refresh rate outputs"
+        },
+        {
             label: Tr.tr("Updates"),
             icon: "update",
             description: Tr.tr("System updates"),
