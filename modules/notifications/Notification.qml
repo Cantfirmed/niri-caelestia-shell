@@ -72,7 +72,7 @@ StyledRect {
                 root.x = 0;
             } else {
                 root.modelData.popup = false;
-                if (root.modelData.isNetwork)
+                if (root.modelData.isNetwork || root.modelData.isAudio || root.modelData.isTransient)
                     root.modelData.close();
             }
         }

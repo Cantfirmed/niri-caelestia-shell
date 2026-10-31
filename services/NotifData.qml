@@ -55,6 +55,8 @@ QtObject {
     property list<var> actions
 
     readonly property bool isNetwork: Notifs.isNetworkNotif(notif)
+    readonly property bool isAudio: Notifs.isAudioNotif(notif)
+    readonly property bool isTransient: Notifs.isTransientNotif(notif)
     readonly property bool isReboot: Notifs.isRebootNotif(notif)
 
     readonly property bool hasFullscreen: Compositor.hasFullscreen
@@ -63,7 +65,7 @@ QtObject {
     readonly property Timer timer: Timer {
         running: true
         interval: {
-            if (notif.isNetwork) {
+            if (notif.isNetwork || notif.isAudio || notif.isTransient) {
                 return notif.expireTimeout > 0 && notif.expireTimeout <= 10000 ? notif.expireTimeout : GlobalConfig.notifs.defaultExpireTimeout;
             }
             return notif.expireTimeout > 0 ? notif.expireTimeout : notif.hasFullscreen ? GlobalConfig.notifs.fullscreenExpireTimeout : GlobalConfig.notifs.defaultExpireTimeout;
@@ -73,7 +75,7 @@ QtObject {
             if (GlobalConfig.notifs.expire || notif.hasFullscreen)
                 notif.popup = false;
 
-            if (notif.isNetwork)
+            if (notif.isNetwork || notif.isAudio || notif.isTransient)
                 notif.close();
         }
     }

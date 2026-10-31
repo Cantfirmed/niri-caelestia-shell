@@ -66,6 +66,36 @@ Singleton {
         return false;
     }
 
+    function isAudioNotif(notif): bool {
+        if (!notif)
+            return false;
+
+        const icon = (notif.appIcon ?? notif.image ?? "").toLowerCase();
+        if (icon.includes("audio-volume") || icon.includes("audio-muted") || icon.includes("volume-muted") || icon.includes("volume_off") || icon.includes("volume-off") || icon.includes("mic-volume") || icon.includes("mic_off"))
+            return true;
+
+        const cat = (notif.hints?.category ?? notif.hints?.["category"] ?? "").toLowerCase();
+        if (cat.startsWith("audio") || cat.startsWith("volume"))
+            return true;
+
+        const summary = (notif.summary ?? "").toLowerCase();
+        const body = (notif.body ?? "").toLowerCase();
+        if ((summary.includes("audio") || summary.includes("volume") || summary.includes("sound") || summary.includes("mic")) &&
+            (body.includes("muted") || body.includes("unmuted") || body.includes("mute") || body.includes("volume") || body.includes("sink") || body.includes("source") || body.includes("speaker") || body.includes("headphones")))
+            return true;
+        if (summary === "audio" || summary === "volume" || summary === "sound")
+            return true;
+
+        return false;
+    }
+
+    function isTransientNotif(notif): bool {
+        if (!notif)
+            return false;
+        const transient = notif.hints?.transient ?? notif.hints?.["transient"];
+        return transient === true || transient === 1 || transient === "true";
+    }
+
     function isRebootNotif(notif): bool {
         if (!notif)
             return false;
@@ -182,8 +212,8 @@ Singleton {
             if (notif.closed)
                 continue;
 
-            // 1. Clean up network notifications immediately if lingering
-            if (root.isNetworkNotif(notif)) {
+            // 1. Clean up network, audio, or transient notifications immediately if lingering
+            if (root.isNetworkNotif(notif) || root.isAudioNotif(notif) || root.isTransientNotif(notif)) {
                 notif.close();
                 continue;
             }
@@ -269,7 +299,7 @@ Singleton {
         id: saveTimer
 
         interval: 1000
-        onTriggered: storage.setText(JSON.stringify(root.notClosed.filter(n => !n.isNetwork && !root.isNetworkNotif(n)).map(n => ({
+        onTriggered: storage.setText(JSON.stringify(root.notClosed.filter(n => !n.isNetwork && !n.isAudio && !n.isTransient && !root.isNetworkNotif(n) && !root.isAudioNotif(n) && !root.isTransientNotif(n)).map(n => ({
                     time: n.time,
                     id: n.id,
                     summary: n.summary,
@@ -335,8 +365,8 @@ Singleton {
             for (const notif of data) {
                 const properties = Object.assign({}, notif);
 
-                // Discard any network notification from saved state
-                if (root.isNetworkNotif(properties))
+                // Discard any network, audio, or transient notification from saved state
+                if (root.isNetworkNotif(properties) || root.isAudioNotif(properties) || root.isTransientNotif(properties))
                     continue;
 
                 // Discard any reboot notification from before the current boot session
