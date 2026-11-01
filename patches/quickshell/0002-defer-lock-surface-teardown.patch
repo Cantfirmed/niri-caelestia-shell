@@ -1,0 +1,28 @@
+diff --git a/src/wayland/session_lock.cpp b/src/wayland/session_lock.cpp
+index 4ced844..b2efec7 100644
+--- a/src/wayland/session_lock.cpp
++++ b/src/wayland/session_lock.cpp
+@@ -13,6 +13,7 @@
+ #include <qquickitem.h>
+ #include <qquickwindow.h>
+ #include <qscreen.h>
++#include <qtimer.h>
+ #include <qtmetamacros.h>
+ #include <qtypes.h>
+ 
+@@ -235,7 +236,14 @@ WlSessionLockSurface::WlSessionLockSurface(QObject* parent)
+ WlSessionLockSurface::~WlSessionLockSurface() {
+ 	if (this->window != nullptr) {
+ 		this->window->destroy();
+-		this->window->deleteLater();
++
++		// Same hazard as ProxyWindowBase::deleteWindow(): destroying the window from inside a
++		// deferred delete batch takes effect immediately, while the QML item tree it backs
++		// (including the QQuickShaderEffectSource Qt creates for `layer.enabled`, used by the
++		// lock surface) is still alive and still holds a QQuickWindow*. Those items are
++		// destroyed a moment later and crash in QQuickItemPrivate::dirty() ->
++		// QQuickWindow::maybeUpdate() on the freed window. Defer so the items die first.
++		QTimer::singleShot(0, this->window, [window = this->window]() { window->deleteLater(); });
+ 	}
+ }
+ 

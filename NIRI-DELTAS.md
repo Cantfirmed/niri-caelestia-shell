@@ -32,6 +32,7 @@ This document tracks all intentional divergences from upstream [caelestia-dots/s
 | `services/Niri.qml` | Service | Custom Niri compositor integration. |
 | `plugin/src/Caelestia/Internal/niriipc*` | C++ | Custom Niri IPC socket plugin. |
 | `patches/quickshell/0001-defer-window-teardown.patch` | Patch | Defers `QQuickWindow` destruction in `ProxyWindowBase::deleteWindow()` past the item-tree teardown. Without it the shell SIGSEGVs on output loss / resume-from-suspend (dangling window in `QQuickItemPrivate::dirty()` → `QQuickWindow::maybeUpdate()`). Applied by `scripts/build-quickshell.sh`. |
+| `patches/quickshell/0002-defer-lock-surface-teardown.patch` | Patch | Same deferral for `WlSessionLockSurface::~WlSessionLockSurface()`. Covers the resume-while-locked path, where `WlSessionLock::updateSurfaces()` deletes a lock surface for every screen that disappears. |
 | `scripts/build-quickshell.sh` | Shell | Rebuilds + installs `~/.local/bin/quickshell` against the installed Qt and applies `patches/quickshell/*.patch`. Required after every Qt upgrade (Quickshell links private Qt APIs). |
 
 ---
@@ -219,6 +220,7 @@ This document tracks all intentional divergences from upstream [caelestia-dots/s
 * **Root Cause:** When the output list empties, every `Variants { model: Screens.screens }` window is `deleteLater()`ed. Inside that deferred-delete batch, `ProxyWindowBase::deleteWindow()` *also* called `window->deleteLater()`, which Qt processes immediately — destroying the backing `QQuickWindow` while its QML item tree (including the `QQuickShaderEffectSource` Qt creates for `layer.enabled`) was still alive. Items then get destroyed, a signal reaches a shader-effect slot, and `QQuickItemPrivate::dirty()` calls `QQuickWindow::maybeUpdate()` on freed memory.
 * **Fix & Preservation Rule:**
   - Local quickshell patch `patches/quickshell/0001-defer-window-teardown.patch` replaces `window->deleteLater()` with `QTimer::singleShot(0, window, [window] { window->deleteLater(); })` so the item tree is gone before the window.
+  - `patches/quickshell/0002-defer-lock-surface-teardown.patch` applies the same deferral to `WlSessionLockSurface::~WlSessionLockSurface()`, which is the path exercised on **resume while the session is locked** (`WlSessionLock::updateSurfaces()` deletes a surface per vanished screen).
   - `scripts/build-quickshell.sh` applies all `patches/quickshell/*.patch`. If a patch no longer applies after an upstream change, **update the patch** — do not drop it.
   - Quickshell links private Qt APIs: **rebuild after every Qt upgrade**, or the stale binary crashes the same way (and prints a `built against Qt X ... system has updated to Qt Y` warning).
   - `scripts/verify-deltas.sh` check #15 asserts the patch and build script are intact.

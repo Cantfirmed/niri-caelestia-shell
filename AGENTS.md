@@ -176,7 +176,6 @@ C++ QML plugin source:
 ### `scripts/`
 Helper backends:
 - `build-quickshell.sh` — rebuild + install the local Quickshell binary (run after every Qt upgrade; applies `patches/quickshell/`)
-- `quickshell-resume-guard.sh` — temporary resume mitigation (see the SIGSEGV section; removable)
 - `launch-quickshell.sh` — restart-on-crash wrapper, started from `niri/caelestia.kdl`
 - `manga/manga_server.py` — manga reader backend
 - `novel/main.py` / `server.py` — novel reader backend
@@ -440,6 +439,8 @@ switch. It looks like "screen turns off = crash" and leaves a dead/blank desktop
 
 ```bash
 export NIRI_SOCKET=$(ls -t /run/user/1000/niri*.sock | head -1)
+# keep the cable plugged and only switch the output off, otherwise niri-display-monitor.py
+# "rescues" the dead display and SIGKILLs the shell before the churn happens (see gotcha below)
 niri msg output HDMI-A-1 off; sleep 4; niri msg output HDMI-A-1 on
 coredumpctl list quickshell --no-pager | tail -3   # must show no new SIGSEGV
 ```
@@ -470,17 +471,30 @@ still alive. The items (including the `QQuickShaderEffectSource` that Qt creates
 moment later, a destruction signal reached a shader-effect slot, `update()` ran, and
 `QQuickItemPrivate::dirty()` called `maybeUpdate()` on the already-freed window.
 
-**Fix** (local quickshell patch, `patches/quickshell/0001-defer-window-teardown.patch`):
-`ProxyWindowBase::deleteWindow()` now defers the actual window destruction to the next event
-loop iteration with `QTimer::singleShot(0, window, [window] { window->deleteLater(); })`, so the
-item tree is gone before the window is. Verified with 5+ consecutive `output off/on` cycles with
-no coredumps. It is **not** a QML/shell workaround: no per-screen window needs to stay alive, so
+**Fix** — two local quickshell patches:
+
+1. `patches/quickshell/0001-defer-window-teardown.patch`: `ProxyWindowBase::deleteWindow()`
+   defers the actual window destruction to the next event loop iteration with
+   `QTimer::singleShot(0, window, [window] { window->deleteLater(); })`, so the item tree is gone
+   before the window is.
+2. `patches/quickshell/0002-defer-lock-surface-teardown.patch`: the same deferral in
+   `WlSessionLockSurface::~WlSessionLockSurface()`. Lock surfaces carry the same hazard and are
+   the path that runs on **resume while locked**: `WlSessionLock::updateSurfaces()` does
+   `surface->deleteLater()` for every screen that disappeared, and the surface dtor called
+   `window->destroy(); window->deleteLater();`, which also fires immediately inside the
+   deferred-delete batch. `modules/lock/LockSurface.qml` uses `layer.enabled` + `MultiEffect`
+   (another `QQuickShaderEffectSource`).
+
+Verified with consecutive `niri msg output <only output> off/on` cycles with no coredumps. It is
+**not** a QML/shell workaround: no per-screen window needs to stay alive, so
 `tasks/stable-per-screen-windows/task.md` is no longer required for this crash.
 
 **Invariants**:
 - Never `delete`/`deleteLater()` a `QQuickWindow` while QML items belonging to it can still be
-  destroyed afterwards. In practice: do not revert the `QTimer::singleShot` deferral, and apply
-  the same pattern if new window types (popups, session-lock surfaces) get torn down manually.
+  destroyed afterwards. In practice: do not revert the `QTimer::singleShot` deferrals, and apply
+  the same pattern if new window types (popups, other surfaces) get torn down manually. When
+  auditing, grep the quickshell tree for `deleteLater()` on a window: `ProxyWindowBase` and
+  `WlSessionLockSurface` were the only two.
 - Quickshell links private Qt APIs, so **rebuild after every Qt upgrade** —
   `scripts/build-quickshell.sh`. A stale binary prints
   `Quickshell was built against Qt X but the system has updated to Qt Y` and crashes in exactly
@@ -489,13 +503,25 @@ no coredumps. It is **not** a QML/shell workaround: no per-screen window needs t
 - Read crash stacks from a build with `-DFRAME_POINTERS=ON`. Without frame pointers the
   unwinder invents frames (we chased `setParentItem`/`deleteChildren` ghosts for hours), which
   is why the build script keeps it enabled.
+- **Testing gotcha**: to exercise the zero-output path you must either leave the *connector*
+  plugged (e.g. `niri msg output HDMI-A-1 off` with the cable in) or pause
+  `niri-display-monitor.py` (`kill -STOP <pid>`, `kill -CONT` afterwards). Otherwise the display
+  daemon sees "all displays inactive, lid open, no external monitor physically connected",
+  SIGKILLs Quickshell (`exit code 137` in the wrapper log) and re-enables `eDP-1` before the
+  window churn ever happens.
+- The wrapper log prints `Quickshell crashed. Restarting in 0.5s...` for **every** non-zero
+  exit, including deliberate kills. Always check the code first: `143` = SIGTERM (resume guard /
+  manual restart), `137` = SIGKILL (`niri-display.py` display switch, or the display daemon),
+  `139` = SIGSEGV (a real crash — and then `coredumpctl list quickshell` has a core).
 
-**Resume guard (currently still installed)**: `scripts/quickshell-resume-guard.sh`, hooked to
-`SessionManager.resumed` (logind `PrepareForSleep(false)`) in `modules/IdleMonitors.qml`,
-SIGTERMs the shell on resume so a fresh process only *creates* windows while outputs settle.
-With the patch above it should no longer be needed; it is kept until a real suspend/resume cycle
-has been verified crash-free. When removing it: delete the `onResumed` hook and
-`scripts/quickshell-resume-guard.sh`.
+**Resume guard: removed 2026-11-01** (both patches are in place). It used to SIGTERM the shell
+from `SessionManager.resumed` so a fresh process would only *create* windows while outputs
+settled. It was removed because it was itself user-visible: killing the shell also kills the
+Wayland session lock, so niri logged `locking session (replacing existing dead lock)` ~5 s after
+every wake (a short blank/unlocked gap). Every "crash" reported on 2026-11-01 was in fact that
+guard (wrapper log `exit code 143`, no core). Do **not** reintroduce a resume-kill mitigation:
+the fix belongs in the window-teardown patches above. If a resume ever does crash, the wrapper
+restarts the shell anyway, and `coredumpctl list quickshell` will have a real core to read.
 
 ### Building Quickshell locally (after a Qt upgrade)
 
