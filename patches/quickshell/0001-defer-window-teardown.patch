@@ -1,0 +1,30 @@
+diff --git a/src/window/proxywindow.cpp b/src/window/proxywindow.cpp
+index bc0181c..0a79ff9 100644
+--- a/src/window/proxywindow.cpp
++++ b/src/window/proxywindow.cpp
+@@ -1,6 +1,8 @@
+ #include "proxywindow.hpp"
+ #include <functional>
+ 
++#include <qtimer.h>
++
+ #include <private/qquickwindow_p.h>
+ #include <qcontainerfwd.h>
+ #include <qcoreevent.h>
+@@ -175,7 +177,15 @@ void ProxyWindowBase::createWindow() {
+ 
+ void ProxyWindowBase::deleteWindow(bool keepItemOwnership) {
+ 	if (this->window != nullptr) emit this->windowDestroyed();
+-	if (auto* window = this->disownWindow(keepItemOwnership)) window->deleteLater();
++	if (auto* window = this->disownWindow(keepItemOwnership)) {
++		// Deleting the backing window straight from inside a deferred delete batch would
++		// destroy the window immediately, while the QML item tree it backs (including the
++		// QQuickShaderEffectSource Qt creates for `layer.enabled`) is still alive and still
++		// holding a QQuickWindow* to it. Those items are torn down moments later and crash in
++		// QQuickItemPrivate::dirty() -> QQuickWindow::maybeUpdate() on the freed window.
++		// Defer to the next event loop iteration so the items are gone before the window is.
++		QTimer::singleShot(0, window, [window]() { window->deleteLater(); });
++	}
+ }
+ 
+ ProxiedWindow* ProxyWindowBase::disownWindow(bool keepItemOwnership) {

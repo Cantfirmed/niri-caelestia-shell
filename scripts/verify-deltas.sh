@@ -235,9 +235,24 @@ else
          "Hyprland calls must be abstracted via Compositor. Found: $HYPR_LEGACY_HITS"
 fi
 
+# 15. Quickshell teardown patch + rebuild tooling (crash fix)
+QS_PATCH="patches/quickshell/0001-defer-window-teardown.patch"
+if [ -f "$QS_PATCH" ] && grep -q 'QTimer::singleShot(0, window' "$QS_PATCH"; then
+    if [ -x "scripts/build-quickshell.sh" ] && \
+       grep -q 'patches/quickshell/\*.patch' "scripts/build-quickshell.sh"; then
+        pass "Quickshell window-teardown patch present and applied by scripts/build-quickshell.sh"
+    else
+        fail "scripts/build-quickshell.sh missing or no longer applies patches/quickshell/*.patch" \
+             "The local Quickshell build must apply patches/quickshell/ or the output-loss SIGSEGV returns. Check AGENTS.md -> 'Building Quickshell locally'."
+    fi
+else
+    fail "Quickshell window-teardown patch missing ($QS_PATCH)" \
+         "Without the deferred QQuickWindow teardown the shell SIGSEGVs on output loss / resume. Check AGENTS.md -> 'SIGSEGV on output loss'."
+fi
+
 echo "===================================================="
 if [ "$FAILED" -eq 0 ]; then
-    echo -e "${GREEN}All 14 delta verification checks passed!${NC}"
+    echo -e "${GREEN}All 15 delta verification checks passed!${NC}"
     exit 0
 else
     echo -e "${RED}Verification failed with $FAILED error(s).${NC}"

@@ -6,6 +6,16 @@
 
 ## Done
 
+- [x] Resume-from-suspend / output-loss SIGSEGV — fixed in Quickshell via
+  [patches/quickshell/0001-defer-window-teardown.patch](patches/quickshell/0001-defer-window-teardown.patch)
+  (`ProxyWindowBase::deleteWindow()` now defers window destruction past the item
+  tree). Rebuild with `scripts/build-quickshell.sh` after every Qt upgrade.
+  See `AGENTS.md` → "SIGSEGV on output loss / resume-from-suspend".
+  Follow-ups: remove the temporary resume guard once a real suspend/resume has
+  been verified, and optionally do
+  [Stable Per-Screen Windows](tasks/stable-per-screen-windows/task.md) to avoid
+  the visual rebuild on hotplug.
+
 - [x] [Display Settings Engine & Multi-Monitor Hotplug](tasks/display-settings-engine/task.md)
   See [DESIGN.md](tasks/display-settings-engine/DESIGN.md)
 - [x] [Native Niri IPC C++ Transaction & Move Batching](tasks/niri-ipc-batch-transactions/task.md)

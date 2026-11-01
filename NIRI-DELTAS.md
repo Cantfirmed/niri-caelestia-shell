@@ -31,6 +31,8 @@ This document tracks all intentional divergences from upstream [caelestia-dots/s
 | `modules/windowinfo/*` | Custom | Active window detail drawer ported to Niri IPC. |
 | `services/Niri.qml` | Service | Custom Niri compositor integration. |
 | `plugin/src/Caelestia/Internal/niriipc*` | C++ | Custom Niri IPC socket plugin. |
+| `patches/quickshell/0001-defer-window-teardown.patch` | Patch | Defers `QQuickWindow` destruction in `ProxyWindowBase::deleteWindow()` past the item-tree teardown. Without it the shell SIGSEGVs on output loss / resume-from-suspend (dangling window in `QQuickItemPrivate::dirty()` → `QQuickWindow::maybeUpdate()`). Applied by `scripts/build-quickshell.sh`. |
+| `scripts/build-quickshell.sh` | Shell | Rebuilds + installs `~/.local/bin/quickshell` against the installed Qt and applies `patches/quickshell/*.patch`. Required after every Qt upgrade (Quickshell links private Qt APIs). |
 
 ---
 
@@ -211,6 +213,18 @@ This document tracks all intentional divergences from upstream [caelestia-dots/s
 
 ---
 
+### I. Shell SIGSEGV on Output Loss / Resume-from-Suspend (Quickshell window teardown)
+
+* **Symptom:** Quickshell dies with SIGSEGV whenever the only monitor disappears for a moment — suspend/resume, `niri msg output <name> off`, or a display switch. The desktop stays dead/blank until `launch-quickshell.sh` restarts it.
+* **Root Cause:** When the output list empties, every `Variants { model: Screens.screens }` window is `deleteLater()`ed. Inside that deferred-delete batch, `ProxyWindowBase::deleteWindow()` *also* called `window->deleteLater()`, which Qt processes immediately — destroying the backing `QQuickWindow` while its QML item tree (including the `QQuickShaderEffectSource` Qt creates for `layer.enabled`) was still alive. Items then get destroyed, a signal reaches a shader-effect slot, and `QQuickItemPrivate::dirty()` calls `QQuickWindow::maybeUpdate()` on freed memory.
+* **Fix & Preservation Rule:**
+  - Local quickshell patch `patches/quickshell/0001-defer-window-teardown.patch` replaces `window->deleteLater()` with `QTimer::singleShot(0, window, [window] { window->deleteLater(); })` so the item tree is gone before the window.
+  - `scripts/build-quickshell.sh` applies all `patches/quickshell/*.patch`. If a patch no longer applies after an upstream change, **update the patch** — do not drop it.
+  - Quickshell links private Qt APIs: **rebuild after every Qt upgrade**, or the stale binary crashes the same way (and prints a `built against Qt X ... system has updated to Qt Y` warning).
+  - `scripts/verify-deltas.sh` check #15 asserts the patch and build script are intact.
+
+---
+
 ## 3. Rebase / Upstream Sync Checklist
 
 When merging or cherry-picking from upstream `caelestia-dots/shell`:
@@ -241,7 +255,7 @@ When merging or cherry-picking from upstream `caelestia-dots/shell`:
    - Lock the screen (Super+Escape or lock command) and verify the Sleep, Restart, and Shutdown buttons appear at the bottom of the screen.
    - Click active window on the bar, verify popout appears with app icon and title, and chevron button opens the windowinfo detail drawer.
    - Click the battery icon on the bar, verify all 4 power profiles (Saver, Balanced, Performance, Auto) appear and switching works.
-   - Run `./scripts/verify-deltas.sh` to confirm 11/11 automated checks pass.
+   - Run `./scripts/verify-deltas.sh` to confirm 15/15 automated checks pass.
 
 ---
 
@@ -250,7 +264,7 @@ When merging or cherry-picking from upstream `caelestia-dots/shell`:
 To ensure customizations are never silently lost during future upstream pulls or rebases, the following automated tools are configured:
 
 1. **`scripts/verify-deltas.sh`**:
-   - Programmatically tests all 11 protected features across QML, C++, and config files.
+   - Programmatically tests all 15 protected features across QML, C++, config files, and the Quickshell build patch.
    - Exits with return code 1 if any protected feature or file has been overwritten or removed.
    - Can be run at any time via:
      ```bash

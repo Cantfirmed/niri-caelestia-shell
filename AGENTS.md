@@ -175,6 +175,9 @@ C++ QML plugin source:
 
 ### `scripts/`
 Helper backends:
+- `build-quickshell.sh` — rebuild + install the local Quickshell binary (run after every Qt upgrade; applies `patches/quickshell/`)
+- `quickshell-resume-guard.sh` — temporary resume mitigation (see the SIGSEGV section; removable)
+- `launch-quickshell.sh` — restart-on-crash wrapper, started from `niri/caelestia.kdl`
 - `manga/manga_server.py` — manga reader backend
 - `novel/main.py` / `server.py` — novel reader backend
 - `areaPicker/region_ocr.sh` / `region_search.sh` — OCR helpers
@@ -425,6 +428,119 @@ pkill -9 quickshell; pkill -9 qs
 - **Defensive Screen Property Access:** Always use `screen?.name ?? ""` in `LockSurface.qml` and `StyledWindow.qml`.
 - **Do Not Downgrade Render Loop:** Keep `QSG_RENDER_LOOP=threaded` to maintain 144Hz/120Hz smooth rendering for SDF shaders and glassmorphic blurs; fix the underlying surface lifecycle instead of switching to `basic`.
 - **Never "Fix" Crashes by Changing Timers:** Increasing or disabling timers only postpones the crash until the timer expires. Always resolve the root cause.
+
+### SIGSEGV on output loss / resume-from-suspend (dangling `QQuickWindow`)
+
+**Symptom**: Quickshell dies with SIGSEGV whenever the *only* monitor disappears for a moment
+— suspend/resume (external HDMI drops its DRM link), `niri msg output <name> off`, or a display
+switch. It looks like "screen turns off = crash" and leaves a dead/blank desktop until
+`launch-quickshell.sh` restarts the shell.
+
+**Reproduce in ~15 seconds** (this is the canonical test, no suspend needed):
+
+```bash
+export NIRI_SOCKET=$(ls -t /run/user/1000/niri*.sock | head -1)
+niri msg output HDMI-A-1 off; sleep 4; niri msg output HDMI-A-1 on
+coredumpctl list quickshell --no-pager | tail -3   # must show no new SIGSEGV
+```
+
+**Crash signature** (`eu-stack --core=...`, frame pointers required — see the build section):
+
+```
+#0 QQuickWindow::maybeUpdate()                       <- this == freed window
+#1 QQuickItemPrivate::dirty()
+#2 QQuickShaderEffectSource::... (signal slot)       <- calls update() on its item
+#3 doActivate<false>(QObject*, int, void**)          <- a signal emitted during destruction
+#4 QObject::~QObject()
+#5 QQmlPrivate::QQmlElement<QQuickItem>::~QQmlElement
+#6 QObjectPrivate::deleteChildren()
+#7 QObject::~QObject()
+#8 Reloadable::~Reloadable()
+#9 QQmlElement<WaylandPanelInterface>::~QQmlElement  <- per-screen ContentWindow, deleted via deleteLater
+```
+
+**Root cause** (confirmed 2026-10-31): when the output list empties, `services/Screens.qml`
+returns nothing and every `Variants { model: Screens.screens }` (`Drawers.qml`,
+`Background.qml`, `AreaPicker.qml`, `Brightness.qml`) gets `deleteLater()`ed. That deferred
+delete runs inside `sendPostedEvents(DeferredDelete)`, and `ProxyWindowBase::deleteWindow()`
+*also* called `window->deleteLater()`. Qt processes a `deleteLater()` posted during that same
+batch **immediately**, so the backing `QQuickWindow` was destroyed while its QML item tree was
+still alive. The items (including the `QQuickShaderEffectSource` that Qt creates internally for
+`layer.enabled`, e.g. the blob/`MultiEffect` layer in `ContentWindow.qml`) then got deleted a
+moment later, a destruction signal reached a shader-effect slot, `update()` ran, and
+`QQuickItemPrivate::dirty()` called `maybeUpdate()` on the already-freed window.
+
+**Fix** (local quickshell patch, `patches/quickshell/0001-defer-window-teardown.patch`):
+`ProxyWindowBase::deleteWindow()` now defers the actual window destruction to the next event
+loop iteration with `QTimer::singleShot(0, window, [window] { window->deleteLater(); })`, so the
+item tree is gone before the window is. Verified with 5+ consecutive `output off/on` cycles with
+no coredumps. It is **not** a QML/shell workaround: no per-screen window needs to stay alive, so
+`tasks/stable-per-screen-windows/task.md` is no longer required for this crash.
+
+**Invariants**:
+- Never `delete`/`deleteLater()` a `QQuickWindow` while QML items belonging to it can still be
+  destroyed afterwards. In practice: do not revert the `QTimer::singleShot` deferral, and apply
+  the same pattern if new window types (popups, session-lock surfaces) get torn down manually.
+- Quickshell links private Qt APIs, so **rebuild after every Qt upgrade** —
+  `scripts/build-quickshell.sh`. A stale binary prints
+  `Quickshell was built against Qt X but the system has updated to Qt Y` and crashes in exactly
+  this kind of place. Qt 6.11.2 → 6.12.0 (2026-10-11) was one such case; the 0.3.1 build from
+  2026-08-29 kept crashing until it was rebuilt (also picking up 0.3.2 "Added support for Qt 6.12").
+- Read crash stacks from a build with `-DFRAME_POINTERS=ON`. Without frame pointers the
+  unwinder invents frames (we chased `setParentItem`/`deleteChildren` ghosts for hours), which
+  is why the build script keeps it enabled.
+
+**Resume guard (currently still installed)**: `scripts/quickshell-resume-guard.sh`, hooked to
+`SessionManager.resumed` (logind `PrepareForSleep(false)`) in `modules/IdleMonitors.qml`,
+SIGTERMs the shell on resume so a fresh process only *creates* windows while outputs settle.
+With the patch above it should no longer be needed; it is kept until a real suspend/resume cycle
+has been verified crash-free. When removing it: delete the `onResumed` hook and
+`scripts/quickshell-resume-guard.sh`.
+
+### Building Quickshell locally (after a Qt upgrade)
+
+`~/.local/bin/quickshell` is a **local build**, not the distro package. Quickshell links
+private Qt headers (`QQuickWindowPrivate`, `QQuickItemPrivate`, `QtWaylandClientPrivate`, …),
+so the binary must be rebuilt whenever Qt changes. `scripts/launch-quickshell.sh` prefers
+`~/.local/bin/quickshell`, so this local build is what actually runs.
+
+```bash
+cd ~/.config/niri_caelestia
+scripts/build-quickshell.sh              # clone/update master, apply patches/, build, install
+QS_REF=v0.3.2 scripts/build-quickshell.sh
+NO_INSTALL=1 scripts/build-quickshell.sh # build only
+```
+
+The script installs via `cp` + `mv` (rename) so it can replace a binary that is currently
+running (`cp` over a running executable fails with `ETXTBSY`), and it backs the old binary up as
+`~/.local/bin/quickshell.bak-<timestamp>` first. Restart the shell afterwards:
+`pkill -TERM -f 'quickshell --path .*shell.qml'` (the wrapper restarts it).
+
+Build settings that are deliberate and must not be "tidied away":
+
+- `-DNO_PCH=ON` — clang's common PCH is built without `-pthread`, and `src/services/polkit`
+  compiles with it, failing with `POSIX thread support was disabled in precompiled file ... but
+  is currently enabled`.
+- `-DFRAME_POINTERS=ON` — keeps crash backtraces honest (see the SIGSEGV section).
+- `-DWaylandScanner_EXECUTABLE=/usr/bin/wayland-scanner` — an anaconda `wayland-scanner` 1.24
+  earlier in `PATH` gets picked up and generates code for the system's libwayland 1.26.
+- `-DCMAKE_PREFIX_PATH="$HOME/.local"` — `cli11` is not a distro package here; it is installed
+  into `~/.local` (`~/.local/share/cmake/CLI11/CLI11Config.cmake`).
+- `-DCMAKE_BUILD_TYPE=RelWithDebInfo` — full debug info without the 227 MB `Debug` footprint.
+
+Local fork patches live in `patches/quickshell/*.patch` and are applied by the script. If one
+stops applying, upstream changed the code: update the patch, don't drop it.
+
+Crash diagnosis cheat sheet:
+
+```bash
+coredumpctl list quickshell --no-pager | tail -5
+coredumpctl dump <pid> -o /tmp/opencode/core.<pid>      # cores are ~1.2 GB uncompressed
+eu-stack -n 25 --core=/tmp/opencode/core.<pid>          # reliable only with frame pointers
+```
+
+Old binaries and cores are large; when things are stable, prune
+`~/.local/bin/quickshell.bak-*` and `/tmp/opencode/core.*`.
 
 ### Interactive Panel Hover Hijacking & Close Animation Bounce
 
