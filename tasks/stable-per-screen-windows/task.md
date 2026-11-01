@@ -10,9 +10,9 @@
 > produce no coredumps. See `AGENTS.md` → "SIGSEGV on output loss / resume-from-suspend
 > (dangling `QQuickWindow`)".
 >
-> The crash therefore does **not** require keeping per-screen windows alive, and
-> `scripts/quickshell-resume-guard.sh` is no longer needed once a real suspend/resume
-> has been verified. This task is kept only because the destroy/recreate churn still
+> The crash therefore does **not** require keeping per-screen windows alive, and the
+> resume guard was removed on 2026-11-01. This task is kept only because the
+> destroy/recreate churn still
 > causes a brief visual rebuild of the bar/wallpaper on hotplug. Treat it as an
 > optional polish task, not a crash fix.
 
@@ -51,9 +51,9 @@ returns, the windows are rebuilt.
 4. **Lock surfaces.** `modules/lock/` uses `Quickshell.screens` per output; check
    whether it needs the same treatment (quickshell#1155 / #503 are the same class
    of bug for `WlSessionLockSurface`).
-5. Once verified, remove the `onResumed` restart hook from `modules/IdleMonitors.qml`
-   and delete `scripts/quickshell-resume-guard.sh` (or keep the script as an
-   opt-in emergency lever).
+5. (Done 2026-11-01, independently of this task: the `onResumed` restart hook and
+   `scripts/quickshell-resume-guard.sh` were removed after the Quickshell teardown
+   patches landed.)
 
 ## Affected files
 

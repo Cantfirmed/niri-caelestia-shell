@@ -11,8 +11,9 @@
   (`ProxyWindowBase::deleteWindow()` now defers window destruction past the item
   tree). Rebuild with `scripts/build-quickshell.sh` after every Qt upgrade.
   See `AGENTS.md` → "SIGSEGV on output loss / resume-from-suspend".
-  Follow-ups: remove the temporary resume guard once a real suspend/resume has
-  been verified, and optionally do
+  Second patch (`0002-defer-lock-surface-teardown.patch`) covers the same bug in
+  `WlSessionLockSurface` (resume while locked). The temporary resume guard was
+  removed 2026-11-01. Optional follow-up:
   [Stable Per-Screen Windows](tasks/stable-per-screen-windows/task.md) to avoid
   the visual rebuild on hotplug.
 
