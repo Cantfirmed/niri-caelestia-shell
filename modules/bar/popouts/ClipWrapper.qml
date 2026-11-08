@@ -35,13 +35,14 @@ Item {
     }
 
     Behavior on offsetScale {
-        Anim {}
+        Anim {
+            type: content.currentName.startsWith("traymenu") ? Anim.FastSpatial : Anim.DefaultSpatial
+        }
     }
 
     Behavior on x {
         Anim {
-            duration: content.animLength
-            easing: content.animCurve
+            type: content.currentName.startsWith("traymenu") ? Anim.FastSpatial : Anim.DefaultSpatial
         }
     }
 
@@ -49,8 +50,7 @@ Item {
         enabled: root.offsetScale < 1
 
         Anim {
-            duration: content.animLength
-            easing: content.animCurve
+            type: content.currentName.startsWith("traymenu") ? Anim.FastSpatial : Anim.DefaultSpatial
         }
     }
 

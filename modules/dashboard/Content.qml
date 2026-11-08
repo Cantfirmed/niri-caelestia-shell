@@ -9,7 +9,7 @@ import Caelestia.Config
 import Caelestia.I18n
 import qs.components
 import qs.components.filedialog
-
+import qs.services as Services
 Item {
     id: root
 
@@ -58,31 +58,12 @@ Item {
     implicitWidth: nonAnimWidth
     implicitHeight: nonAnimHeight
 
-    property bool preloadAll: false
+    property int initialDashboardTab: screenState.dashboardTab
+    property real lastTabWidth: Tokens.sizes.dashboard.mediaTabWidth
+    property real lastTabHeight: Tokens.sizes.dashboard.mediaTabHeight + Tokens.padding.extraLarge
 
-    Timer {
-        id: preloadTimer
-        interval: 150
-        repeat: false
-        onTriggered: {
-            if (root.screenState.dashboard)
-                root.preloadAll = true;
-        }
-    }
+    Component.onCompleted: root.initialDashboardTab = root.screenState.dashboardTab;
 
-    Connections {
-        target: root.screenState
-        function onDashboardChanged() {
-            if (root.screenState.dashboard) {
-                preloadTimer.restart();
-            }
-        }
-    }
-
-    Component.onCompleted: {
-        if (root.screenState.dashboard)
-            preloadTimer.restart();
-    }
 
     Tabs {
         id: tabs
@@ -96,6 +77,14 @@ Item {
         nonAnimWidth: root.nonAnimWidth - anchors.margins * 2
         screenState: root.screenState
         tabs: root.dashboardTabs
+        onTabHovered: index => {
+            if (!root.screenState.dashboard)
+                return;
+
+            const loader = repeater.itemAt(index);
+            if (loader)
+                loader.preloadRequested = true;
+        }
     }
 
     ClippingRectangle {
@@ -123,12 +112,19 @@ Item {
 
             flickableDirection: Flickable.HorizontalFlick
 
-            implicitWidth: currentItem?.implicitWidth ?? 0
-            implicitHeight: currentItem?.implicitHeight ?? 0
+            implicitWidth: currentItem?.status === Loader.Ready ? currentItem.implicitWidth : root.lastTabWidth
+            implicitHeight: currentItem?.status === Loader.Ready ? currentItem.implicitHeight : root.lastTabHeight
 
             contentX: currentItem?.x ?? 0
             contentWidth: row.implicitWidth
             contentHeight: row.implicitHeight
+
+            onCurrentIndexChanged: {
+                if (currentItem?.status === Loader.Ready) {
+                    root.lastTabWidth = currentItem.implicitWidth;
+                    root.lastTabHeight = currentItem.implicitHeight;
+                }
+            }
 
             onContentXChanged: {
                 if (!moving || !currentItem)
@@ -171,21 +167,28 @@ Item {
                         required property var modelData
 
                         property bool loaded: false
+                        property bool preloadRequested: false
 
                         Layout.alignment: Qt.AlignTop
 
                         sourceComponent: modelData.component
 
-                        active: loaded || (index === view.currentIndex) || root.preloadAll
-                        asynchronous: index !== view.currentIndex
+                        active: loaded || (index === view.currentIndex) || preloadRequested
+                        asynchronous: index !== root.initialDashboardTab
 
                         onStatusChanged: {
-                            if (status === Loader.Ready)
+                            if (status === Loader.Ready) {
                                 loaded = true;
+                                if (index === view.currentIndex) {
+                                    root.lastTabWidth = implicitWidth;
+                                    root.lastTabHeight = implicitHeight;
+                                }
+                            }
                         }
                     }
                 }
             }
+
 
             Component {
                 id: dashComponent
@@ -230,6 +233,62 @@ Item {
 
             Behavior on contentX {
                 Anim {}
+            }
+        }
+        Item {
+            z: 1
+
+            anchors.fill: parent
+            enabled: false
+            visible: view.currentItem?.status === Loader.Loading
+
+            StyledRect {
+                anchors.fill: parent
+                radius: Tokens.rounding.large
+                color: Services.Colours.palette.m3surfaceContainer
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: Tokens.padding.large
+                spacing: Tokens.spacing.medium
+
+                Repeater {
+                    model: 3
+
+                    Item {
+                        required property int index
+
+                        width: (parent.width - parent.spacing * 2) / 3
+                        height: parent.height * (index === 1 ? 0.9 : 0.68)
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        StyledRect {
+                            anchors.fill: parent
+                            radius: Tokens.rounding.large
+                            color: Services.Colours.palette.m3surfaceContainerHighest
+                        }
+
+                        Column {
+                            anchors.fill: parent
+                            anchors.margins: Tokens.padding.large
+                            spacing: Tokens.spacing.medium
+
+                            Repeater {
+                                model: 5
+
+                                StyledRect {
+                                    required property int index
+
+                                    width: parent.width * (index === 0 ? 0.72 : 0.38 + (index % 3) * 0.12)
+                                    height: index === 0 ? Tokens.padding.medium : Tokens.padding.small
+                                    radius: Tokens.rounding.full
+                                    color: Services.Colours.palette.m3surfaceContainerLow
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

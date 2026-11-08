@@ -19,8 +19,18 @@ Item {
     readonly property alias winfo: winfo
     readonly property alias nexus: nexus
 
-    readonly property real nonAnimWidth: children.find(c => c.shouldBeActive)?.implicitWidth ?? content.implicitWidth
-    readonly property real nonAnimHeight: children.find(c => c.shouldBeActive)?.implicitHeight ?? content.implicitHeight
+    readonly property real nonAnimWidth: {
+        const activeChild = children.find(c => c.shouldBeActive);
+        if (activeChild?.status === Loader.Loading && activeChild.placeholderWidth !== undefined)
+            return activeChild.placeholderWidth;
+        return activeChild?.implicitWidth ?? content.implicitWidth;
+    }
+    readonly property real nonAnimHeight: {
+        const activeChild = children.find(c => c.shouldBeActive);
+        if (activeChild?.status === Loader.Loading && activeChild.placeholderHeight !== undefined)
+            return activeChild.placeholderHeight;
+        return activeChild?.implicitHeight ?? content.implicitHeight;
+    }
     readonly property Item current: (content.item as Content)?.current ?? null
     readonly property bool isDetached: detachedMode.length > 0
 
@@ -103,6 +113,7 @@ Item {
         id: content
 
         shouldBeActive: root.hasCurrent && !root.detachedMode
+        onLoaded: content.keepLoaded = true
         anchors.fill: parent
 
         sourceComponent: Content {
@@ -166,9 +177,9 @@ Item {
         id: comp
 
         property bool shouldBeActive
-        property bool activeState: false
+        property bool keepLoaded: false
 
-        active: false
+        active: shouldBeActive || keepLoaded
         opacity: 0
 
         // Makes the loader load on the same frame shouldBeActive becomes true, which ensures size is set

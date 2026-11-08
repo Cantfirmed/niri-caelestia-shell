@@ -91,7 +91,6 @@ StackView {
                 Loader {
                     id: children
 
-                    asynchronous: true
                     anchors.left: parent.left
                     anchors.right: parent.right
 

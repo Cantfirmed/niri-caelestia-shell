@@ -20,8 +20,56 @@ Item {
         return acc;
     }, {})
 
-    implicitWidth: currentPopout ? currentPopout.implicitWidth + Tokens.padding.large * 2 : 0
-    implicitHeight: currentPopout ? currentPopout.implicitHeight + Tokens.padding.large * 2 : 0
+    implicitWidth: currentPopout ? (currentPopout.status === Loader.Loading ? currentPopout.placeholderWidth : currentPopout.implicitWidth) + Tokens.padding.large * 2 : 0
+    implicitHeight: currentPopout ? (currentPopout.status === Loader.Loading ? currentPopout.placeholderHeight : currentPopout.implicitHeight) + Tokens.padding.large * 2 : 0
+
+    Item {
+        id: loadingSkeleton
+        z: 1
+
+        anchors.centerIn: content
+        width: root.currentPopout?.placeholderWidth ?? 0
+        height: root.currentPopout?.placeholderHeight ?? 0
+        visible: root.popouts.hasCurrent && root.currentPopout?.status === Loader.Loading
+
+        StyledRect {
+            anchors.fill: parent
+            radius: Tokens.rounding.large
+            color: Colours.palette.m3surfaceContainer
+        }
+
+        Column {
+            anchors.centerIn: parent
+            width: parent.width - Tokens.padding.large * 2
+            spacing: Tokens.spacing.medium
+
+            Repeater {
+                model: ["battery", "activewindow", "lockstatus"].includes(root.currentPopout?.name) ? 2 : 6
+
+                Row {
+                    required property int index
+
+                    spacing: Tokens.spacing.medium
+                    width: parent.width
+
+                    StyledRect {
+                        width: Tokens.sizes.bar.innerWidth
+                        height: width
+                        radius: Tokens.rounding.full
+                        color: Colours.palette.m3surfaceContainerHighest
+                    }
+
+                    StyledRect {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - Tokens.sizes.bar.innerWidth - parent.spacing
+                        height: index === 0 ? Tokens.padding.medium : Tokens.padding.small
+                        radius: Tokens.rounding.full
+                        color: Colours.palette.m3surfaceContainerHighest
+                    }
+                }
+            }
+        }
+    }
 
     Item {
         id: content
@@ -180,11 +228,24 @@ Item {
         required property string name
         readonly property bool shouldBeActive: root.popouts.currentName === name
         property bool ready: true
+        readonly property bool cacheAfterFirstLoad: ["network", "bluetooth", "btcodec", "audio", "vpn", "battery", "kblayout", "lockstatus", "activewindow"].includes(name)
+        property bool keepActiveAfterOpen: false
+        onShouldBeActiveChanged: {
+            if (shouldBeActive && cacheAfterFirstLoad)
+                keepActiveAfterOpen = true;
+        }
+        readonly property real placeholderWidth: name === "network" || name === "vpn" ? Tokens.sizes.bar.networkWidth : name === "audio" ? Tokens.sizes.bar.audioWidth : name === "battery" ? Tokens.sizes.bar.batteryWidth : name === "kblayout" ? Tokens.sizes.bar.kbLayoutWidth : name === "activewindow" ? 350 : name === "lockstatus" ? 240 : 300
+        readonly property real placeholderHeight: name === "network" ? 500 : name === "battery" || name === "activewindow" || name === "lockstatus" ? 160 : 420
+        asynchronous: cacheAfterFirstLoad
+
+
 
         anchors.centerIn: parent
 
         opacity: 0
-        active: false
+        active: shouldBeActive || (cacheAfterFirstLoad && keepActiveAfterOpen)
+        visible: opacity > 0
+        enabled: shouldBeActive
 
         states: State {
             name: "active"
@@ -221,7 +282,7 @@ Item {
                     }
                     Anim {
                         property: "opacity"
-                        type: Anim.SlowEffects
+                        type: Anim.FastEffects
                     }
                 }
             }

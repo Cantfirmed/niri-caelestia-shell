@@ -15,6 +15,8 @@ Item {
     required property real nonAnimWidth
     required property ScreenState screenState
     required property var tabs
+    signal tabHovered(index: int)
+
 
     readonly property alias count: bar.count
 
@@ -136,6 +138,7 @@ Item {
 
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            onEntered: root.tabHovered(tab.TabBar.index)
 
             onPressed: root.screenState.dashboardTab = tab.TabBar.index
 
