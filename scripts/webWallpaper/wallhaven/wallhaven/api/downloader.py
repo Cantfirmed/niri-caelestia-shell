@@ -54,28 +54,31 @@ def download_wallpaper(
         log.debug("skip %s — already at %s", wallpaper.id, dest)
         return dest
 
+    part_dest = dest.with_name(dest.name + ".part")
+
     headers: dict = {}
     if api_key:
         headers["X-API-Key"] = api_key
 
     # Resume support
     bytes_done = 0
-    if dest.exists():
-        bytes_done = dest.stat().st_size
+    if part_dest.exists():
+        bytes_done = part_dest.stat().st_size
         headers["Range"] = f"bytes={bytes_done}-"
 
     sess = _dl_session()
     resp = sess.get(wallpaper.path, headers=headers, stream=True, timeout=(5, 60))
     resp.raise_for_status()
 
-    mode = "ab" if bytes_done else "wb"
+    mode = "ab" if (bytes_done and resp.status_code == 206) else "wb"
     log.info("↓ %s  →  %s", wallpaper.id, dest)
 
-    with open(dest, mode) as f:
+    with open(part_dest, mode) as f:
         for chunk in resp.iter_content(chunk_size=chunk_size):
             if chunk:
                 f.write(chunk)
 
+    part_dest.replace(dest)
     return dest
 
 

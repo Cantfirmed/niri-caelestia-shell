@@ -111,7 +111,7 @@ binds {
     Mod+Shift+Equal { set-window-height "+5%"; }
 
     // === Screenshots ===
-    Print { screenshot; }
-    Ctrl+Print { screenshot-screen; }
-    Alt+Print { screenshot-window; }
+    Print hotkey-overlay-title="[Tools] Screenshot Tool (Area/Window/Fullscreen)" { spawn-sh "qs -c niri-caelestia-shell ipc call picker open || niri msg action screenshot"; }
+    Ctrl+Print hotkey-overlay-title="[Tools] Screenshot Full Screen" { spawn-sh "qs -c niri-caelestia-shell ipc call picker openFullscreen || niri msg action screenshot-screen"; }
+    Alt+Print hotkey-overlay-title="[Tools] Screenshot Window" { spawn-sh "qs -c niri-caelestia-shell ipc call picker openWindow || niri msg action screenshot-window"; }
 }

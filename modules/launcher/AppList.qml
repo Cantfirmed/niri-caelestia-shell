@@ -21,9 +21,33 @@ StyledListView {
     readonly property string requestedState: stateForText(search.text)
     readonly property string displayState: stateForText(displayText)
 
+    function flushSearch(): void {
+        if (searchDebounce.running) {
+            searchDebounce.stop();
+            if (screenState.launcher && requestedState === displayState)
+                displayText = search.text;
+        }
+    }
+
     function syncDisplayText(): void {
-        if (screenState.launcher && requestedState === displayState)
-            displayText = search.text;
+        if (screenState.launcher && requestedState === displayState) {
+            if (search.text.length === 0) {
+                searchDebounce.stop();
+                displayText = "";
+            } else {
+                searchDebounce.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: searchDebounce
+        interval: 25
+        repeat: false
+        onTriggered: {
+            if (root.screenState.launcher && root.requestedState === root.displayState)
+                root.displayText = root.search.text;
+        }
     }
 
     function stateForText(text: string): string {
@@ -59,6 +83,7 @@ StyledListView {
         onValuesChanged: root.currentIndex = 0
     }
 
+    reuseItems: true
     spacing: Tokens.spacing.small
     orientation: Qt.Vertical
     implicitHeight: (Tokens.sizes.launcher.itemHeight + spacing) * Math.min(Config.launcher.maxShown, count) - spacing
@@ -189,62 +214,6 @@ StyledListView {
 
     StyledScrollBar.vertical: StyledScrollBar {
         flickable: root
-    }
-
-    add: Transition {
-        enabled: !root.state
-
-        Anim {
-            type: Anim.DefaultEffects
-            property: "opacity"
-            from: 0
-            to: 1
-        }
-    }
-
-    remove: Transition {
-        enabled: !root.state
-
-        Anim {
-            type: Anim.DefaultEffects
-            property: "opacity"
-            from: 1
-            to: 0
-        }
-    }
-
-    move: Transition {
-        Anim {
-            property: "y"
-        }
-        Anim {
-            type: Anim.DefaultEffects
-            property: "opacity"
-            to: 1
-        }
-    }
-
-    addDisplaced: Transition {
-        Anim {
-            property: "y"
-            type: Anim.StandardSmall
-        }
-        Anim {
-            type: Anim.DefaultEffects
-            property: "opacity"
-            to: 1
-        }
-    }
-
-    displaced: Transition {
-        Anim {
-            property: "y"
-        }
-        Anim {
-            type: Anim.DefaultEffects
-            property: "opacity"
-            to: 1
-        }
     }
 
     Component {

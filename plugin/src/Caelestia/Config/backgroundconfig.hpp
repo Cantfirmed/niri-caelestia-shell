@@ -46,6 +46,15 @@ class BackgroundVisualiser : public settings::ObjectNode {
     CONFIG_PROPERTY(qreal, spacing, 1)
 };
 
+class BackgroundTransition : public settings::ObjectNode {
+    CONFIG_NODE(BackgroundTransition, settings::ObjectNode)
+
+    CONFIG_PROPERTY(bool, enabled, true)
+    CONFIG_PROPERTY(QString, type, u"auto"_s)
+    CONFIG_PROPERTY(int, duration, 1800)
+    CONFIG_PROPERTY(qreal, glow, 0.9)
+};
+
 class BackgroundConfig : public settings::ObjectNode {
     CONFIG_NODE(BackgroundConfig, settings::ObjectNode)
 
@@ -53,6 +62,7 @@ class BackgroundConfig : public settings::ObjectNode {
     CONFIG_PROPERTY(bool, wallpaperEnabled, true)
     CONFIG_SUBOBJECT(DesktopClock, desktopClock)
     CONFIG_SUBOBJECT(BackgroundVisualiser, visualiser)
+    CONFIG_SUBOBJECT(BackgroundTransition, transition)
 };
 
 } // namespace caelestia::config

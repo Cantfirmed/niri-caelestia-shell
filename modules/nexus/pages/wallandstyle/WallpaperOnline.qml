@@ -19,6 +19,14 @@ PageBase {
     readonly property string pythonPath: Quickshell.env("CAELESTIA_VIRTUAL_ENV") ? (Quickshell.env("CAELESTIA_VIRTUAL_ENV") + "/bin/python3") : "python3"
     readonly property string scriptDir: Quickshell.shellPath("scripts/webWallpaper/wallhaven")
     property string keyword: ""
+    property string selectedRatio: "landscape"
+    property string selectedResolution: "1920x1080"
+    property string selectedSort: "date_added"
+    property string selectedTopRange: "1M"
+    property bool catGeneral: true
+    property bool catAnime: true
+    property bool catPeople: false
+    property string downloadStatusText: qsTr("Downloading wallpaper...")
     property bool loading: false
     property bool downloading: false
     property var wallpapers: []
@@ -66,25 +74,28 @@ PageBase {
         property string currentSlug: ""
 
         onExited: (exitCode, exitStatus) => {
-            root.downloading = false;
+            if (exitCode !== 0)
+                root.downloading = false;
             downloadProcess.currentSlug = "";
         }
 
         stdout: StdioCollector {
             onStreamFinished: {
-                root.downloading = false;
                 if (text) {
                     try {
                         const result = JSON.parse(text);
                         if (result.status === "success") {
-                            Wallpapers.setWallpaper(result.path);
-                            root.nState.closeSubPage();
-                            root.nState.closeSubPage();
+                            root.downloadStatusText = qsTr("Preparing wallpaper transition...");
+                            prepareProcess.targetPath = result.path;
+                            prepareProcess.command = ["python3", Quickshell.shellPath("scripts/wallfx.py"), "perfil", result.path];
+                            prepareProcess.running = true;
+                            return;
                         }
                     } catch (e) {
                         console.error("Failed to parse download result:", e, "Output was:", text);
                     }
                 }
+                root.downloading = false;
                 downloadProcess.currentSlug = "";
             }
         }
@@ -95,22 +106,47 @@ PageBase {
         }
     }
 
+    property Process prepareProcess: Process {
+        property string targetPath: ""
+
+        onExited: (exitCode, exitStatus) => {
+            root.downloading = false;
+            Wallpapers.setWallpaper(prepareProcess.targetPath);
+            root.nState.closeSubPage();
+            root.nState.closeSubPage();
+        }
+    }
+
     function fetchWallpapers(page) {
         if (page === undefined) page = 1;
         currentApiPage = page;
         loading = true;
 
+        let cats = [];
+        if (catGeneral) cats.push("general");
+        if (catAnime) cats.push("anime");
+        if (catPeople) cats.push("people");
+        if (cats.length === 0) cats = ["general", "anime", "people"];
+
         let args = [
             pythonPath,
             scriptDir + "/main.py",
             "search",
-            "--categories", "general,anime",
+            "--categories", cats.join(","),
             "--purity", "sfw",
-            "--sort", "date_added",
-            "--resolution", "1920x1080",
+            "--sort", selectedSort,
             "--page", String(currentApiPage),
             "--json"
         ];
+        if (selectedSort === "toplist" && selectedTopRange) {
+            args.push("--range", selectedTopRange);
+        }
+        if (selectedResolution) {
+            args.push("--resolution", selectedResolution);
+        }
+        if (selectedRatio) {
+            args.push("--ratios", selectedRatio);
+        }
         if (keyword) {
             args.splice(3, 0, keyword);
         }
@@ -123,6 +159,7 @@ PageBase {
 
     function downloadAndSet(slug) {
         downloading = true;
+        downloadStatusText = qsTr("Downloading wallpaper...");
         downloadProcess.currentSlug = slug;
         let args = [
             pythonPath,
@@ -207,6 +244,157 @@ PageBase {
             }
         }
 
+        // Filter Bar
+        Flow {
+            Layout.fillWidth: true
+            spacing: Tokens.spacing.small
+            z: 10
+
+            SplitButton {
+                id: ratioFilter
+
+                z: expanded ? 20 : 0
+                type: SplitButton.Tonal
+                fallbackIcon: "aspect_ratio"
+                fallbackText: qsTr("Ratio")
+                stateLayer.onClicked: expanded = !expanded
+                active: menuItems.find(i => i.value === root.selectedRatio) ?? null
+                menu.onItemSelected: item => {
+                    if (root.selectedRatio !== item.value) {
+                        root.selectedRatio = item.value;
+                        root.fetchWallpapers(1);
+                    }
+                }
+
+                menuItems: [
+                    MenuItem { text: qsTr("Landscape (Monitors & Laptops)"); activeText: qsTr("Landscape"); icon: "desktop_windows"; value: "landscape" },
+                    MenuItem { text: qsTr("16:9 (External Monitor)"); activeText: "16:9"; icon: "monitor"; value: "16x9" },
+                    MenuItem { text: qsTr("16:10 (Notebook)"); activeText: "16:10"; icon: "laptop_chromebook"; value: "16x10" },
+                    MenuItem { text: qsTr("16:9 & 16:10"); activeText: "16:9 / 16:10"; icon: "devices"; value: "16x9,16x10" },
+                    MenuItem { text: qsTr("21:9 (Ultrawide)"); activeText: "21:9"; icon: "width_wide"; value: "21x9" },
+                    MenuItem { text: qsTr("Portrait (Phone)"); activeText: qsTr("Portrait"); icon: "smartphone"; value: "portrait" },
+                    MenuItem { text: qsTr("Any Ratio"); activeText: qsTr("Any Ratio"); icon: "crop_free"; value: "" }
+                ]
+            }
+
+            SplitButton {
+                id: resolutionFilter
+
+                z: expanded ? 20 : 0
+                type: SplitButton.Tonal
+                fallbackIcon: "high_quality"
+                fallbackText: qsTr("Resolution")
+                stateLayer.onClicked: expanded = !expanded
+                active: menuItems.find(i => i.value === root.selectedResolution) ?? null
+                menu.onItemSelected: item => {
+                    if (root.selectedResolution !== item.value) {
+                        root.selectedResolution = item.value;
+                        root.fetchWallpapers(1);
+                    }
+                }
+
+                menuItems: [
+                    MenuItem { text: qsTr("1080p+ (1920x1080)"); activeText: "1080p+"; icon: "hd"; value: "1920x1080" },
+                    MenuItem { text: qsTr("1440p+ (2560x1440)"); activeText: "1440p+"; icon: "2k"; value: "2560x1440" },
+                    MenuItem { text: qsTr("4K+ (3840x2160)"); activeText: "4K+"; icon: "4k"; value: "3840x2160" },
+                    MenuItem { text: qsTr("Any Resolution"); activeText: qsTr("Any Res"); icon: "photo_size_select_large"; value: "" }
+                ]
+            }
+
+            SplitButton {
+                id: sortFilter
+
+                z: expanded ? 20 : 0
+                type: SplitButton.Tonal
+                fallbackIcon: "sort"
+                fallbackText: qsTr("Sort")
+                stateLayer.onClicked: expanded = !expanded
+                active: menuItems.find(i => i.value === root.selectedSort) ?? null
+                menu.onItemSelected: item => {
+                    if (root.selectedSort !== item.value) {
+                        root.selectedSort = item.value;
+                        root.fetchWallpapers(1);
+                    }
+                }
+
+                menuItems: [
+                    MenuItem { text: qsTr("Latest"); activeText: qsTr("Latest"); icon: "schedule"; value: "date_added" },
+                    MenuItem { text: qsTr("Toplist"); activeText: qsTr("Toplist"); icon: "trending_up"; value: "toplist" },
+                    MenuItem { text: qsTr("Most Viewed"); activeText: qsTr("Views"); icon: "visibility"; value: "views" },
+                    MenuItem { text: qsTr("Favorites"); activeText: qsTr("Favorites"); icon: "favorite"; value: "favorites" },
+                    MenuItem { text: qsTr("Random"); activeText: qsTr("Random"); icon: "shuffle"; value: "random" },
+                    MenuItem { text: qsTr("Relevance"); activeText: qsTr("Relevance"); icon: "search"; value: "relevance" }
+                ]
+            }
+
+            SplitButton {
+                id: topRangeFilter
+
+                z: expanded ? 20 : 0
+                visible: root.selectedSort === "toplist"
+                type: SplitButton.Tonal
+                fallbackIcon: "date_range"
+                fallbackText: qsTr("Range")
+                stateLayer.onClicked: expanded = !expanded
+                active: menuItems.find(i => i.value === root.selectedTopRange) ?? null
+                menu.onItemSelected: item => {
+                    if (root.selectedTopRange !== item.value) {
+                        root.selectedTopRange = item.value;
+                        root.fetchWallpapers(1);
+                    }
+                }
+
+                menuItems: [
+                    MenuItem { text: qsTr("Last Day"); activeText: "1d"; value: "1d" },
+                    MenuItem { text: qsTr("Last 3 Days"); activeText: "3d"; value: "3d" },
+                    MenuItem { text: qsTr("Last Week"); activeText: "1w"; value: "1w" },
+                    MenuItem { text: qsTr("Last Month"); activeText: "1M"; value: "1M" },
+                    MenuItem { text: qsTr("Last 3 Months"); activeText: "3M"; value: "3M" },
+                    MenuItem { text: qsTr("Last 6 Months"); activeText: "6M"; value: "6M" },
+                    MenuItem { text: qsTr("Last Year"); activeText: "1y"; value: "1y" }
+                ]
+            }
+
+            ToggleButton {
+                label: qsTr("General")
+                toggled: root.catGeneral
+                horizontalPadding: Tokens.padding.medium
+                verticalPadding: Tokens.padding.small
+                onClicked: {
+                    if (root.catGeneral && !root.catAnime && !root.catPeople)
+                        return;
+                    root.catGeneral = !root.catGeneral;
+                    root.fetchWallpapers(1);
+                }
+            }
+
+            ToggleButton {
+                label: qsTr("Anime")
+                toggled: root.catAnime
+                horizontalPadding: Tokens.padding.medium
+                verticalPadding: Tokens.padding.small
+                onClicked: {
+                    if (root.catAnime && !root.catGeneral && !root.catPeople)
+                        return;
+                    root.catAnime = !root.catAnime;
+                    root.fetchWallpapers(1);
+                }
+            }
+
+            ToggleButton {
+                label: qsTr("People")
+                toggled: root.catPeople
+                horizontalPadding: Tokens.padding.medium
+                verticalPadding: Tokens.padding.small
+                onClicked: {
+                    if (root.catPeople && !root.catGeneral && !root.catAnime)
+                        return;
+                    root.catPeople = !root.catPeople;
+                    root.fetchWallpapers(1);
+                }
+            }
+        }
+
         // Loading indicator for search
         Loader {
             Layout.fillWidth: true
@@ -239,7 +427,7 @@ PageBase {
 
                 StyledText {
                     Layout.alignment: Qt.AlignHCenter
-                    text: qsTr("Downloading and setting wallpaper...")
+                    text: root.downloadStatusText
                     font: Tokens.font.body.large
                     color: Colours.palette.m3onSurface
                 }

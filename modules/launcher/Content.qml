@@ -62,6 +62,7 @@ Item {
         placeholderText: Tr.tr("Type \"%1\" for commands").arg(GlobalConfig.launcher.actionPrefix)
 
         onAccepted: {
+            list.currentList?.flushSearch?.();
             const currentItem = list.currentList?.currentItem;
             if (currentItem) {
                 if (list.showWallpapers) {

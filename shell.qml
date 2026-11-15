@@ -11,12 +11,17 @@ import "modules/areapicker"
 import "modules/lock"
 import "components"
 import "modules/polkit"
-import qs.services
-import Quickshell
 import QtQuick
+import Quickshell
+import qs.services
 
 ShellRoot {
     id: root
+
+    // Initialize LidInhibitor, PowerManagement and WallFx services
+    property var _lidInhibitor: LidInhibitor
+    property var _powerManagement: PowerManagement
+    property var _wallFx: WallFx
 
     settings.watchFiles: true
 
@@ -44,9 +49,5 @@ ShellRoot {
 
     PolkitDialog {}
     ReloadPopup {}
-
-    // Initialize LidInhibitor and PowerManagement services
-    property var _lidInhibitor: LidInhibitor
-    property var _powerManagement: PowerManagement
 }
 

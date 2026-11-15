@@ -8,6 +8,24 @@ import qs.utils
 Searcher {
     id: root
 
+    property var iconCache: ({})
+
+    function iconPathFor(iconName: string): string {
+        const key = iconName || "";
+        if (iconCache.hasOwnProperty(key))
+            return iconCache[key];
+        const resolved = Quickshell.iconPath(iconName, "image-missing");
+        iconCache[key] = resolved;
+        return resolved;
+    }
+
+    function setSearchKeys(nextKeys: list<string>, nextWeights: list<real>): void {
+        if (keys.length !== nextKeys.length || keys.some((k, i) => k !== nextKeys[i]))
+            keys = nextKeys;
+        if (weights.length !== nextWeights.length || weights.some((w, i) => w !== nextWeights[i]))
+            weights = nextWeights;
+    }
+
     function launch(entry: DesktopEntry): void {
         appDb.incrementFrequency(entry.id);
 
@@ -24,29 +42,21 @@ Searcher {
         const prefix = GlobalConfig.launcher.specialPrefix;
 
         if (search.startsWith(`${prefix}i `)) {
-            keys = ["id", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["id", "name"], [0.9, 0.1]);
         } else if (search.startsWith(`${prefix}c `)) {
-            keys = ["categories", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["categories", "name"], [0.9, 0.1]);
         } else if (search.startsWith(`${prefix}d `)) {
-            keys = ["comment", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["comment", "name"], [0.9, 0.1]);
         } else if (search.startsWith(`${prefix}e `)) {
-            keys = ["execString", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["execString", "name"], [0.9, 0.1]);
         } else if (search.startsWith(`${prefix}w `)) {
-            keys = ["startupClass", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["startupClass", "name"], [0.9, 0.1]);
         } else if (search.startsWith(`${prefix}g `)) {
-            keys = ["genericName", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["genericName", "name"], [0.9, 0.1]);
         } else if (search.startsWith(`${prefix}k `)) {
-            keys = ["keywords", "name"];
-            weights = [0.9, 0.1];
+            setSearchKeys(["keywords", "name"], [0.9, 0.1]);
         } else {
-            keys = ["name"];
-            weights = [1];
+            setSearchKeys(["name"], [1]);
 
             if (!search.startsWith(`${prefix}t `))
                 return query(search).map(e => e.entry);

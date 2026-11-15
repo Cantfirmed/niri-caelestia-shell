@@ -77,6 +77,12 @@
   "background": {
     "enabled": true,
     "wallpaperEnabled": true,
+    "transition": {
+      "enabled": true,
+      "type": "auto",
+      "duration": 1800,
+      "glow": 0.9
+    },
     "desktopClock": {
       "enabled": true,
       "scale": 1,

@@ -96,6 +96,25 @@ Singleton {
         return transient === true || transient === 1 || transient === "true";
     }
 
+    function isScreenshotNotif(notif): bool {
+        if (!notif)
+            return false;
+
+        const app = (notif.appName ?? "").toLowerCase();
+        if (app === "caelestia-cli" || app.includes("screenshot"))
+            return true;
+
+        const summary = (notif.summary ?? "").toLowerCase();
+        if (summary.includes("screenshot taken") || summary.includes("screenshot saved") || summary === "screenshot")
+            return true;
+
+        const body = (notif.body ?? "").toLowerCase();
+        if (body.includes("screenshot copied") || body.includes("saved to screenshots"))
+            return true;
+
+        return false;
+    }
+
     function isRebootNotif(notif): bool {
         if (!notif)
             return false;
@@ -212,8 +231,8 @@ Singleton {
             if (notif.closed)
                 continue;
 
-            // 1. Clean up network, audio, or transient notifications immediately if lingering
-            if (root.isNetworkNotif(notif) || root.isAudioNotif(notif) || root.isTransientNotif(notif)) {
+            // 1. Clean up network, audio, transient, or screenshot notifications immediately if lingering
+            if (root.isNetworkNotif(notif) || root.isAudioNotif(notif) || root.isTransientNotif(notif) || root.isScreenshotNotif(notif)) {
                 notif.close();
                 continue;
             }
@@ -299,7 +318,7 @@ Singleton {
         id: saveTimer
 
         interval: 1000
-        onTriggered: storage.setText(JSON.stringify(root.notClosed.filter(n => !n.isNetwork && !n.isAudio && !n.isTransient && !root.isNetworkNotif(n) && !root.isAudioNotif(n) && !root.isTransientNotif(n)).map(n => ({
+        onTriggered: storage.setText(JSON.stringify(root.notClosed.filter(n => !n.isNetwork && !n.isAudio && !n.isTransient && !n.isScreenshot && !root.isNetworkNotif(n) && !root.isAudioNotif(n) && !root.isTransientNotif(n) && !root.isScreenshotNotif(n)).map(n => ({
                     time: n.time,
                     id: n.id,
                     summary: n.summary,
@@ -365,8 +384,8 @@ Singleton {
             for (const notif of data) {
                 const properties = Object.assign({}, notif);
 
-                // Discard any network, audio, or transient notification from saved state
-                if (root.isNetworkNotif(properties) || root.isAudioNotif(properties) || root.isTransientNotif(properties))
+                // Discard any network, audio, transient, or screenshot notification from saved state
+                if (root.isNetworkNotif(properties) || root.isAudioNotif(properties) || root.isTransientNotif(properties) || root.isScreenshotNotif(properties))
                     continue;
 
                 // Discard any reboot notification from before the current boot session

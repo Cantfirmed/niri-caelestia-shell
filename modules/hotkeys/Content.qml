@@ -90,12 +90,11 @@ StyledRect {
         { category: "apps", keys: "Ctrl + Shift + Esc", desc: qsTr("Launch Btop system monitor in Kitty") },
 
         // --- Screenshots & Tools ---
-        { category: "tools", keys: "Mod + Shift + S", desc: qsTr("Interactive screenshot area picker") },
+        { category: "tools", keys: "Print / Mod + Shift + S", desc: qsTr("Interactive screenshot tool (Area, Window, Fullscreen)") },
+        { category: "tools", keys: "Alt + Print / Mod + Alt + S", desc: qsTr("Capture window screenshot") },
+        { category: "tools", keys: "Ctrl + Print / Mod + Ctrl + S", desc: qsTr("Capture full screen screenshot") },
         { category: "tools", keys: "Mod + Shift + X", desc: qsTr("Region OCR (extract text from screen)") },
         { category: "tools", keys: "Mod + Shift + A", desc: qsTr("Region search (reverse image search)") },
-        { category: "tools", keys: "Print", desc: qsTr("Capture interactive screenshot") },
-        { category: "tools", keys: "Ctrl + Print", desc: qsTr("Capture full screen") },
-        { category: "tools", keys: "Alt + Print", desc: qsTr("Capture focused window") },
         { category: "tools", keys: "Mod + M / Shift + M", desc: qsTr("Open Manga / Light Novel reader") }
     ]
 

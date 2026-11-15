@@ -76,6 +76,7 @@ Background processes and state managers:
 | `Recorder.qml` | Screen recording service (pipewire/wf-recorder) |
 | `Appearance.qml` | Compatibility shim mapping old v1 `Appearance.*` → new `Tokens.*` |
 | `BatteryMonitor.qml`, `IdleInhibitor.qml`, `LidInhibitor.qml` | Power/hardware state management |
+| `WallFx.qml` | Wallpaper transition manager (pocket-dots shader animation controller, color extractor, map generator IPC) |
 
 ### `modules/drawers/` — The Drawer System (Critical)
 
@@ -163,6 +164,7 @@ Plus floating/detached panels:
 | `nexus/` | Settings/config UI (the "Nexus" control panel). System → **Plugins** (`pages/PluginsPage.qml` + `common/PluginRow.qml`) lists the Manga/Novel readers with enable/disable toggles. |
 | `polkit/` | Polkit authentication agent |
 | `windowinfo/` | Ported to Niri — Active window detail view showing client info (PID, floating, workspace, position, size) and action buttons (move workspace, maximize, float, kill) |
+| `background/` | Desktop wallpaper, desktop clock, visualizer, and pocket-dots shader transitions — [Background Developer Guide](modules/background/AGENTS.md) |
 
 ### `plugin/src/Caelestia/`
 C++ QML plugin source:
@@ -180,6 +182,7 @@ Helper backends:
 - `manga/manga_server.py` — manga reader backend
 - `novel/main.py` / `server.py` — novel reader backend
 - `areaPicker/region_ocr.sh` / `region_search.sh` — OCR helpers
+- `wallfx.py` — wallpaper transition map generator (contagion pool & character outline extraction)
 
 ---
 
@@ -267,6 +270,13 @@ With `Exclusive`, the compositor automatically grants keyboard focus to the shel
 - **Explicit Width/Height:** When centering custom modals in a fullscreen `Wrapper.qml` via `anchors.centerIn: parent`, define explicit `width` and `height` on `root`. Relying solely on `implicitWidth` causes child `RowLayout` headers and spacers to collapse horizontally.
 - **Prevent Event Stealing:** Avoid placing a catch-all `MouseArea { anchors.fill: parent }` across the entire modal surface; use `TapHandler { onTapped: root.focus = true }` instead so child controls (`Chip`, `IconButton`, `SearchBar`) receive pointer clicks cleanly.
 - **Button Rows:** Prefer `Flow { Layout.fillWidth: true }` over horizontal `Flickable` for chip/button toolbars to prevent gesture stealing.
+
+### Wallpaper Transitions (`pocket-dots` Shader Effect)
+- **Direct in-shell rendering**: Rendered on `WlrLayer.Background` via `WallpaperTransition.qml` using `wallfx.frag.qsb` (compiled via `qsb`), avoiding external daemons (`awww`/`swww`) and extra layer surfaces.
+- **Desktop decoupling & preview bypass**: Background renders `Wallpapers.actualCurrent`. Hovering wallpapers in the launcher (`Super+W`) previews on carousel cards and dynamic palette without thrashing the desktop. Selecting a wallpaper (Enter or click) triggers the full transition from previous to new wallpaper.
+- **Seamless handover**: At `t = 1.0`, `WallFx.onFinished` instantiates the static `CachingImage` with `opacity: 1` immediately, hiding the shader overlay only once ready.
+- **Aspect ratio cover math**: `crop(img)` computes centered normalized cover coordinates dynamically, adapting cleanly to any output resolution or orientation change.
+- **Preserve threaded render loop**: Keep texture decoding asynchronous (`asynchronous: true`) and run map generation in background child processes. Refer to [Background Developer Guide](modules/background/AGENTS.md) for full architecture details.
 
 ### Invisible popup / menu swallowing clicks on adjacent elements
 
