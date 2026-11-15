@@ -38,11 +38,18 @@ Searcher {
     }
 
     function setWallpaper(path: string): void {
+        const oldWall = actualCurrent;
         actualCurrent = path;
         
         stateFile.watchChanges = false;
         stateFile.setText(path);
         stateFile.watchChanges = true;
+
+        if (oldWall && oldWall !== path && (GlobalConfig.background?.transition?.enabled ?? true)) {
+            WallFx.trigger(oldWall, path);
+        }
+
+        wallpapers.refresh();
 
         const mode = Colours.light ? "light" : "dark";
         const schemeType = "scheme-" + Colours.variant;
@@ -92,6 +99,7 @@ Searcher {
         }
 
         function open(): void {
+            wallpapers.refresh();
             const state = ShellState.forActive();
             if (state) {
                 state.wallpaperRequested = true;
@@ -120,6 +128,7 @@ Searcher {
 
     FileView {
         id: stateFile
+
         path: root.currentNamePath
         watchChanges: true
         printErrors: false
@@ -129,6 +138,9 @@ Searcher {
             if (!wall) {
                 wall = root.fallback;
                 root.setWallpaper(root.fallback);
+            }
+            if (root.actualCurrent && root.actualCurrent !== wall && (GlobalConfig.background?.transition?.enabled ?? true)) {
+                WallFx.trigger(root.actualCurrent, wall);
             }
             root.actualCurrent = wall;
             root.previewColourLock = false;

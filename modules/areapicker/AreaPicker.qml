@@ -15,6 +15,8 @@ Scope {
         property bool closing
         property bool clipboardOnly
         property string mode: "screenshot" // "screenshot", "ocr", "lens"
+        property string captureType: "area" // "area", "window", "screen"
+        property bool openSwappy: false
 
         Variants {
             model: Screens.screens
@@ -51,6 +53,25 @@ Scope {
     IpcHandler {
         function open(): void {
             root.mode = "screenshot";
+            root.captureType = "area";
+            root.freeze = false;
+            root.closing = false;
+            root.clipboardOnly = false;
+            root.activeAsync = true;
+        }
+
+        function openWindow(): void {
+            root.mode = "screenshot";
+            root.captureType = "window";
+            root.freeze = false;
+            root.closing = false;
+            root.clipboardOnly = false;
+            root.activeAsync = true;
+        }
+
+        function openFullscreen(): void {
+            root.mode = "screenshot";
+            root.captureType = "screen";
             root.freeze = false;
             root.closing = false;
             root.clipboardOnly = false;
@@ -59,6 +80,7 @@ Scope {
 
         function openFreeze(): void {
             root.mode = "screenshot";
+            root.captureType = "area";
             root.freeze = true;
             root.closing = false;
             root.clipboardOnly = false;
@@ -67,6 +89,7 @@ Scope {
 
         function openClip(): void {
             root.mode = "screenshot";
+            root.captureType = "area";
             root.freeze = false;
             root.closing = false;
             root.clipboardOnly = true;
@@ -75,6 +98,7 @@ Scope {
 
         function openFreezeClip(): void {
             root.mode = "screenshot";
+            root.captureType = "area";
             root.freeze = true;
             root.closing = false;
             root.clipboardOnly = true;
@@ -83,6 +107,7 @@ Scope {
 
         function regionOcr(): void {
             root.mode = "ocr";
+            root.captureType = "area";
             root.freeze = false;
             root.closing = false;
             root.clipboardOnly = false;
@@ -91,10 +116,16 @@ Scope {
 
         function regionSearch(): void {
             root.mode = "lens";
+            root.captureType = "area";
             root.freeze = false;
             root.closing = false;
             root.clipboardOnly = false;
             root.activeAsync = true;
+        }
+
+        function close(): void {
+            root.closing = true;
+            root.activeAsync = false;
         }
 
         target: "picker"

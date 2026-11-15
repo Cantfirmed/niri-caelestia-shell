@@ -225,7 +225,7 @@ ColumnLayout {
         ActiveWindow {
             objectName: "taskbarActiveWindow"
             bar: root
-            monitor: Brightness.getMonitorForScreen(root.screen)
+            monitor: root.screen ? Brightness.getMonitorForScreen(root.screen) : null
         }
     }
 

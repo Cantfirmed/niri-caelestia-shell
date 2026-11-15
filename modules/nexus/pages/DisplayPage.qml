@@ -633,7 +633,7 @@ PageBase {
 
                 MaterialIcon {
                     text: "desktop_access_disabled"
-                    font: Tokens.font.icon.large
+                    fontStyle: Tokens.font.icon.large
                     color: Colours.palette.m3outline
                     Layout.alignment: Qt.AlignHCenter
                 }
@@ -671,10 +671,13 @@ PageBase {
         StyledRect {
             visible: root.outputsArray.length > 0
             Layout.fillWidth: true
+            implicitHeight: arrangementCol.implicitHeight + Tokens.padding.large * 2
             color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.large
 
             ColumnLayout {
+                id: arrangementCol
+                anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.margins: Tokens.padding.large
@@ -762,6 +765,7 @@ PageBase {
                                     font.pointSize: 9.5
                                     color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3onSurface
                                     Layout.alignment: Qt.AlignHCenter
+                                    Layout.maximumWidth: parent.width
                                     elide: Text.ElideRight
                                 }
 
@@ -770,6 +774,7 @@ PageBase {
                                     font.pointSize: 8
                                     color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
                                     Layout.alignment: Qt.AlignHCenter
+                                    Layout.maximumWidth: parent.width
                                     elide: Text.ElideRight
                                 }
 
@@ -778,6 +783,7 @@ PageBase {
                                     font.pointSize: 7.5
                                     color: root.selectedIndex === index ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3outline
                                     Layout.alignment: Qt.AlignHCenter
+                                    Layout.maximumWidth: parent.width
                                     elide: Text.ElideRight
                                 }
                             }
@@ -859,6 +865,8 @@ PageBase {
                 }
 
                 ToggleRow {
+                    first: true
+                    last: true
                     text: Tr.tr("Magnetic monitor snapping")
                     subtext: Tr.tr("Snap adjacent edges and centers while dragging displays")
                     checked: root.enableSnapping
@@ -944,7 +952,7 @@ PageBase {
 
                         MaterialIcon {
                             text: modelData.connector.startsWith("eDP") ? "laptop_chromebook" : "monitor"
-                            font: Tokens.font.icon.medium
+                            fontStyle: Tokens.font.icon.medium
                             color: modelData.active ? Colours.palette.m3primary : Colours.palette.m3outline
                         }
 
@@ -994,17 +1002,20 @@ PageBase {
 
         // ── Section 3: Display Power Toggle ──
         SectionHeader {
-            visible: root.selectedOutput !== null
+            visible: root.selectedOutput !== null && root.outputsArray.length > 1
             text: Tr.tr("Display Settings — %1").arg(root.selectedOutput ? root.selectedOutput.connector : "")
         }
 
         StyledRect {
-            visible: root.selectedOutput !== null
+            visible: root.selectedOutput !== null && root.outputsArray.length > 1
             Layout.fillWidth: true
+            implicitHeight: powerCol.implicitHeight + Tokens.padding.large * 2
             color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.large
 
             ColumnLayout {
+                id: powerCol
+                anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.margins: Tokens.padding.large
@@ -1013,13 +1024,12 @@ PageBase {
                 ToggleRow {
                     first: true
                     last: true
-                    visible: root.outputsArray.length > 1
                     text: Tr.tr("Enable display output")
                     subtext: root.selectedOutput && root.selectedOutput.active
                         ? Tr.tr("Currently active (%1)").arg(root.selectedOutput.connector)
                         : Tr.tr("Currently turned off")
                     checked: root.selectedOutput ? root.selectedOutput.active : false
-                    enabled: root.selectedOutput ? (!root.selectedOutput.active || root.activeOutputCount > 1) : false
+                    disabled: root.selectedOutput ? (root.selectedOutput.active && root.activeOutputCount <= 1) : true
                     onToggled: checked => {
                         if (root.selectedOutput)
                             root.applyOutputEnabled(root.selectedOutput.connector, checked);
@@ -1037,10 +1047,13 @@ PageBase {
         StyledRect {
             visible: root.selectedOutput !== null
             Layout.fillWidth: true
+            implicitHeight: scalingCol.implicitHeight + Tokens.padding.large * 2
             color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.large
 
             ColumnLayout {
+                id: scalingCol
+                anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.margins: Tokens.padding.large
@@ -1141,6 +1154,7 @@ PageBase {
                 }
 
                 ToggleRow {
+                    first: true
                     last: true
                     text: Tr.tr("Flip horizontal (mirrored)")
                     subtext: Tr.tr("Invert display orientation horizontally")
@@ -1165,10 +1179,13 @@ PageBase {
         StyledRect {
             visible: root.selectedOutput !== null
             Layout.fillWidth: true
+            implicitHeight: resCol.implicitHeight + Tokens.padding.large * 2
             color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.large
 
             ColumnLayout {
+                id: resCol
+                anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.margins: Tokens.padding.large
@@ -1176,13 +1193,14 @@ PageBase {
 
                 ToggleRow {
                     first: true
+                    last: true
                     text: Tr.tr("Variable Refresh Rate (Adaptive Sync / VRR)")
                     subtext: root.selectedOutput && !root.selectedOutput.vrrSupported
                         ? Tr.tr("Unsupported by this display")
                         : Tr.tr("Eliminates screen tearing and reduces stuttering")
                     checked: root.selectedOutput ? root.selectedOutput.vrrEnabled : false
-                    enabled: root.selectedOutput ? root.selectedOutput.vrrSupported : false
-                    opacity: enabled ? 1.0 : 0.6
+                    disabled: !(root.selectedOutput && root.selectedOutput.vrrSupported)
+                    opacity: disabled ? 0.6 : 1.0
                     onToggled: checked => {
                         if (root.selectedOutput && root.selectedOutput.vrrSupported)
                             root.applyVrr(root.selectedOutput.connector, checked);
@@ -1284,7 +1302,7 @@ PageBase {
                                 MaterialIcon {
                                     visible: modelData.is_preferred
                                     text: "star"
-                                    font: Tokens.font.icon.small
+                                    fontStyle: Tokens.font.icon.small
                                     color: modelData.is_current ? Colours.palette.m3onPrimaryContainer : Colours.palette.m3primary
                                 }
                             }
@@ -1398,7 +1416,7 @@ PageBase {
 
                         MaterialIcon {
                             text: "settings_backup_restore"
-                            font: Tokens.font.icon.large
+                            fontStyle: Tokens.font.icon.large
                             color: Colours.palette.m3primary
                         }
 

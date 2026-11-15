@@ -31,6 +31,10 @@ This document tracks all intentional divergences from upstream [caelestia-dots/s
 | `modules/windowinfo/*` | Custom | Active window detail drawer ported to Niri IPC. |
 | `services/Niri.qml` | Service | Custom Niri compositor integration. |
 | `plugin/src/Caelestia/Internal/niriipc*` | C++ | Custom Niri IPC socket plugin. |
+| `modules/background/*` | Custom | Wallpaper rendering with pocket-dots shader transitions (`wallfx.frag`, `wallfx.frag.qsb`, `WallpaperTransition.qml`). |
+| `services/WallFx.qml` | Service | Transition controller service, M3 palette color extraction, and IPC handler (`target: "wallfx"`). |
+| `scripts/wallfx.py` | Python | Contagion pool and character outline transition map generator. |
+| `plugin/src/Caelestia/Config/backgroundconfig.hpp` | C++ | Retains `BackgroundTransition` subobject (`enabled`, `type`, `duration`, `glow`) in `BackgroundConfig`. |
 | `patches/quickshell/0001-defer-window-teardown.patch` | Patch | Defers `QQuickWindow` destruction in `ProxyWindowBase::deleteWindow()` past the item-tree teardown. Without it the shell SIGSEGVs on output loss / resume-from-suspend (dangling window in `QQuickItemPrivate::dirty()` → `QQuickWindow::maybeUpdate()`). Applied by `scripts/build-quickshell.sh`. |
 | `patches/quickshell/0002-defer-lock-surface-teardown.patch` | Patch | Same deferral for `WlSessionLockSurface::~WlSessionLockSurface()`. Covers the resume-while-locked path, where `WlSessionLock::updateSurfaces()` deletes a lock surface for every screen that disappears. |
 | `scripts/build-quickshell.sh` | Shell | Rebuilds + installs `~/.local/bin/quickshell` against the installed Qt and applies `patches/quickshell/*.patch`. Required after every Qt upgrade (Quickshell links private Qt APIs). |
@@ -336,3 +340,22 @@ To ensure customizations are never silently lost during future upstream pulls or
 * **Symptom:** System → **Plugins** in Nexus shows the `PlaceholderComp` “Page under construction” text even though `modules/nexus/pages/PluginsPage.qml` exists and contains the reader toggles.
 * **Root Cause:** The upstream `PageCompRegistry.qml` merge for v2.5.0 (commit `140d25a8`) silently reverted our second `// System` entry from `StackPage { PluginsPage {} }` back to `PlaceholderComp {}` without raising a conflict. The page file survived, so nothing looked broken until the page was opened.
 * **Fix & Guarantee:** Keep the System → Plugins entry wired as `StackPage { Component { PluginsPage {} } }`. `scripts/verify-deltas.sh` check **#12** asserts both the registration and the `GlobalConfig.extra.manga` / `.novel` bindings, so the pre-commit / post-merge hooks catch any future regression.
+
+---
+
+## 7. Wallpaper Transition Subsystem (pocket-dots Port)
+
+### A. Architectural Overview & In-Shell Rendering
+* **Location:** `modules/background/WallpaperTransition.qml`, `modules/background/shaders/`, `services/WallFx.qml`, `scripts/wallfx.py`, and `plugin/src/Caelestia/Config/backgroundconfig.hpp`.
+* **Ported Feature:** Integrates the **pocket-dots** procedural shader transitions (`contagio` and `perfil`) directly into Caelestia Shell.
+* **Architecture Difference vs pocket-dots:**
+  - Pocket-dots did not render wallpaper natively; it controlled an external `awww` daemon and created ephemeral overlay windows on `WlrLayer.Bottom`.
+  - Caelestia renders desktop wallpapers natively in Quickshell on `WlrLayer.Background`. The transition effect executes directly within `modules/background/Wallpaper.qml` via `WallpaperTransition.qml`.
+  - Zero external daemons required. Desktop clocks and audio visualizers remain anchored on top of the background without recreation.
+
+### B. Invariants & Preservation Rules
+1. **Desktop Decoupling & Preview Bypass Invariant:** `modules/background/Wallpaper.qml` binds to `Wallpapers.actualCurrent`, while `Wallpapers.preview(path)` drives `Wallpapers.current` (used for launcher card previews and dynamic M3 palette preview). While browsing wallpapers in the launcher (`Super+W`), the desktop background remains stable. When a wallpaper is selected (Enter or click), `Wallpapers.setWallpaper()` updates `actualCurrent` and fires `WallFx.trigger(oldWall, selectedPath)`. The launcher closes, and the desktop performs the full pocket-dots transition from the previous wallpaper to the chosen wallpaper. Heavy shader transitions never thrash during hover navigation.
+2. **Seamless Handover Contract:** When the shader transition finishes (`t = 1.0`), `WallFx.onFinished` creates the static `CachingImage` with `opacity: 1` immediately. The transition viewport hides only after the underlying static image is ready, preventing blank frames or flicker.
+3. **Aspect Ratio Cover Normalization:** Wallpapers of varying aspect ratios are normalized using dynamic cover crop math (`root.crop(img)`). Samplers inside `wallfx.frag` scale and center textures without distortion across multi-monitor setups or display resolution changes.
+4. **Threaded Render Loop Compatibility:** To honor `QSG_RENDER_LOOP=threaded`, texture decoders must use `asynchronous: true` and map computation is handled asynchronously by `scripts/wallfx.py` via `Process`.
+5. **C++ Configuration Preservation:** `BackgroundConfig` subobject `CONFIG_SUBOBJECT(BackgroundTransition, transition)` must be retained in `plugin/src/Caelestia/Config/backgroundconfig.hpp` alongside defaults in `shell.json`.

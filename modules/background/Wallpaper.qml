@@ -12,33 +12,55 @@ import qs.utils
 Item {
     id: root
 
-    property string source: Wallpapers.current
+    property string source: Wallpapers.actualCurrent
+    property string activeSource: ""
     property CachingImage current
     property bool completed
 
     onSourceChanged: {
-        if (!source)
+        if (!source) {
+            activeSource = "";
             current = null;
-        else
+        } else if (source !== activeSource) {
+            activeSource = source;
+            const transitionEnabled = Config.background?.transition?.enabled ?? true;
             current = imgComp.createObject(this, {
-                path: source
+                path: source,
+                opacity: transitionEnabled ? 1 : (completed ? 0 : 1)
             });
+        }
     }
 
     Component.onCompleted: {
-        if (source)
-            Qt.callLater(() => {
-                current = imgComp.createObject(this, {
-                    path: source
-                });
-                completed = true;
+        if (source && !current) {
+            activeSource = source;
+            current = imgComp.createObject(this, {
+                path: source,
+                opacity: 1
             });
+        }
+        completed = true;
+    }
+
+    Connections {
+        function onFinished(dest) {
+            if (dest === root.source && (!root.current || root.current.path !== dest)) {
+                root.activeSource = dest;
+                root.current = imgComp.createObject(root, {
+                    path: dest,
+                    opacity: 1
+                });
+            }
+        }
+
+        target: WallFx
     }
 
     Loader {
+        id: missingLoader
+
         asynchronous: true
         anchors.fill: parent
-
         active: root.completed && !root.source
 
         sourceComponent: StyledRect {
@@ -101,18 +123,23 @@ Item {
         }
     }
 
+    WallpaperTransition {
+        id: transition
+
+        z: 1
+    }
+
     Component {
         id: imgComp
 
         CachingImage {
             id: img
 
+            opacity: 0
             anchors.fill: parent
 
-            opacity: 0
-
             onStatusChanged: {
-                if (status === Image.Ready)
+                if (status === Image.Ready && opacity === 0)
                     anim.start();
             }
 

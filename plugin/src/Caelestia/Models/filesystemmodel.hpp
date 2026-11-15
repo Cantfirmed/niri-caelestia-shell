@@ -10,6 +10,7 @@
 #include <qobject.h>
 #include <qqmlintegration.h>
 #include <qqmllist.h>
+#include <qtimer.h>
 
 namespace caelestia::models {
 
@@ -86,6 +87,8 @@ public:
 
     explicit FileSystemModel(QObject* parent = nullptr);
 
+    Q_INVOKABLE void refresh();
+
     [[nodiscard]] int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
@@ -137,6 +140,7 @@ private:
 
     QDir m_dir;
     QFileSystemWatcher m_watcher;
+    QTimer m_rescanTimer;
     QList<FileSystemEntry*> m_entries;
     QHash<QString, QFuture<PathDiff>> m_futures;
 
@@ -145,9 +149,11 @@ private:
     bool m_watchChanges;
     bool m_showHidden;
     bool m_sortReverse = false;
+    bool m_waitingForPath = false;
     Filter m_filter;
     QStringList m_nameFilters;
 
+    void onDirectoryChanged(const QString& changedPath);
     void watchDirIfRecursive(const QString& path);
     void update();
     void updateWatcher();

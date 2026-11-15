@@ -48,7 +48,7 @@ Card {
     Timer {
         id: refreshTimer
         interval: 3000
-        running: root.visibilities.soundPanel
+        running: root.visibilities?.soundPanel ?? false
         repeat: true
         triggeredOnStart: true
         onTriggered: {
