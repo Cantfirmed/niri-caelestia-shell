@@ -940,7 +940,7 @@ PageBase {
                         : Colours.palette.m3outlineVariant
 
                     StateLayer {
-                        function onClicked(): void {
+                        onClicked: {
                             root.selectedIndex = index;
                         }
                     }
@@ -1265,7 +1265,7 @@ PageBase {
                                     : "transparent")
 
                             StateLayer {
-                                function onClicked(): void {
+                                onClicked: {
                                     if (modelData.rates && modelData.rates.length > 0 && root.selectedOutput) {
                                         const bestRate = modelData.rates[0];
                                         root.applyMode(root.selectedOutput.connector, bestRate.width, bestRate.height, bestRate.refresh_rate);

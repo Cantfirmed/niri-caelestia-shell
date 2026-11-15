@@ -13,6 +13,7 @@ StyledRect {
 
     property real implicitSize: Appearance.font.size.bodyMedium
 
+    signal clicked()
     function onClicked(): void {
     }
 
@@ -36,8 +37,9 @@ StyledRect {
     StateLayer {
         id: stateLayer
         color: parent.onColor
-        function onClicked(): void {
-            parent.onClicked();
+        onClicked: {
+            root.clicked();
+            root.onClicked();
         }
     }
 }

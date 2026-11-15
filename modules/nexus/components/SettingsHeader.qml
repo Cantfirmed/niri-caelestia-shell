@@ -23,8 +23,8 @@ Item {
         MaterialIcon {
             Layout.alignment: Qt.AlignHCenter
             text: root.icon
-            font.pointSize: Appearance.font.size.headlineLarge * 3
-            font.bold: true
+            size: Appearance.font.size.headlineLarge * 3
+            weight: Font.Bold
         }
 
         StyledText {

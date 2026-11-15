@@ -108,7 +108,7 @@ Variants {
                         spacing: Appearance.spacing.md
 
                         StyledRect {
-                            implicitWidth: headerIcon.font.pointSize + Appearance.padding.md * 2
+                            implicitWidth: headerIcon.size + Appearance.padding.md * 2
                             implicitHeight: implicitWidth
                             radius: Appearance.rounding.full
                             color: Colours.palette.m3secondaryContainer
@@ -118,7 +118,7 @@ Variants {
                                 anchors.centerIn: parent
                                 text: "admin_panel_settings"
                                 color: Colours.palette.m3onSecondaryContainer
-                                font.pointSize: Appearance.font.size.titleMedium
+                                size: Appearance.font.size.titleMedium
                             }
                         }
 
@@ -217,7 +217,7 @@ Variants {
                                         color: PolkitService.submitting
                                             ? Colours.palette.m3secondary
                                             : Colours.palette.m3onSurfaceVariant
-                                        font.pointSize: Appearance.font.size.bodyMedium
+                                        size: Appearance.font.size.bodyMedium
                                         opacity: PolkitService.submitting ? 0 : 1
                                         Behavior on opacity { Anim {} }
                                     }
@@ -280,10 +280,9 @@ Variants {
                                             ? Colours.palette.m3onPrimary
                                             : Colours.palette.m3onSurface
                                         radius: Appearance.rounding.full
+                                        disabled: !(inputField.text.length > 0 && PolkitService.interactionAvailable)
 
-                                        function onClicked(): void {
-                                            dialogContent.trySubmit();
-                                        }
+                                        onClicked: dialogContent.trySubmit()
                                     }
 
                                     MaterialIcon {
@@ -293,8 +292,8 @@ Variants {
                                         color: inputField.text.length > 0 && PolkitService.interactionAvailable
                                             ? Colours.palette.m3onPrimary
                                             : Colours.palette.m3onSurface
-                                        font.pointSize: Appearance.font.size.bodyMedium
-                                        font.weight: 500
+                                        size: Appearance.font.size.bodyMedium
+                                        weight: 500
 
                                         CAnim { properties: "color" }
                                     }
@@ -342,9 +341,7 @@ Variants {
                                 radius: Appearance.rounding.full
                                 color: Colours.palette.m3onSurface
 
-                                function onClicked(): void {
-                                    PolkitService.cancel();
-                                }
+                                onClicked: PolkitService.cancel()
                             }
 
                             StyledText {
@@ -372,11 +369,9 @@ Variants {
                             StateLayer {
                                 radius: Appearance.rounding.full
                                 color: Colours.palette.m3onPrimary
-                                enabled: inputField.text.length > 0 && PolkitService.interactionAvailable
+                                disabled: !(inputField.text.length > 0 && PolkitService.interactionAvailable)
 
-                                function onClicked(): void {
-                                    dialogContent.trySubmit();
-                                }
+                                onClicked: dialogContent.trySubmit()
                             }
 
                             StyledText {

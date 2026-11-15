@@ -22,7 +22,7 @@ RowLayout {
         implicitSize: root.implicitSize
 
         icon: root.client.is_floating ? "grid_view" : "picture_in_picture"
-        function onClicked(): void {
+        onClicked: {
             console.log("Toggling floating for", root.client?.id);
             Compositor.toggleWindowFloating(root.client?.id);
         }
@@ -41,7 +41,7 @@ RowLayout {
             implicitSize: root.implicitSize
 
             icon: "fullscreen"
-            function onClicked(): void {
+            onClicked: {
                 Compositor.toggleMaximize();
             }
         }
@@ -55,7 +55,7 @@ RowLayout {
 
         implicitSize: root.implicitSize
 
-        function onClicked(): void {
+        onClicked: {
             Compositor.closeWindow(root.client?.id);
         }
     }

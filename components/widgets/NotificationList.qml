@@ -43,7 +43,7 @@ Item {
 
             MaterialIcon {
                 text: Notifs.dnd ? "notifications_off" : "notifications"
-                font.pointSize: Appearance.font.size.bodyMedium
+                size: Appearance.font.size.bodyMedium
                 color: Notifs.dnd ? Colours.palette.m3outline : Colours.palette.m3primary
             }
 
@@ -71,7 +71,7 @@ Item {
                     radius: parent.radius
                     color: Notifs.dnd ? Colours.palette.m3onErrorContainer : Colours.palette.m3onSurface
 
-                    function onClicked(): void {
+                    onClicked: {
                         Notifs.dnd = !Notifs.dnd;
                     }
                 }
@@ -79,7 +79,7 @@ Item {
                 MaterialIcon {
                     anchors.centerIn: parent
                     text: Notifs.dnd ? "do_not_disturb_on" : "do_not_disturb_off"
-                    font.pointSize: Appearance.font.size.labelLarge
+                    size: Appearance.font.size.labelLarge
                     color: Notifs.dnd ? Colours.palette.m3onErrorContainer : Colours.palette.m3onSurfaceVariant
                 }
             }
@@ -95,7 +95,7 @@ Item {
                     radius: parent.radius
                     color: Colours.palette.m3error
 
-                    function onClicked(): void {
+                    onClicked: {
                         Notifs.discardAllNotifications();
                         root.cleared();
                     }
@@ -104,7 +104,7 @@ Item {
                 MaterialIcon {
                     anchors.centerIn: parent
                     text: "delete_sweep"
-                    font.pointSize: Appearance.font.size.labelLarge
+                    size: Appearance.font.size.labelLarge
                     color: Colours.palette.m3error
                 }
             }
@@ -120,7 +120,7 @@ Item {
                     radius: parent.radius
                     color: Colours.palette.m3onSurface
 
-                    function onClicked(): void {
+                    onClicked: {
                         root.expanded = !root.expanded;
                     }
                 }
@@ -128,7 +128,7 @@ Item {
                 MaterialIcon {
                     anchors.centerIn: parent
                     text: root.expanded ? "keyboard_arrow_up" : "keyboard_arrow_down"
-                    font.pointSize: Appearance.font.size.bodyMedium
+                    size: Appearance.font.size.bodyMedium
                     color: Colours.palette.m3onSurfaceVariant
                 }
             }
@@ -150,7 +150,7 @@ Item {
                 MaterialIcon {
                     Layout.alignment: Qt.AlignHCenter
                     text: "notifications_none"
-                    font.pointSize: Appearance.font.size.headlineLarge * 1.5
+                    size: Appearance.font.size.headlineLarge * 1.5
                     color: Colours.palette.m3outlineVariant
                 }
 
@@ -212,7 +212,7 @@ Item {
             color: notifItem.notif?.urgency === NotificationUrgency.Critical ? Colours.palette.m3onErrorContainer : Colours.palette.m3onSurface
             disabled: !notifItem.bodyTruncated && !notifItem.itemExpanded
 
-            function onClicked(): void {
+            onClicked: {
                 notifItem.itemExpanded = !notifItem.itemExpanded;
             }
         }
@@ -259,7 +259,7 @@ Item {
 
                             MaterialIcon {
                                 text: Icons.getNotifIcon(notifItem.notif?.summary ?? "", notifItem.notif?.urgency ?? NotificationUrgency.Normal)
-                                font.pointSize: Appearance.font.size.bodyMedium
+                                size: Appearance.font.size.bodyMedium
                                 color: notifItem.notif?.urgency === NotificationUrgency.Critical ? Colours.palette.m3onError : Colours.palette.m3onSecondaryContainer
                             }
                         }
@@ -335,7 +335,7 @@ Item {
                                 radius: parent.radius
                                 color: notifItem.notif?.urgency === NotificationUrgency.Critical ? Colours.palette.m3onError : Colours.palette.m3onSecondaryContainer
 
-                                function onClicked(): void {
+                                onClicked: {
                                     modelData.invoke();
                                 }
                             }
@@ -355,7 +355,7 @@ Item {
                 MaterialIcon {
                     Layout.alignment: Qt.AlignHCenter
                     text: notifItem.itemExpanded ? "expand_less" : "expand_more"
-                    font.pointSize: Appearance.font.size.labelMedium
+                    size: Appearance.font.size.labelMedium
                     color: Colours.palette.m3outline
                     visible: notifItem.bodyTruncated || notifItem.itemExpanded
                     opacity: 0.6
@@ -384,7 +384,7 @@ Item {
                         radius: parent.radius
                         color: Colours.palette.m3onSurface
 
-                        function onClicked(): void {
+                        onClicked: {
                             if (notifItem.notif)
                                 Notifs.discardNotification(notifItem.notif.notificationId);
                         }
@@ -393,7 +393,7 @@ Item {
                     MaterialIcon {
                         anchors.centerIn: parent
                         text: "close"
-                        font.pointSize: Appearance.font.size.labelMedium
+                        size: Appearance.font.size.labelMedium
                         color: Colours.palette.m3onSurfaceVariant
                     }
                 }

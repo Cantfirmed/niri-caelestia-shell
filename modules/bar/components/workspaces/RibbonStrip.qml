@@ -380,7 +380,7 @@ Item {
                                         id: matIconComp
                                         MaterialIcon {
                                             text: Icons.getAppCategoryIcon(tilePill.modelData.app_id ?? "", "web_asset")
-                                            font.pointSize: Math.max(7, Math.min(10, Math.floor(Math.min(tilePill.width, tilePill.height) * 0.48)))
+                                            size: Math.max(7, Math.min(10, Math.floor(Math.min(tilePill.width, tilePill.height) * 0.48)))
                                             color: tilePill.tileFocused
                                                 ? Colours.palette.m3onPrimaryContainer
                                                 : Colours.palette.m3onSurfaceVariant
@@ -443,7 +443,7 @@ Item {
                                         root.dropTargetIdx = -1;
                                     }
 
-                                    function onClicked(event): void {
+                                    onClicked: (event) => {
                                         if (dragging)
                                             return;
                                         const targetId = Number(tilePill.modelData.id);
@@ -557,7 +557,7 @@ Item {
                     border.color: floatFocused ? Colours.palette.m3tertiary : Colours.palette.m3outlineVariant
 
                     StateLayer {
-                        function onClicked(): void {
+                        onClicked: {
                             Niri.focusWindow(Number(modelData.id));
                         }
                     }

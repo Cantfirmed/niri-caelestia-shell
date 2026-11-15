@@ -79,7 +79,7 @@ ColumnLayout {
                     implicitHeight: expandIcon.implicitHeight + Appearance.padding.xs
 
                     StateLayer {
-                        function onClicked(): void {
+                        onClicked: {
                             root.expanded = !root.expanded;
                         }
                     }
@@ -91,7 +91,7 @@ ColumnLayout {
                         text: root.expanded ? "expand_less" : "expand_more"
                         color: root.expanded ? Colours.palette.m3primary : Colours.palette.m3onSurfaceVariant
 
-                        font.pointSize: Appearance.font.size.titleMedium
+                        size: Appearance.font.size.titleMedium
                     }
                 }
             }
