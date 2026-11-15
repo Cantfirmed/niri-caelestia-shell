@@ -1,7 +1,10 @@
-import Quickshell.Hyprland
+import QtQuick
 
-// qmllint disable unresolved-type
-GlobalShortcut {
-    // qmllint enable unresolved-type
-    appid: "caelestia"
+QtObject {
+    property string appid: "caelestia"
+    property string name: ""
+    property string description: ""
+
+    signal pressed
+    signal released
 }

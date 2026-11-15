@@ -24,6 +24,7 @@ StyledRect {
 
     Ref {
         service: Recorder
+        active: Boolean(root.screenState?.utilities || root.screenState?.sidebar)
     }
 
     ColumnLayout {
