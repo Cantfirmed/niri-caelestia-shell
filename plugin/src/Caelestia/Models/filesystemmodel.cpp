@@ -84,8 +84,18 @@ FileSystemModel::FileSystemModel(QObject* parent)
     , m_watchChanges(true)
     , m_showHidden(false)
     , m_filter(Filter::NoFilter) {
-    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &FileSystemModel::watchDirIfRecursive);
-    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &FileSystemModel::updateEntriesForDir);
+    m_rescanTimer.setSingleShot(true);
+    m_rescanTimer.setInterval(150);
+    connect(&m_rescanTimer, &QTimer::timeout, this, [this]() {
+        if (!m_path.isEmpty()) {
+            updateEntriesForDir(m_path);
+        }
+    });
+    connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &FileSystemModel::onDirectoryChanged);
+}
+
+void FileSystemModel::refresh() {
+    update();
 }
 
 int FileSystemModel::rowCount(const QModelIndex& parent) const {
@@ -247,6 +257,18 @@ void FileSystemModel::watchDirIfRecursive(const QString& path) {
     }
 }
 
+void FileSystemModel::onDirectoryChanged(const QString& changedPath) {
+    if (m_waitingForPath) {
+        if (QDir(m_path).exists()) {
+            update();
+        }
+        return;
+    }
+
+    watchDirIfRecursive(changedPath);
+    m_rescanTimer.start();
+}
+
 void FileSystemModel::update() {
     updateWatcher();
     updateEntries();
@@ -256,13 +278,26 @@ void FileSystemModel::updateWatcher() {
     if (!m_watcher.directories().isEmpty()) {
         m_watcher.removePaths(m_watcher.directories());
     }
+    m_waitingForPath = false;
 
     if (!m_watchChanges || m_path.isEmpty()) {
         return;
     }
 
-    m_watcher.addPath(m_path);
-    watchDirIfRecursive(m_path);
+    if (QDir(m_path).exists()) {
+        m_watcher.addPath(m_path);
+        watchDirIfRecursive(m_path);
+        return;
+    }
+
+    QDir probe(m_path);
+    while (!probe.exists()) {
+        if (!probe.cdUp()) {
+            return;
+        }
+    }
+    m_watcher.addPath(probe.absolutePath());
+    m_waitingForPath = true;
 }
 
 void FileSystemModel::updateEntries() {

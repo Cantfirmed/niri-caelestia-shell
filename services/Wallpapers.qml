@@ -49,6 +49,8 @@ Searcher {
             WallFx.trigger(oldWall, path);
         }
 
+        wallpapers.refresh();
+
         const mode = Colours.light ? "light" : "dark";
         const schemeType = "scheme-" + Colours.variant;
         matugenProcess.command = ["matugen", "image", path, "-m", mode, "-t", schemeType, "--source-color-index", "0"];
@@ -97,6 +99,7 @@ Searcher {
         }
 
         function open(): void {
+            wallpapers.refresh();
             const state = ShellState.forActive();
             if (state) {
                 state.wallpaperRequested = true;
