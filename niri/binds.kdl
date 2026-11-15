@@ -36,6 +36,7 @@ binds {
 
     // === Window Management ===
     Mod+Q repeat=false { close-window; }
+    Mod+Shift+Q repeat=false hotkey-overlay-title="[Window] Force Kill Window" { spawn-sh "~/.config/niri_caelestia/scripts/force-kill.sh"; }
     Mod+F { maximize-column; }
     Mod+Shift+F { toggle-windowed-fullscreen; }
     Mod+Shift+G { fullscreen-window; }
