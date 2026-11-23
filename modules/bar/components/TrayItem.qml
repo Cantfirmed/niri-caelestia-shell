@@ -12,9 +12,11 @@ MouseArea {
 
     required property SystemTrayItem modelData
 
+    readonly property int iconSize: Math.max(1, Math.min(Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2, Math.round(Tokens.font.body.small.pointSize * 2)))
+
     acceptedButtons: Qt.LeftButton | Qt.RightButton
-    implicitWidth: Tokens.font.body.small.pointSize * 2
-    implicitHeight: Tokens.font.body.small.pointSize * 2
+    implicitWidth: iconSize
+    implicitHeight: iconSize
 
     onClicked: event => {
         if (event.button === Qt.LeftButton)

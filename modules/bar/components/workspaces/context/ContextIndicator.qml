@@ -15,11 +15,11 @@ Item {
     required property Item anchorWs
 
     readonly property int anchorWsCount: (Niri.wsContextType === "item") ? Niri.wsContextAnchor?.windowCount : 1
-    readonly property real rounding: Appearance.rounding.small
-    readonly property real padding: Appearance.padding.xs
+    readonly property real rounding: Tokens.rounding.small
+    readonly property real padding: Tokens.padding.extraSmall
     readonly property color bgColor: (Niri.wsContextType === "workspaces" && Niri.wsContextAnchor ? Colours.palette.m3surfaceContainer : Colours.palette.m3surfaceContainerHigh)
 
-    property real cornerPieceSize: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + padding
+    property real cornerPieceSize: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2) + padding
     property bool activated: false
 
     Component.onCompleted: root.activated = true
@@ -156,7 +156,7 @@ Item {
         property int cornerType: 0 // 1 = bottom, 3 = top
         width: root.activated && Niri.wsContextAnchor ? root.cornerPieceSize : 0
         height: root.activated && Niri.wsContextAnchor ? root.cornerPieceSize / 2 : 0
-        radius: Appearance.padding.md
+        radius: Tokens.padding.medium
         orientation: cornerType
         color: parent.highlightColor
         opacity: parent.opacity
@@ -196,7 +196,7 @@ Item {
         anchors.leftMargin: -root.padding
         anchors.topMargin: -root.padding + 1
         anchors.bottomMargin: -root.padding + 1
-        rounding: Appearance.rounding.normal
+        rounding: Tokens.rounding.medium
     }
 
     HighlightRect {

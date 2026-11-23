@@ -31,7 +31,7 @@ Item {
         const otherModules = bar.children.filter(c => c.entryId && c.item !== this && c.entryId !== "spacer");
         const otherHeight = otherModules.reduce((acc, curr) => acc + (curr.item?.nonAnimHeight ?? curr.height), 0);
         // Length - 2 cause repeater counts as a child
-        return bar.height - otherHeight - bar.spacing * (bar.children.length - 1) - bar.vPadding * 2;
+        return Math.max(0, bar.height - otherHeight - bar.spacing * Math.max(0, bar.children.length - 2) - bar.vPadding * 2);
     }
     property Title current: text1
 
@@ -91,7 +91,7 @@ Item {
         text: root.windowTitle
         font: root.Tokens.font.body.builders.small.letterSpacing(1.4).build()
         elide: Qt.ElideRight
-        elideWidth: root.maxHeight - icon.height
+        elideWidth: Math.max(0, root.maxHeight - icon.height - root.current.anchors.topMargin)
 
         onTextChanged: {
             const next = root.current === text1 ? text2 : text1;

@@ -16,7 +16,8 @@ StyledRect {
 
     function fontFor(text: string, metricWidth: int): font {
         // We don't count seconds for the max width because it changes too often
-        const scale = text === "11" ? 1.15 : Math.min(1.05, Math.max(hourMetrics.width, minMetrics.width) / metricWidth);
+        const ratio = metricWidth > 0 ? Math.max(hourMetrics.width, minMetrics.width) / metricWidth : 1.0;
+        const scale = text === "11" ? 1.15 : Math.min(1.05, ratio);
         return root.font.width(scale * 100).letterSpacing(scale).build();
     }
 
@@ -53,7 +54,7 @@ StyledRect {
             visible: active
 
             sourceComponent: ColumnLayout {
-                spacing: layout.spacing - 4
+                spacing: layout.spacing - Math.round(4 * Tokens.uiScale)
 
                 StyledText {
                     Layout.alignment: Qt.AlignHCenter
@@ -73,7 +74,7 @@ StyledRect {
                     Layout.fillWidth: true
                     Layout.leftMargin: -Tokens.padding.extraSmall
                     Layout.rightMargin: -Tokens.padding.extraSmall
-                    Layout.topMargin: 4
+                    Layout.topMargin: Tokens.padding.extraSmall
                     Layout.bottomMargin: Tokens.padding.extraSmall / 2
                     implicitHeight: 1
                     color: Colours.palette.m3outlineVariant
@@ -96,7 +97,7 @@ StyledRect {
         }
 
         StyledText {
-            Layout.topMargin: -parent.spacing - 4
+            Layout.topMargin: -parent.spacing - Math.round(4 * Tokens.uiScale)
             Layout.alignment: Qt.AlignHCenter
             text: Time.minuteStr
             font: root.fontFor(text, minMetrics.width)
@@ -111,7 +112,7 @@ StyledRect {
         }
 
         Loader {
-            Layout.topMargin: -parent.spacing - 4
+            Layout.topMargin: -parent.spacing - Math.round(4 * Tokens.uiScale)
             Layout.alignment: Qt.AlignHCenter
             asynchronous: true
             active: Config.bar.clock.showSeconds
@@ -132,7 +133,7 @@ StyledRect {
         }
 
         Loader {
-            Layout.topMargin: -parent.spacing - 4
+            Layout.topMargin: -parent.spacing - Math.round(4 * Tokens.uiScale)
             Layout.alignment: Qt.AlignHCenter
             asynchronous: true
             active: Units.twelveHourClock

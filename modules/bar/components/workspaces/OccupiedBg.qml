@@ -56,19 +56,19 @@ Item {
                 // horizontalCenter: root.horizontalCenter
                 left: root.left
                 right: root.right
-                rightMargin: isContextActiveInWs ? -Config.bar.workspaces.windowContextWidth + Appearance.padding.xs : 0
+                rightMargin: isContextActiveInWs ? -Math.round((Config.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale) + Tokens.padding.extraSmall : 0
             }
 
-            topRightRadius: isContextActiveInWs ? Appearance.rounding.normal : radius
-            bottomRightRadius: isContextActiveInWs ? Appearance.rounding.normal : radius
+            topRightRadius: isContextActiveInWs ? Tokens.rounding.medium : radius
+            bottomRightRadius: isContextActiveInWs ? Tokens.rounding.medium : radius
 
             y: (start?.y ?? 0)
-            // implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2 + 2
+            // implicitWidth: Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2 + 2
             implicitHeight: start && end ? end.y + end.size - start.y : 0
             // implicitHeight: end?.y + end?.height - start?.y
 
             color: Colours.layer(Colours.palette.m3surfaceContainerHigh, 2)
-            radius: Appearance.rounding.full
+            radius: Tokens.rounding.full
 
             scale: 0
             Component.onCompleted: scale = 1.0

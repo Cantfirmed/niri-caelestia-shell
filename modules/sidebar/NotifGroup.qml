@@ -34,7 +34,7 @@ StyledRect {
     readonly property int nonAnimHeight: {
         const headerHeight = header.implicitHeight + (root.expanded ? Math.round(Tokens.spacing.extraSmall) : 0);
         const columnHeight = headerHeight + notifList.layoutHeight;
-        return Math.round(Math.max(TokenConfig.sizes.notifs.image, columnHeight) + Tokens.padding.medium * 2);
+        return Math.round(Math.max(Tokens.sizes.notifs.image, columnHeight) + Tokens.padding.medium * 2);
     }
     readonly property bool expanded: props.expandedNotifs.includes(modelData)
 
@@ -76,8 +76,8 @@ StyledRect {
 
         Item {
             Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-            implicitWidth: TokenConfig.sizes.notifs.image
-            implicitHeight: TokenConfig.sizes.notifs.image
+            implicitWidth: Tokens.sizes.notifs.image
+            implicitHeight: Tokens.sizes.notifs.image
 
             Component {
                 id: imageComp
@@ -86,13 +86,13 @@ StyledRect {
                     source: Qt.resolvedUrl(root.image)
                     fillMode: Image.PreserveAspectCrop
                     sourceSize: {
-                        const size = TokenConfig.sizes.notifs.image * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1);
+                        const size = Tokens.sizes.notifs.image * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1);
                         return Qt.size(size, size);
                     }
                     cache: true
                     asynchronous: false
-                    width: TokenConfig.sizes.notifs.image
-                    height: TokenConfig.sizes.notifs.image
+                    width: Tokens.sizes.notifs.image
+                    height: Tokens.sizes.notifs.image
                 }
             }
 
@@ -100,7 +100,7 @@ StyledRect {
                 id: appIconComp
 
                 ColouredIcon {
-                    implicitSize: Math.round(TokenConfig.sizes.notifs.image * 0.6)
+                    implicitSize: Math.round(Tokens.sizes.notifs.image * 0.6)
                     source: Quickshell.iconPath(root.appIcon)
                     colour: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3onError : root.urgency === NotificationUrgency.Low ? Colours.palette.m3onSurface : Colours.palette.m3onSecondaryContainer
                     layer.enabled: root.appIcon.endsWith("symbolic")
@@ -188,7 +188,7 @@ StyledRect {
 
                 StyledRect {
                     implicitWidth: expandBtn.implicitWidth + Tokens.padding.large
-                    implicitHeight: groupCount.implicitHeight + Tokens.padding.extraSmall
+                    implicitHeight: Math.max(expandBtn.implicitHeight, groupCount.implicitHeight) + Tokens.padding.extraSmall
 
                     color: root.urgency === NotificationUrgency.Critical ? Colours.palette.m3error : Colours.layer(Colours.palette.m3surfaceContainerHigh, 3)
                     radius: Tokens.rounding.full

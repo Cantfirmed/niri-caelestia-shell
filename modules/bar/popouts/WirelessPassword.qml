@@ -71,7 +71,7 @@ ColumnLayout {
     }
 
     spacing: Tokens.spacing.medium
-    implicitWidth: 400
+    implicitWidth: Math.round(400 * Tokens.uiScale)
     implicitHeight: content.implicitHeight + Tokens.padding.extraLargeIncreased
     visible: shouldBeVisible || isClosing
     enabled: shouldBeVisible && !isClosing
@@ -132,7 +132,7 @@ ColumnLayout {
 
     StyledRect {
         Layout.fillWidth: true
-        Layout.preferredWidth: 400
+        Layout.preferredWidth: Math.round(400 * Tokens.uiScale)
         implicitHeight: content.implicitHeight + Tokens.padding.extraLargeIncreased
         radius: Tokens.rounding.large
         color: Colours.tPalette.m3surfaceContainer
@@ -270,7 +270,7 @@ ColumnLayout {
                 objectName: "passwordContainer"
                 Layout.topMargin: Tokens.spacing.largeIncreased
                 Layout.fillWidth: true
-                implicitHeight: Math.max(48, charList.implicitHeight + Tokens.padding.medium * 2)
+                implicitHeight: Math.max(Math.round(48 * Tokens.uiScale), charList.implicitHeight + Tokens.padding.medium * 2)
                 focus: true
                 activeFocusOnTab: true
 

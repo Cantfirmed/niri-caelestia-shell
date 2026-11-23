@@ -101,8 +101,8 @@ ColumnLayout {
 
             StyledRect {
                 Layout.alignment: Qt.AlignVCenter
-                implicitWidth: 8
-                implicitHeight: 8
+                implicitWidth: Math.max(4, Math.round(8 * Tokens.uiScale))
+                implicitHeight: Math.max(4, Math.round(8 * Tokens.uiScale))
                 radius: Tokens.rounding.full
                 color: VPN.pingMs <= 80 ? Colours.palette.m3primary : VPN.pingMs <= 150 ? Colours.palette.m3tertiary : Colours.palette.m3error
             }
@@ -168,8 +168,8 @@ ColumnLayout {
                 spacing: Tokens.spacing.small
 
                 StyledRect {
-                    implicitWidth: 28
-                    implicitHeight: 28
+                    implicitWidth: Math.round(28 * Tokens.uiScale)
+                    implicitHeight: Math.round(28 * Tokens.uiScale)
                     radius: Tokens.rounding.full
                     color: providerRow.isConnected ? Colours.palette.m3primary : providerRow.isSelected ? Colours.palette.m3secondary : Colours.palette.m3surfaceContainerHighest
 
@@ -212,8 +212,8 @@ ColumnLayout {
                 }
 
                 StyledRect {
-                    implicitWidth: 28
-                    implicitHeight: 28
+                    implicitWidth: Math.round(28 * Tokens.uiScale)
+                    implicitHeight: Math.round(28 * Tokens.uiScale)
                     radius: Tokens.rounding.full
                     color: providerRow.isConnected ? Colours.palette.m3primaryContainer : "transparent"
 

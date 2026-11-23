@@ -115,7 +115,7 @@ ColumnLayout {
 
             StyledRect {
                 visible: !!networkItem.modelData.band
-                implicitHeight: 18
+                implicitHeight: Math.max(Math.round(18 * Tokens.uiScale), bandLabel.implicitHeight + Tokens.padding.extraSmall)
                 implicitWidth: bandLabel.implicitWidth + Tokens.padding.extraSmall * 2
                 radius: Tokens.rounding.full
                 color: networkItem.modelData.active ? Colours.palette.m3primaryContainer : Colours.palette.m3surfaceContainerHigh

@@ -11,10 +11,10 @@ import qs.components.widgets
 Rectangle {
     id: root
 
-    readonly property int contextWidth: Config.bar.workspaces.windowContextWidth
-    readonly property int baseRadius: Appearance.rounding.normal
-    readonly property int hPadding: Appearance.padding.xs
-    readonly property int textWidth: mouseArea.containsMouse ? contextWidth - hPadding * 2 - windowDecs.implicitWidth : contextWidth
+    readonly property int contextWidth: Math.round((Config.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale)
+    readonly property int baseRadius: Tokens.rounding.medium
+    readonly property int hPadding: Tokens.padding.extraSmall
+    readonly property int textWidth: Math.max(0, mouseArea.containsMouse ? contextWidth - hPadding * 2 - windowDecs.implicitWidth : contextWidth)
 
     required property bool onPrimary
     required property bool isFocused
@@ -56,13 +56,13 @@ Rectangle {
             AnimatedText {
                 Layout.leftMargin: 0
                 text: root.displayTitle
-                font.pointSize: Appearance.font.size.labelMedium
+                font.pointSize: Tokens.font.label.medium.pointSize
                 font.italic: root.isFocused
                 color: root.onPrimary ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant
             }
 
             Rectangle {
-                implicitWidth: classText.width + Appearance.padding.xs * 2
+                implicitWidth: classText.width + Tokens.padding.extraSmall * 2
                 implicitHeight: classText.height
                 color: root.onPrimary ? Colours.palette.m3tertiary : "transparent"
 
@@ -78,8 +78,8 @@ Rectangle {
                     anchors.centerIn: parent
 
                     text: root.displaySubtitle
-                    font.pointSize: Appearance.font.size.labelSmall
-                    font.family: Appearance.font.family.mono
+                    font.pointSize: Tokens.font.label.small.pointSize
+                    font.family: Tokens.font.mono.medium.family
                     font.bold: root.isFocused
                     color: root.onPrimary ? Colours.palette.m3onTertiary : Colours.palette.m3tertiaryContainer
                 }
@@ -93,14 +93,14 @@ Rectangle {
 
             implicitWidth: decs.implicitWidth + root.hPadding
             implicitHeight: root.itemH
-            radius: Appearance.rounding.small
+            radius: Tokens.rounding.small
 
             WindowDecorations {
                 id: decs
                 anchors.centerIn: parent
                 client: root.mainWindow
                 opacity: mouseArea.containsMouse ? 1 : 0
-                implicitSize: Appearance.font.size.labelLarge
+                implicitSize: Tokens.font.label.large.pointSize
                 Behavior on opacity {
                     Anim {
                         duration: Appearance.anim.durations.normal

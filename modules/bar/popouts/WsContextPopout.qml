@@ -15,9 +15,12 @@ Item {
         // For item context, check if anchor has wsWindowCount (WindowIcon) or use 1
         return anchorWs?.wsWindowCount ?? anchorWs?.windowCount ?? 1;
     }
-    readonly property real itemH: anchorWs ? (anchorWs.height + Config.bar.workspaces.windowIconGap * 2) : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
-    readonly property real expandedW: Config.bar.workspaces.windowContextWidth - (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
+    readonly property int scaledGap: Math.round((Config.bar.workspaces.windowIconGap ?? 5) * Tokens.uiScale)
+    readonly property int scaledContextWidth: Math.round((Config.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale)
+    readonly property int cellWidth: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2)
+    readonly property real itemH: anchorWs ? (anchorWs.height + scaledGap * 2) : cellWidth
+    readonly property real expandedW: Math.max(0, scaledContextWidth - cellWidth)
 
-    implicitHeight: anchorWs ? ((itemH + Appearance.padding.xs) * anchorWsCount) : itemH - Appearance.padding.md
+    implicitHeight: anchorWs ? ((itemH + Tokens.padding.extraSmall) * anchorWsCount) : Math.max(0, itemH - Tokens.padding.medium)
     implicitWidth: root.expandedW
 }

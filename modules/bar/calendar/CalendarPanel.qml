@@ -29,8 +29,8 @@ Item {
     clip: true
     visible: offsetScale < 1
     anchors.leftMargin: (-implicitWidth - 5) * offsetScale
-    implicitWidth: content.implicitWidth || 340
-    implicitHeight: content.implicitHeight || 360
+    implicitWidth: content.implicitWidth || Math.round(340 * Tokens.uiScale)
+    implicitHeight: content.implicitHeight || Math.round(360 * Tokens.uiScale)
     width: implicitWidth
     height: implicitHeight
 
@@ -55,9 +55,10 @@ Item {
             color: Colours.tPalette.m3surfaceContainer
             radius: Tokens.rounding.extraLarge
 
-            implicitWidth: 340
-            implicitHeight: 360
+            implicitWidth: Math.max(Math.round(340 * Tokens.uiScale), calLayout.implicitWidth + Tokens.padding.large * 2)
+            implicitHeight: Math.max(Math.round(360 * Tokens.uiScale), calLayout.implicitHeight + Tokens.padding.large * 2)
             ColumnLayout {
+                id: calLayout
                 anchors.fill: parent
                 anchors.margins: Tokens.padding.large
                 spacing: Tokens.spacing.extraSmall
@@ -144,7 +145,7 @@ Item {
 
                         anchors.fill: parent
 
-                        spacing: 3
+                        spacing: Math.max(1, Math.round(3 * Tokens.uiScale))
                         locale: Qt.locale()
 
                         delegate: Item {

@@ -33,12 +33,12 @@ StyledRect {
     }
 
     color: Colours.palette.m3surfaceContainer
-    radius: entered ? Appearance.rounding.small / 2 : Appearance.rounding.full
+    radius: entered ? Tokens.rounding.small / 2 : Tokens.rounding.full
 
-    anchors.topMargin: entered ? -Appearance.padding.md : -Tokens.sizes.bar.innerWidth
+    anchors.topMargin: entered ? -Tokens.padding.medium : -Tokens.sizes.bar.innerWidth
 
-    width: Tokens.sizes.bar.innerWidth - Appearance.spacing.sm
-    height: minimap.height + Appearance.spacing.sm * 2
+    width: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.spacing.small)
+    height: minimap.height + Tokens.spacing.small * 2
 
     Behavior on anchors.topMargin {
         enabled: !root.dying
@@ -52,7 +52,7 @@ StyledRect {
         opacity: root.entered ? 1 : 0
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 2
+        spacing: Math.max(1, Math.round(2 * Tokens.uiScale))
 
         Repeater {
             model: root.wsCount
@@ -60,8 +60,8 @@ StyledRect {
             Rectangle {
                 required property int index
 
-                width: Math.max(3, (root.width - minimap.spacing * (root.wsCount - 1) - Appearance.spacing.sm * 2) / root.wsCount)
-                height: index === root.focusedIdx ? 6 : 3
+                width: Math.max(Math.max(2, Math.round(3 * Tokens.uiScale)), (root.width - minimap.spacing * (root.wsCount - 1) - Tokens.spacing.small * 2) / root.wsCount)
+                height: index === root.focusedIdx ? Math.max(3, Math.round(6 * Tokens.uiScale)) : Math.max(2, Math.round(3 * Tokens.uiScale))
                 radius: height / 2
                 color: index === root.focusedIdx ? Colours.palette.m3primary : Colours.palette.m3surfaceContainerHighest
 

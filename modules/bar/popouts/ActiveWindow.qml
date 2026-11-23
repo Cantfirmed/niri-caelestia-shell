@@ -43,7 +43,7 @@ Item {
 
             asynchronous: true
             Layout.alignment: Qt.AlignVCenter
-            implicitSize: 40
+            implicitSize: Math.round(40 * Tokens.uiScale)
             source: Icons.getAppIcon(root.client?.app_id ?? "", "image-missing")
         }
 
@@ -51,7 +51,7 @@ Item {
             id: details
 
             spacing: 0
-            Layout.preferredWidth: 250
+            Layout.preferredWidth: Math.round(250 * Tokens.uiScale)
             Layout.fillWidth: true
 
             StyledText {

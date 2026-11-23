@@ -22,7 +22,9 @@ Item {
 
     property bool useImageIcon: GlobalConfig.bar.workspaces.windowIconImage ?? false
     property bool groupIconsByApp: GlobalConfig.bar.workspaces.groupIconsByApp ?? false
-    readonly property int windowIconGap: GlobalConfig.bar.workspaces.windowIconGap ?? 5
+    readonly property int windowIconGap: Math.round((GlobalConfig.bar.workspaces.windowIconGap ?? 5) * Tokens.uiScale)
+    readonly property int cellWidth: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2)
+    readonly property int scaledContextWidth: Math.round((GlobalConfig.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale)
 
     property int currentGroupIndex: 0
 
@@ -41,7 +43,7 @@ Item {
 
     anchors.left: parent.left
 
-    implicitWidth: iconLoader.implicitWidth + (popupActive ? (GlobalConfig.bar.workspaces.windowContextWidth ?? 250) : 0)
+    implicitWidth: iconLoader.implicitWidth + (popupActive ? scaledContextWidth : 0)
     implicitHeight: iconLoader.implicitHeight
     width: implicitWidth
     height: implicitHeight
@@ -57,7 +59,7 @@ Item {
     SafeLoader {
         id: contextLoader
         anchors.left: parent.left
-        anchors.leftMargin: iconLoader.implicitWidth + Appearance.padding.xs
+        anchors.leftMargin: iconLoader.implicitWidth + Tokens.padding.extraSmall
         anchors.verticalCenter: parent.verticalCenter
         activeState: (Niri.wsContextType !== "none" && (GlobalConfig.bar.workspaces.windowRighClickContext ?? true))
         sourceComponent: WindowIconContext {
@@ -87,16 +89,16 @@ Item {
             width: implicitWidth
             height: implicitHeight
 
-            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + windowIconGap
-            implicitWidth: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
+            implicitHeight: iconItem.cellWidth + iconItem.windowIconGap
+            implicitWidth: iconItem.cellWidth
             color: "transparent"
-            radius: Appearance.rounding.small / 2
+            radius: Tokens.rounding.small / 2
 
             IconImage {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                width: (iconItem.isFocused && iconItem.isWsFocused) ? (Tokens.sizes.bar.innerWidth * 0.6) - Appearance.padding.xs : (Tokens.sizes.bar.innerWidth * 0.6) - Appearance.padding.xs * 2
+                width: Math.max(1, Math.round(iconItem.cellWidth * ((iconItem.isFocused && iconItem.isWsFocused) ? 0.85 : 0.72)))
                 height: width
                 source: Icons.getAppIcon(windowData?.app_id ?? "", "image-missing")
                 Behavior on width {
@@ -116,14 +118,14 @@ Item {
             width: implicitWidth
             height: implicitHeight
 
-            implicitHeight: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + windowIconGap
-            implicitWidth: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
+            implicitHeight: iconItem.cellWidth + iconItem.windowIconGap
+            implicitWidth: iconItem.cellWidth
 
             MaterialIcon {
                 anchors.centerIn: parent
                 property var windowData: iconItem.windowData
                 property int windowCount: iconItem.windowCount
-                size: (iconItem.isFocused && iconItem.isWsFocused) ? (Tokens.sizes.bar.innerWidth * 0.6) : (Tokens.sizes.bar.innerWidth * 0.6) - Appearance.padding.xs
+                size: Math.max(1, Math.round(iconItem.cellWidth * ((iconItem.isFocused && iconItem.isWsFocused) ? 0.85 : 0.72) / 1.33))
                 grade: 0
                 text: Icons.getAppCategoryIcon(windowData?.app_id ?? "", "help_center")
                 color: (iconItem.isWsFocused ? Colours.palette.m3onPrimary : Colours.palette.m3onSurfaceVariant)
@@ -144,11 +146,11 @@ Item {
         id: dragPreview
         visible: false
         z: 999
-        width: iconLoader.width + Appearance.padding.xs
-        height: iconLoader.height + Appearance.padding.xs
+        width: iconLoader.width + Tokens.padding.extraSmall
+        height: iconLoader.height + Tokens.padding.extraSmall
 
         color: iconItem.isWsFocused ? Colours.palette.m3primaryContainer : Colours.palette.m3surfaceContainer
-        radius: Appearance.rounding.small / 2
+        radius: Tokens.rounding.small / 2
 
         MouseArea {
             anchors.fill: parent
@@ -177,9 +179,9 @@ Item {
         anchors.fill: iconItem
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: (iconItem.dragActive ? Qt.ClosedHandCursor : (Qt.PointingHandCursor))
-        pressAndHoldInterval: Appearance.anim.durations.small
+        pressAndHoldInterval: Tokens.anim.durations.small
 
-        radius: Appearance.rounding.small
+        radius: Tokens.rounding.small
 
         hoverEnabled: true
 
@@ -254,20 +256,20 @@ Item {
         function calculateMargins() {
             if (iconItem.popupActive && Niri.wsContextType === "item")
                 return {
-                    right: -Appearance.padding.xl,
-                    bottom: (iconLoader.implicitHeight - badgeLoader.height) / 2 - (!iconItem.isFocused ? Appearance.padding.xs / 2 : windowIconGap),
-                    size: Appearance.padding.xl
+                    right: -Tokens.padding.extraLarge,
+                    bottom: (iconLoader.implicitHeight - badgeLoader.height) / 2 - (!iconItem.isFocused ? Tokens.padding.extraSmall / 2 : windowIconGap),
+                    size: Tokens.padding.extraLarge
                 };
             else if (iconItem.isFocused)
                 return {
                     right: 0,
                     bottom: 0,
-                    size: Appearance.padding.lg
+                    size: Tokens.padding.large
                 };
             return {
-                right: -Appearance.padding.xs / 2,
-                bottom: -Appearance.padding.xs / 2,
-                size: Appearance.padding.lg
+                right: -Tokens.padding.extraSmall / 2,
+                bottom: -Tokens.padding.extraSmall / 2,
+                size: Tokens.padding.large
             };
         }
 
@@ -293,7 +295,7 @@ Item {
             visible: (iconItem.windowCount > 1)
             color: iconItem.isWsFocused ? (Colours.palette.m3tertiary) : Colours.palette.m3tertiaryContainer
             anchors.centerIn: parent
-            radius: Appearance.rounding.small
+            radius: Tokens.rounding.small
             width: badgeLoader.calculateMargins().size
             height: badgeLoader.calculateMargins().size
 
@@ -301,9 +303,9 @@ Item {
                 animate: true
                 anchors.centerIn: parent
                 text: iconItem.windowCount
-                font.family: Appearance.font.family.mono
+                font.family: Tokens.font.mono.medium.family
                 color: iconItem.isWsFocused ? Colours.palette.m3onTertiary : Colours.palette.m3onTertiaryContainer
-                font.pointSize: badgeLoader.calculateMargins().size - 3
+                font.pointSize: Math.max(1, Math.round(badgeLoader.calculateMargins().size * 0.6))
             }
         }
     }

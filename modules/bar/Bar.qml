@@ -40,7 +40,7 @@ ColumnLayout {
     required property ScreenState screenState
     required property BarPopouts.Wrapper popouts
     required property bool fullscreen
-    readonly property int vPadding: Tokens.padding.large
+    readonly property int vPadding: Math.max(Tokens.padding.large, (GlobalConfig.border?.thickness ?? 0) + Tokens.padding.small)
 
     function closeTray(): void {
         if (!Config.bar.tray.compact)
@@ -168,7 +168,8 @@ ColumnLayout {
                         { id: "power", enabled: true }
                     ];
                 }
-                return list.filter(e => e && e.enabled);
+                const validIds = ["spacer", "logo", "workspaces", "activeWindow", "tray", "clock", "statusIcons", "power"];
+                return list.filter(e => e && e.enabled && validIds.includes(e.id));
             }
         }
 

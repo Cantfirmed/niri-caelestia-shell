@@ -234,8 +234,8 @@ Item {
             if (shouldBeActive && cacheAfterFirstLoad)
                 keepActiveAfterOpen = true;
         }
-        readonly property real placeholderWidth: name === "network" || name === "vpn" ? Tokens.sizes.bar.networkWidth : name === "audio" ? Tokens.sizes.bar.audioWidth : name === "battery" ? Tokens.sizes.bar.batteryWidth : name === "kblayout" ? Tokens.sizes.bar.kbLayoutWidth : name === "activewindow" ? 350 : name === "lockstatus" ? 240 : 300
-        readonly property real placeholderHeight: name === "network" ? 500 : name === "battery" || name === "activewindow" || name === "lockstatus" ? 160 : 420
+        readonly property real placeholderWidth: name === "network" || name === "vpn" ? Tokens.sizes.bar.networkWidth : name === "audio" ? Tokens.sizes.bar.audioWidth : name === "battery" ? Tokens.sizes.bar.batteryWidth : name === "kblayout" ? Tokens.sizes.bar.kbLayoutWidth : name === "activewindow" ? Math.round(350 * Tokens.uiScale) : name === "lockstatus" ? Math.round(240 * Tokens.uiScale) : Math.round(300 * Tokens.uiScale)
+        readonly property real placeholderHeight: name === "network" ? Math.round(500 * Tokens.uiScale) : name === "battery" || name === "activewindow" || name === "lockstatus" ? Math.round(160 * Tokens.uiScale) : Math.round(420 * Tokens.uiScale)
         asynchronous: cacheAfterFirstLoad
 
 

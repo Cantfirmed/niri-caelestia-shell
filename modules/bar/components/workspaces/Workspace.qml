@@ -23,7 +23,7 @@ ColumnLayout {
     readonly property bool isWorkspace: true // Flag for finding workspace children
     readonly property string workspaceStyle: String(Config.bar.workspaces.style ?? GlobalConfig.bar?.workspaces?.style ?? "classic").toLowerCase()
     readonly property bool isMinimap: workspaceStyle === "minimap"
-    readonly property int size: isWorkspace ? implicitHeight + (hasWindows ? Appearance.padding.xs : 0) : 0
+    readonly property int size: isWorkspace ? implicitHeight + (hasWindows ? Tokens.padding.extraSmall : 0) : 0
     readonly property int indicatorSize: isMinimap && hasWindows ? wsIcon.implicitHeight : size
     readonly property int ws: virtualIdx
     readonly property bool isOccupied: workspaceId > 0 && (occupied && (occupied[ws.toString()] ?? false))
@@ -52,7 +52,7 @@ ColumnLayout {
         id: windows
 
         Layout.alignment: Qt.AlignCenter
-        Layout.topMargin: root.isMinimap ? 2 : -(Tokens.sizes.bar.innerWidth ?? 40) / 10
+        Layout.topMargin: root.isMinimap ? Math.max(1, Math.round(2 * Tokens.uiScale)) : -Math.round((Tokens.sizes.bar.innerWidth ?? 40) / 10)
 
         visible: active
         asynchronous: true

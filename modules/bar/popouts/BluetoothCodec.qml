@@ -16,7 +16,7 @@ ColumnLayout {
 
     required property PopoutState popouts
 
-    width: 310
+    width: Math.round(310 * Tokens.uiScale)
     spacing: Tokens.spacing.small
 
     readonly property var card: BluetoothAudio.activeCard
@@ -29,8 +29,8 @@ ColumnLayout {
         spacing: Tokens.spacing.medium
 
         StyledRect {
-            implicitWidth: 36
-            implicitHeight: 36
+            implicitWidth: Math.round(36 * Tokens.uiScale)
+            implicitHeight: Math.round(36 * Tokens.uiScale)
             radius: Tokens.rounding.full
             color: Colours.palette.m3primaryContainer
 
@@ -138,7 +138,7 @@ ColumnLayout {
                 readonly property bool isHfp: modelData.isHeadset
 
                 Layout.fillWidth: true
-                implicitHeight: 40
+                implicitHeight: Math.max(Math.round(40 * Tokens.uiScale), profileRow.implicitHeight + Tokens.padding.small * 2)
                 radius: Tokens.rounding.medium
                 color: isActive ? Qt.alpha(Colours.palette.m3primary, 0.12) : "transparent"
                 border.color: isActive ? Colours.palette.m3primary : Qt.alpha(Colours.palette.m3outline, 0.15)
@@ -154,6 +154,7 @@ ColumnLayout {
                 }
 
                 RowLayout {
+                    id: profileRow
                     anchors.fill: parent
                     anchors.leftMargin: Tokens.padding.medium
                     anchors.rightMargin: Tokens.padding.medium

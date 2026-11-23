@@ -17,7 +17,7 @@ ColumnLayout {
 
     required property PopoutState popouts
 
-    width: 300
+    width: Math.round(300 * Tokens.uiScale)
     spacing: Tokens.spacing.small
 
     Process {

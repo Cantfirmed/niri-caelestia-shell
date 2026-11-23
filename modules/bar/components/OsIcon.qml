@@ -8,8 +8,10 @@ import qs.utils
 Item {
     id: root
 
-    implicitWidth: Math.round(Tokens.font.body.large.pointSize * 1.4)
-    implicitHeight: Math.round(Tokens.font.body.large.pointSize * 1.4)
+    readonly property int iconSize: Math.max(1, Math.min(Tokens.sizes.bar.innerWidth, Math.round(Tokens.font.body.large.pointSize * 1.4)))
+
+    implicitWidth: iconSize
+    implicitHeight: iconSize
     width: implicitWidth
     height: implicitHeight
 
@@ -32,8 +34,8 @@ Item {
         id: caelestiaLogo
 
         Logo {
-            implicitWidth: Math.round(Tokens.font.body.large.pointSize * 1.6)
-            implicitHeight: Math.round(Tokens.font.body.large.pointSize * 1.6)
+            implicitWidth: root.iconSize
+            implicitHeight: root.iconSize
         }
     }
 
@@ -42,7 +44,7 @@ Item {
 
         ColouredIcon {
             source: SysInfo.osLogo
-            implicitSize: Math.round(Tokens.font.body.large.pointSize * 1.4)
+            implicitSize: root.iconSize
             colour: Colours.palette.m3tertiary
             layer.enabled: false
         }

@@ -44,16 +44,16 @@ StyledRect {
 
     clip: true
     y: offset + mask.y
-    implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
+    implicitWidth: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2)
     implicitHeight: size
-    radius: Appearance.rounding.full
+    radius: Tokens.rounding.full
     color: Colours.palette.m3primary
 
     anchors {
         left: parent.left
         right: parent.right
-        leftMargin: Appearance.padding.xs
-        rightMargin: Appearance.padding.xs
+        leftMargin: Tokens.padding.extraSmall
+        rightMargin: Tokens.padding.extraSmall
     }
 
     Colouriser {

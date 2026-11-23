@@ -97,9 +97,12 @@ Item {
 
                 Image {
                     asynchronous: true
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: Math.round(clipRect.width * 0.8)
+                    Layout.maximumHeight: Math.round(clipRect.height * 0.5)
                     source: Paths.absolutePath(Config.paths.noNotifsPic)
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: clipRect.width * 0.8 * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1)
+                    sourceSize.width: Math.round(clipRect.width * 0.8 * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1))
 
                     layer.enabled: true
                     layer.effect: Colouriser {
@@ -181,6 +184,7 @@ Item {
         scale: root.notifCount > 0 ? 1 : 0.5
         opacity: root.notifCount > 0 ? 1 : 0
         active: opacity > 0
+        visible: opacity > 0
 
         sourceComponent: IconButton {
             id: clearBtn

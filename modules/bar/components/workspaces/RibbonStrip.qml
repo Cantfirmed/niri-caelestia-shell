@@ -18,11 +18,11 @@ Item {
     required property int focusedWindowId
     required property bool isWsFocused
 
-    // Inner cross-axis width inside the 40px vertical bar pill (with fallback per modules/bar/AGENTS.md)
-    readonly property int stripWidth: Math.max(24, (Tokens.sizes.bar.innerWidth ?? 40) - (Tokens.padding.extraSmall ?? 4) * 3)
+    // Inner cross-axis width inside the vertical bar pill (with fallback per modules/bar/AGENTS.md)
+    readonly property int stripWidth: Math.max(Math.round(16 * Tokens.uiScale), (Tokens.sizes.bar.innerWidth ?? 40) - (Tokens.padding.extraSmall ?? 4) * 3)
     // Pixel length along the bar's vertical axis corresponding to 1.0 full monitor width
-    readonly property real viewportUnitPx: 44
-    readonly property real columnGapPx: 2
+    readonly property real viewportUnitPx: Math.max(16, Math.round(44 * Tokens.uiScale))
+    readonly property real columnGapPx: Math.max(1, Math.round(2 * Tokens.uiScale))
 
     property var ribbonColumns: []
     property var floatingWindows: []
@@ -120,7 +120,7 @@ Item {
                 colLogicalW = monWidth * 0.5;
 
             const widthProportion = Math.max(0.18, Math.min(1.0, colLogicalW / monWidth));
-            const lengthPx = Math.max(12, Math.round(widthProportion * root.viewportUnitPx));
+            const lengthPx = Math.max(Math.round(12 * Tokens.uiScale), Math.round(widthProportion * root.viewportUnitPx));
 
             if (!isNaN(sampleViewX) && isNaN(cameraStartSample))
                 cameraStartSample = cursorLogicalX - sampleViewX;
@@ -218,7 +218,7 @@ Item {
         logicalToStripPx(root.viewportStartLogical + root.viewportSpanLogical)
     )
     readonly property real viewportBoxHeight: Math.max(
-        10,
+        Math.round(10 * Tokens.uiScale),
         viewportBoxBottom > viewportBoxY ? (viewportBoxBottom - viewportBoxY) : Math.min(stripContentHeight, root.viewportUnitPx)
     )
 
@@ -547,10 +547,10 @@ Item {
 
                 delegate: StyledRect {
                     required property var modelData
-                    width: root.stripWidth - 6
-                    height: 12
+                    width: Math.max(1, root.stripWidth - Math.round(6 * Tokens.uiScale))
+                    height: Math.max(6, Math.round(12 * Tokens.uiScale))
                     anchors.horizontalCenter: parent.horizontalCenter
-                    radius: 6
+                    radius: height / 2
                     readonly property bool floatFocused: Number(modelData.id) === Number(Niri.focusedWindowId)
                     color: floatFocused ? Colours.palette.m3tertiaryContainer : Colours.palette.m3surfaceContainerHigh
                     border.width: 1

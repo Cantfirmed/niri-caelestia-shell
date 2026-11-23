@@ -33,7 +33,7 @@ Item {
 
     property bool groupIconsByApp: GlobalConfig.bar.workspaces.groupIconsByApp ?? false
     property bool groupingRespectsLayout: GlobalConfig.bar.workspaces.groupingRespectsLayout ?? true
-    property int windowIconGap: GlobalConfig.bar.workspaces.windowIconGap ?? 5
+    property int windowIconGap: Math.round((GlobalConfig.bar.workspaces.windowIconGap ?? 5) * Tokens.uiScale)
 
     property var wsWindows: {
         const wins = Niri.windows;
@@ -131,10 +131,10 @@ Item {
     Rectangle {
         id: dropIndicator
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - Appearance.padding.xs
-        height: Appearance.padding.xs
+        width: Math.max(1, parent.width - Tokens.padding.extraSmall)
+        height: Tokens.padding.extraSmall
         color: root.isWsFocused ? Colours.palette.m3primaryContainer : Colours.palette.m3primaryContainer
-        radius: Appearance.rounding.small
+        radius: Tokens.rounding.small
         visible: false
         z: 200
 

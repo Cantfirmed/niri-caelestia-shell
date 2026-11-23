@@ -42,7 +42,7 @@ ColumnLayout {
 
         clip: true
         interactive: true
-        implicitHeight: Math.min(contentHeight, 320)
+        implicitHeight: Math.min(contentHeight, Math.round(320 * Tokens.uiScale))
         visible: kb.visibleModel.count > 0
         spacing: Tokens.spacing.small
 
@@ -89,7 +89,7 @@ ColumnLayout {
             readonly property bool isDisabled: layoutIndex > 3
 
             width: list.width
-            height: Math.max(36, rowText.implicitHeight + Tokens.padding.small)
+            height: Math.max(Math.round(36 * Tokens.uiScale), rowText.implicitHeight + Tokens.padding.small)
             ToolTip.visible: isDisabled && layer.containsMouse
             ToolTip.text: Tr.tr("XKB limitation: maximum 4 layouts allowed")
 

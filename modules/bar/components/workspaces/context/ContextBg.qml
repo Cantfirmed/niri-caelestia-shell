@@ -20,9 +20,11 @@ Item {
     readonly property bool hasWindows: (isItem && anchorWs.wsWindowCount > 0) || (isWorkspace && anchorWs.isOccupied)
     readonly property bool isFocused: anchorWs.isWsFocused
 
-    readonly property int rounding: Appearance.rounding.small
-    readonly property int gPadding: isItem ? Appearance.padding.xs / 2 : 0
-    readonly property int cornerPieceSize: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) + Appearance.padding.xs
+    readonly property int rounding: Tokens.rounding.small
+    readonly property int gPadding: isItem ? Tokens.padding.extraSmall / 2 : 0
+    readonly property int cellWidth: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2)
+    readonly property int scaledContextWidth: Math.round((Config.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale)
+    readonly property int cornerPieceSize: cellWidth + Tokens.padding.extraSmall
 
     property bool activated: false
     Component.onCompleted: root.activated = true
@@ -35,15 +37,15 @@ Item {
 
         color: root.bgColor
 
-        width: root.activated && Niri.wsContextAnchor ? Config.bar.workspaces.windowContextWidth + (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) : (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
+        width: root.activated && Niri.wsContextAnchor ? root.scaledContextWidth + root.cellWidth : root.cellWidth
         height: (root.anchorWs?.height ?? 0) + root.gPadding * 2
 
         x: 0
         y: root.anchorWs?.mapToItem(root, 0, 0).y - root.gPadding ?? 0
 
         radius: root.rounding
-        topRightRadius: Appearance.rounding.normal
-        bottomRightRadius: Appearance.rounding.normal
+        topRightRadius: Tokens.rounding.medium
+        bottomRightRadius: Tokens.rounding.medium
 
         Behavior on color {
             CAnim {
@@ -101,9 +103,9 @@ Item {
 
         anchors.fill: highlight
 
-        anchors.margins: -Appearance.padding.xs
+        anchors.margins: -Tokens.padding.extraSmall
 
-        anchors.leftMargin: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2)
+        anchors.leftMargin: root.cellWidth
         topLeftRadius: 0
         bottomLeftRadius: 0
 
@@ -125,19 +127,19 @@ Item {
     HighlightRect {
         id: highlight
 
-        topRightRadius: Appearance.rounding.small
-        bottomRightRadius: Appearance.rounding.small
+        topRightRadius: Tokens.rounding.small
+        bottomRightRadius: Tokens.rounding.small
 
         Corner {
             cornerType: 2
-            anchors.leftMargin: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - 1
+            anchors.leftMargin: root.cellWidth - 1
             height: !(Niri.wsContextAnchor || root.activated) || root.isWorkspace ? 0 : root.cornerPieceSize
         }
         Corner {
             property bool lastWindow: (root.isItem && (root.anchorWs.curWindowIndex === root.anchorWs.wsWindowCount - 1))
 
             cornerType: 0
-            anchors.leftMargin: (Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2) - 1
+            anchors.leftMargin: root.cellWidth - 1
             height: !(Niri.wsContextAnchor || root.activated) || (root.isWorkspace || lastWindow) ? 0 : root.cornerPieceSize
         }
     }
@@ -147,12 +149,12 @@ Item {
         property int cornerType: 0 // 1 = bottom, 3 = top
         width: root.activated && !root.isWorkspaces && Niri.wsContextAnchor ? root.cornerPieceSize : 0
         height: root.cornerPieceSize
-        radius: Appearance.padding.xl * 1.3
+        radius: Tokens.padding.extraLarge * 1.3
         orientation: cornerType
         color: parent.color
 
         anchors.left: parent.left
-        anchors.leftMargin: Appearance.padding.xs
+        anchors.leftMargin: Tokens.padding.extraSmall
         anchors.top: cornerType === 0 ? parent.bottom : undefined
         anchors.bottom: cornerType === 2 ? parent.top : undefined
         anchors.topMargin: cornerType === 0 ? -1 : undefined

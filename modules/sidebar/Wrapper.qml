@@ -47,7 +47,7 @@ Item {
         active: root.hasBeenActive || root.shouldBeActive || root.visible
 
         sourceComponent: Content {
-            implicitWidth: Tokens.sizes.sidebar.width - content.anchors.leftMargin - content.anchors.margins
+            implicitWidth: Math.max(100, Tokens.sizes.sidebar.width - content.anchors.leftMargin - content.anchors.margins)
             props: root.props
             screenState: root.screenState
         }

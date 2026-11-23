@@ -9,11 +9,11 @@ import Caelestia.Config
 Rectangle {
     id: root
 
-    readonly property int contextWidth: Config.bar.workspaces.windowContextWidth
-    readonly property int baseRadius: Appearance.rounding.normal
-    readonly property int hPadding: Appearance.padding.xs
-    readonly property int sideMargin: Appearance.padding.xl
-    readonly property int textWidth: contextWidth - hPadding * 2
+    readonly property int contextWidth: Math.round((Config.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale)
+    readonly property int baseRadius: Tokens.rounding.medium
+    readonly property int hPadding: Tokens.padding.extraSmall
+    readonly property int sideMargin: Tokens.padding.extraLarge
+    readonly property int textWidth: Math.max(0, contextWidth - hPadding * 2)
 
     required property var windows
     required property var fokus
@@ -109,7 +109,7 @@ Rectangle {
             }
         }
 
-        radius: Appearance.rounding.small / 2
+        radius: Tokens.rounding.small / 2
 
         // anchors.left: parent.left
         Layout.leftMargin: root.hPadding * 2
@@ -131,7 +131,7 @@ Rectangle {
 
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
-            anchors.leftMargin: Appearance.padding.xs
+            anchors.leftMargin: Tokens.padding.extraSmall
             Layout.alignment: Qt.AlignVCenter
 
             Rectangle {
@@ -153,8 +153,8 @@ Rectangle {
 
                     anchors.centerIn: parent
                     text: multiWindowContent.index + 1
-                    font.pointSize: Appearance.font.size.labelSmall
-                    font.family: Appearance.font.family.mono
+                    font.pointSize: Tokens.font.label.small.pointSize
+                    font.family: Tokens.font.mono.medium.family
                     font.bold: true
                     color: multiWindowContent.itemIsFocused ? Colours.palette.m3onTertiary : Colours.palette.m3onTertiary
                 }
@@ -163,19 +163,19 @@ Rectangle {
             ColumnLayout {
                 spacing: 0
 
-                Layout.preferredWidth: root.textWidth - root.sideMargin - multiWindowContent.Layout.leftMargin * 2 - column.anchors.leftMargin
+                Layout.preferredWidth: Math.max(0, root.textWidth - root.sideMargin - multiWindowContent.Layout.leftMargin * 2 - column.anchors.leftMargin)
 
                 AnimatedText {
                     Layout.alignment: Qt.AlignVCenter
 
                     text: multiWindowContent.displayTitle
-                    font.pointSize: Appearance.font.size.labelMedium
+                    font.pointSize: Tokens.font.label.medium.pointSize
                     font.italic: multiWindowContent.itemIsFocused
                     color: multiWindowContent.itemIsFocused ? Colours.palette.m3onPrimary : (multiWindowContent.onPrimary ? Colours.palette.m3onSurfaceVariant : Colours.palette.m3onSurfaceVariant)
                 }
 
                 Rectangle {
-                    implicitWidth: classText.width + Appearance.padding.xs * 2
+                    implicitWidth: classText.width + Tokens.padding.extraSmall * 2
                     implicitHeight: classText.height
                     color: multiWindowContent.itemIsFocused ? Colours.palette.m3tertiary : "transparent"
 
@@ -193,8 +193,8 @@ Rectangle {
                         anchors.centerIn: parent
 
                         text: multiWindowContent.displaySubtitle
-                        font.pointSize: Appearance.font.size.labelSmall
-                        font.family: Appearance.font.family.mono
+                        font.pointSize: Tokens.font.label.small.pointSize
+                        font.family: Tokens.font.mono.medium.family
                         font.bold: multiWindowContent.itemIsFocused
                         color: multiWindowContent.itemIsFocused ? Colours.palette.m3onTertiary : Colours.palette.m3tertiaryContainer
                     }

@@ -16,7 +16,7 @@ StyledRect {
     required property ScreenState screenState
 
     readonly property StyledText body: (expandedContent.item as ExpandedBody)?.body ?? null
-    readonly property real nonAnimHeight: expanded ? summary.implicitHeight + expandedContent.implicitHeight + expandedContent.anchors.topMargin + Tokens.padding.medium * 2 : summaryHeightMetrics.height
+    readonly property real nonAnimHeight: expanded ? Math.max(summary.implicitHeight, timeStr.implicitHeight) + expandedContent.implicitHeight + expandedContent.anchors.topMargin + Tokens.padding.medium * 2 : summaryHeightMetrics.height
 
     implicitHeight: nonAnimHeight
 
@@ -37,7 +37,7 @@ StyledRect {
             compactBody.anchors.margins: root.Tokens.padding.medium
             timeStr.anchors.margins: root.Tokens.padding.medium
             expandedContent.anchors.margins: root.Tokens.padding.medium
-            summary.width: root.width - root.Tokens.padding.medium * 2 - timeStr.implicitWidth - root.Tokens.spacing.small
+            summary.width: Math.max(0, root.width - root.Tokens.padding.medium * 2 - timeStr.implicitWidth - root.Tokens.spacing.small)
             summary.maximumLineCount: Number.MAX_SAFE_INTEGER
         }
     }

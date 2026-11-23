@@ -8,17 +8,14 @@ Item {
 
     required property ScreenState screenState
 
-    implicitWidth: icon.implicitHeight + Tokens.padding.small
-    implicitHeight: icon.implicitHeight
+    readonly property int buttonSize: icon.implicitHeight + Tokens.padding.small
+
+    implicitWidth: buttonSize
+    implicitHeight: buttonSize
     width: implicitWidth
     height: implicitHeight
 
     StateLayer {
-        // Cursed workaround to make the height larger than the parent
-        anchors.fill: undefined
-        anchors.centerIn: parent
-        implicitWidth: implicitHeight
-        implicitHeight: icon.implicitHeight + Tokens.padding.small
         radius: Tokens.rounding.full
         onClicked: root.screenState.session = !root.screenState.session
     }

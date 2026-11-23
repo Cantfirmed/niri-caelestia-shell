@@ -12,11 +12,14 @@ Item {
     required property var workspace
     property bool popupActive: (Niri.wsContextAnchor === root) || (Niri.wsContextAnchor === workspace) || (Niri.wsContextType === "workspaces")
 
+    readonly property int cellWidth: Math.max(1, Tokens.sizes.bar.innerWidth - Tokens.padding.extraSmall * 2)
+    readonly property int scaledContextWidth: Math.round((Config.bar.workspaces.windowContextWidth ?? 250) * Tokens.uiScale)
+
     Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-    implicitHeight: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
+    implicitHeight: cellWidth
     Layout.preferredHeight: implicitHeight
 
-    implicitWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2 + (popupActive ? Config.bar.workspaces.windowContextWidth : 0)
+    implicitWidth: cellWidth + (popupActive ? scaledContextWidth : 0)
     width: implicitWidth
     height: implicitHeight
     Behavior on implicitWidth {
@@ -30,18 +33,20 @@ Item {
     RowLayout {
         id: content
         anchors.left: parent.left
-        spacing: Appearance.padding.xs
+        spacing: Tokens.padding.extraSmall
 
         Item {
             Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
-            Layout.preferredHeight: Tokens.sizes.bar.innerWidth - Appearance.padding.xs * 2
+            Layout.preferredWidth: root.cellWidth
+            Layout.preferredHeight: root.cellWidth
 
             StyledText {
                 id: indicator
                 anchors.centerIn: parent
                 width: parent.width
                 height: parent.height
+                fontSizeMode: Text.Fit
+                minimumPointSize: 1
 
                 animate: true
                 text: {
@@ -73,7 +78,7 @@ Item {
                 color: Config.bar.workspaces.occupiedBg || root.workspace.isOccupied || root.workspace.activeWsId === root.workspace.ws ? Colours.palette.m3onSurface : Colours.layer(Colours.palette.m3outlineVariant, 2)
 
                 font.pointSize: Tokens.font.body.small.pointSize * (Config.bar.workspaces.workspaceIconScale ?? 1.0)
-                font.family: Appearance.font.family.mono
+                font.family: Tokens.font.mono.medium.family
                 text: {
                     const _ = Niri.allWorkspaces;
                     return root.workspace.workspaceId > 0 ? Niri.getWorkspaceNameById(root.workspace.workspaceId) : "Workspace " + (root.workspace.ws)
@@ -96,9 +101,9 @@ Item {
         anchors.fill: root
         acceptedButtons: Qt.LeftButton
         cursorShape: (Qt.PointingHandCursor)
-        pressAndHoldInterval: Appearance.anim.durations.small
+        pressAndHoldInterval: Tokens.anim.durations.small
 
-        radius: Appearance.rounding.small
+        radius: Tokens.rounding.small
 
         hoverEnabled: true
 
