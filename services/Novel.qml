@@ -192,15 +192,18 @@ Singleton {
         repeat: true
         running: GlobalConfig.extra.novel
         triggeredOnStart: true
-        onTriggered: {
-            if (!GlobalConfig.extra.novel) {
+        onRunningChanged: {
+            if (!running) {
                 if (serverProcess.running) {
                     console.log("[ServiceNovel] Novel feature disabled, stopping backend...")
                     serverProcess.running = false
                 }
                 root.serverReady = false
-                return
             }
+        }
+        onTriggered: {
+            if (!GlobalConfig.extra.novel)
+                return
 
             var xhr = new XMLHttpRequest()
             xhr.onreadystatechange = function() {

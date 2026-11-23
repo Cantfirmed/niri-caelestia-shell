@@ -174,15 +174,18 @@ Singleton {
         repeat: true
         running: GlobalConfig.extra.manga
         triggeredOnStart: true
-        onTriggered: {
-            if (!GlobalConfig.extra.manga) {
+        onRunningChanged: {
+            if (!running) {
                 if (serverProcess.running) {
                     console.log("[ServiceManga] Manga feature disabled, stopping backend...")
                     serverProcess.running = false
                 }
                 root.serverReady = false
-                return
             }
+        }
+        onTriggered: {
+            if (!GlobalConfig.extra.manga)
+                return
 
             var xhr = new XMLHttpRequest()
             xhr.onreadystatechange = function() {
