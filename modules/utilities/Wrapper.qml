@@ -66,15 +66,6 @@ Item {
         }
     ]
 
-    property bool hasBeenActive: false
-
-    onShouldBeActiveChanged: {
-        if (shouldBeActive)
-            hasBeenActive = true;
-    }
-
-    Component.onCompleted: Qt.callLater(() => root.hasBeenActive = true)
-
     Behavior on offsetScale {
         Anim {}
     }
@@ -87,7 +78,7 @@ Item {
         anchors.margins: Tokens.padding.large
 
         asynchronous: false
-        active: root.hasBeenActive || root.shouldBeActive || root.visible
+        active: root.shouldBeActive || root.visible
 
         sourceComponent: Content {
             implicitWidth: root.implicitWidth - root.totalPadding

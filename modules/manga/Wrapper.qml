@@ -47,13 +47,19 @@ Item {
         }
     ]
 
-    MangaReader {
-        id: mangaReader
+    Loader {
+        id: mangaReaderLoader
         width: 600
         height: parent.height
         anchors.left: parent.left
-        visible: root.visible
-        visibilities: root.visibilities
+        active: (root.visibilities?.manga ?? false) || root.visible
+
+        sourceComponent: MangaReader {
+            width: 600
+            height: mangaReaderLoader.height
+            visible: root.visible
+            visibilities: root.visibilities
+        }
     }
 
     clip: true

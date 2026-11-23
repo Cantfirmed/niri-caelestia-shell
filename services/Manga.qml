@@ -170,18 +170,22 @@ Singleton {
 
     Timer {
         id: healthPoller
-        interval: 2000
+        interval: root.serverReady ? 30000 : 2000
         repeat: true
-        running: true
-        onTriggered: {
-            if (!GlobalConfig.extra.manga) {
+        running: GlobalConfig.extra.manga
+        triggeredOnStart: true
+        onRunningChanged: {
+            if (!running) {
                 if (serverProcess.running) {
                     console.log("[ServiceManga] Manga feature disabled, stopping backend...")
                     serverProcess.running = false
                 }
                 root.serverReady = false
-                return
             }
+        }
+        onTriggered: {
+            if (!GlobalConfig.extra.manga)
+                return
 
             var xhr = new XMLHttpRequest()
             xhr.onreadystatechange = function() {

@@ -19,6 +19,7 @@ Item {
     property real offset: shouldBeActive ? 0 : screen.height * 0.2
 
     opacity: shouldBeActive ? 1 : 0
+    visible: opacity > 0
 
     Loader {
         asynchronous: true
@@ -40,7 +41,7 @@ Item {
         id: wrapper
 
         anchors.fill: parent
-        layer.enabled: true
+        layer.enabled: root.opacity > 0 && Config.background.visualiser.blur
 
         Loader {
             asynchronous: true

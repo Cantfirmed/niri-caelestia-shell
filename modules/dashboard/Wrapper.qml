@@ -29,15 +29,7 @@ Item {
 
     readonly property real nonAnimHeight: (content.item as Content)?.nonAnimHeight ?? 0
     readonly property bool shouldBeActive: (screenState?.dashboard ?? false) && (Config.dashboard?.enabled ?? false)
-    property bool hasBeenActive: false
     property real offsetScale: shouldBeActive ? 0 : 1
-
-    onShouldBeActiveChanged: {
-        if (shouldBeActive)
-            hasBeenActive = true;
-    }
-
-    Component.onCompleted: Qt.callLater(() => root.hasBeenActive = true)
 
     visible: offsetScale < 1
     anchors.topMargin: (-implicitHeight - 5) * offsetScale
@@ -55,7 +47,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
 
-        active: root.hasBeenActive || root.shouldBeActive || root.visible
+        active: root.shouldBeActive || root.visible
 
         sourceComponent: Content {
             screenState: root.screenState

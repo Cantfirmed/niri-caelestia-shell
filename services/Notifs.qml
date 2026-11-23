@@ -298,6 +298,20 @@ Singleton {
         onTriggered: root.cleanupStaleNotifs()
     }
 
+    Timer {
+        id: ageUpdateTimer
+
+        interval: 30000
+        running: root.list.length > 0
+        repeat: true
+        onTriggered: {
+            for (const notif of root.list) {
+                if (!notif.closed)
+                    notif.updateTimeStr();
+            }
+        }
+    }
+
 
     onDndChanged: {
         if (!GlobalConfig.utilities.toasts.dndChanged)

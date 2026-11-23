@@ -127,8 +127,7 @@ Slider {
                 implicitHeight: lineWidth * amplitudeMultiplier * 2 + lineWidth
 
                 Anim on waveProgress {
-                    running: true
-                    paused: !root.animateWave
+                    running: root.visible && root.animateWave
                     from: 0
                     to: 1
                     duration: root.waveDuration

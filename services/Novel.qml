@@ -188,18 +188,22 @@ Singleton {
 
     Timer {
         id: healthPoller
-        interval: 2000
+        interval: root.serverReady ? 30000 : 2000
         repeat: true
-        running: true
-        onTriggered: {
-            if (!GlobalConfig.extra.novel) {
+        running: GlobalConfig.extra.novel
+        triggeredOnStart: true
+        onRunningChanged: {
+            if (!running) {
                 if (serverProcess.running) {
                     console.log("[ServiceNovel] Novel feature disabled, stopping backend...")
                     serverProcess.running = false
                 }
                 root.serverReady = false
-                return
             }
+        }
+        onTriggered: {
+            if (!GlobalConfig.extra.novel)
+                return
 
             var xhr = new XMLHttpRequest()
             xhr.onreadystatechange = function() {
