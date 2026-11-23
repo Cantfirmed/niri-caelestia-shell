@@ -233,6 +233,7 @@ WlSessionLockSurface {
 
         Binding {
             when: !initAnim.running && !unlockAnim.running
+            restoreMode: Binding.RestoreNone
             target: lockContent
             property: "implicitWidth"
             value: lockContent.targetWidth
@@ -240,6 +241,7 @@ WlSessionLockSurface {
 
         Binding {
             when: !initAnim.running && !unlockAnim.running
+            restoreMode: Binding.RestoreNone
             target: lockContent
             property: "implicitHeight"
             value: lockContent.targetHeight
@@ -247,6 +249,7 @@ WlSessionLockSurface {
 
         Binding {
             when: !initAnim.running && !unlockAnim.running
+            restoreMode: Binding.RestoreNone
             target: lockBg
             property: "radius"
             value: lockContent.targetRadius
