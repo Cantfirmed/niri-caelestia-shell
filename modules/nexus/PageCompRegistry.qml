@@ -43,6 +43,14 @@ QtObject {
             }
         },
         Component {
+            // Displays
+            StackPage {
+                Component {
+                    DisplayPage {}
+                }
+            }
+        },
+        Component {
             // Window blur (Niri)
             StackPage {
                 Component {
@@ -132,14 +140,6 @@ QtObject {
         },
 
         // System
-        Component {
-            // Displays
-            StackPage {
-                Component {
-                    DisplayPage {}
-                }
-            }
-        },
         Component {
             PlaceholderComp {}
         },
