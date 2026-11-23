@@ -37,10 +37,13 @@ Item {
         }
     }
 
-    Content {
+    Loader {
         id: content
-
-        visibilities: root.visibilities
         anchors.centerIn: parent
+        active: (root.visibilities?.hotkeys ?? false) || root.visible
+
+        sourceComponent: Content {
+            visibilities: root.visibilities
+        }
     }
 }

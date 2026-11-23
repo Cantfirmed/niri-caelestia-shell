@@ -86,7 +86,7 @@ BusyIndicator {
     }
 
     NumberAnimation {
-        running: root.animState !== CircularIndicator.Stopped
+        running: root.visible && root.animState !== CircularIndicator.Stopped
         loops: Animation.Infinite
         target: manager
         property: "progress"

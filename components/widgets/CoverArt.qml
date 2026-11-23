@@ -46,7 +46,7 @@ Item {
             color: Qt.alpha(root.fallbackColour, 1)
 
             Anim on rotation {
-                running: Players.active?.isPlaying ?? false
+                running: root.visible && (Players.active?.isPlaying ?? false)
                 from: 360
                 to: 0
                 duration: 23500

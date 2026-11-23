@@ -11,6 +11,7 @@ import qs.services
 Singleton {
     id: root
 
+    property bool available: true
     property bool connected: false
     property string backendState: "NoState"
     property string ip: ""
@@ -109,6 +110,10 @@ Singleton {
                 }
             }
         }
+        onExited: exitCode => { // qmllint disable signal-handler-parameters
+            if (exitCode === 127)
+                root.available = false;
+        }
     }
 
     Process {
@@ -197,9 +202,9 @@ Singleton {
     Timer {
         id: statusTimer
 
-        interval: 4000
+        interval: (root.connecting || root.disconnecting) ? 4000 : (root.connected ? 15000 : 30000)
         repeat: true
-        running: true
+        running: root.available
         triggeredOnStart: true
         onTriggered: root.checkStatus()
     }

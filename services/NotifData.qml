@@ -17,6 +17,7 @@ QtObject {
     property var locks: new Set()
 
     property date time: new Date()
+    onTimeChanged: updateTimeStr()
     property int ageMins: 0
     readonly property string timeStr: {
         if (ageMins < 1)
@@ -30,13 +31,6 @@ QtObject {
         if (h > 0)
             return Tr.trCtx("%1h", "abbreviated notification age, hours").arg(h);
         return Tr.trCtx("%1m", "abbreviated notification age, minutes").arg(ageMins);
-    }
-
-    readonly property Timer timeStrTimer: Timer {
-        running: !notif.closed
-        repeat: true
-        interval: 5000
-        onTriggered: notif.updateTimeStr()
     }
 
     property Notification notification

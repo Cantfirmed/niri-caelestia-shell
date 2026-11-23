@@ -170,9 +170,10 @@ Singleton {
 
     Timer {
         id: healthPoller
-        interval: 2000
+        interval: root.serverReady ? 30000 : 2000
         repeat: true
-        running: true
+        running: GlobalConfig.extra.manga
+        triggeredOnStart: true
         onTriggered: {
             if (!GlobalConfig.extra.manga) {
                 if (serverProcess.running) {
