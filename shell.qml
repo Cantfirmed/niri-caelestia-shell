@@ -13,6 +13,7 @@ import "components"
 import "modules/polkit"
 import QtQuick
 import Quickshell
+import Caelestia.Config
 import qs.services
 
 ShellRoot {
@@ -24,6 +25,27 @@ ShellRoot {
     property var _wallFx: WallFx
 
     settings.watchFiles: true
+
+    function syncScreenScales(): void {
+        const outs = NiriCompositor.outputs;
+        if (!outs)
+            return;
+        for (const [name, out] of Object.entries(outs)) {
+            const s = out?.logical?.scale;
+            if (s && s > 0)
+                TokenConfig.setScreenScale(name, s);
+        }
+    }
+
+    Component.onCompleted: syncScreenScales()
+
+    Connections {
+        target: NiriCompositor
+
+        function onOutputsChanged(): void {
+            root.syncScreenScales();
+        }
+    }
 
     Binding {
         target: ShellState

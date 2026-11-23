@@ -76,11 +76,51 @@ void ConfigRoot::bindTokens() {
     m_appearance->spacing()->bindTokens(tokens->spacing());
     m_appearance->padding()->bindTokens(tokens->padding());
     m_appearance->anim()->durations()->bindTokens(tokens->animDurations());
+
+    auto* const sizeTokens = key().isEmpty()
+                                 ? TokensSingleton::instance()->sizes()
+                                 : TokensSingleton::instance()->forScreen(key())->sizes();
+    m_scaledSizes->bind(sizeTokens);
+
+    connect(m_appearance, &AppearanceConfig::ignoreDisplayScaleChanged, this, &ConfigRoot::updateDisplayScale);
+    connect(TokensSingleton::instance(), &TokensRoot::screenScaleChanged, this,
+        [this](const QString& screen, qreal) {
+            if (screen == key())
+                updateDisplayScale();
+        });
+    updateDisplayScale();
+}
+
+void ConfigRoot::updateDisplayScale() {
+    const qreal s = (m_appearance->ignoreDisplayScale() && !key().isEmpty())
+                        ? TokensSingleton::instance()->screenScale(key())
+                        : 1.0;
+    const qreal ds = s > 0.0 ? (1.0 / s) : 1.0;
+    m_appearance->rounding()->setDisplayScale(ds);
+    m_appearance->spacing()->setDisplayScale(ds);
+    m_appearance->padding()->setDisplayScale(ds);
+    m_scaledSizes->setScale(ds);
 }
 
 TokensRoot::TokensRoot(const QString& path, TokensRoot* fallback, QObject* parent)
     : RootNode(path, fallback, parent) {
     qCDebug(lcConfig) << "Created tokens root for" << nameFor(key());
+}
+
+void TokensRoot::setScreenScale(const QString& screen, qreal scale) {
+    if (screen.isEmpty() || scale <= 0.0)
+        return;
+
+    const qreal prev = m_screenScales.value(screen, 1.0);
+    if (qFuzzyCompare(prev + 1.0, scale + 1.0))
+        return;
+
+    m_screenScales[screen] = scale;
+    emit screenScaleChanged(screen, scale);
+}
+
+qreal TokensRoot::screenScale(const QString& screen) const {
+    return m_screenScales.value(screen, 1.0);
 }
 
 #define SINGLETON_IMPL(Type, Root, file, kind)                                                                         \

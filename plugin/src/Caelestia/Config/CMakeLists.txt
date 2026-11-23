@@ -10,6 +10,8 @@ qml_module(caelestia-config
         font.cpp
         fontbuilder.cpp
         tokensattached.cpp
+        scaledsizes.hpp
+        scaledsizes.cpp
         anim.cpp
         enums.hpp
         backgroundconfig.hpp

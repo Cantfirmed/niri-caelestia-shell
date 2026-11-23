@@ -1,5 +1,6 @@
 #pragma once
 
+#include <qhash.h>
 #include <qjsengine.h>
 #include <qqmlengine.h>
 
@@ -21,6 +22,7 @@
 #include "sessionconfig.hpp"
 #include "sidebarconfig.hpp"
 #include "tokens.hpp"
+#include "scaledsizes.hpp"
 #include "userpaths.hpp"
 #include "utilitiesconfig.hpp"
 #include "extraconfig.hpp"
@@ -54,9 +56,14 @@ class ConfigRoot : public settings::RootNode {
 public:
     explicit ConfigRoot(const QString& path, ConfigRoot* fallback = nullptr, QObject* parent = nullptr);
 
+    [[nodiscard]] const ScaledSizeTokens* scaledSizes() const { return m_scaledSizes; }
+
 private:
     // Binds the computed appearance values to the global token base values
     void bindTokens();
+    void updateDisplayScale();
+
+    ScaledSizeTokens* m_scaledSizes = new ScaledSizeTokens(this);
 };
 
 class TokensRoot : public settings::RootNode {
@@ -68,6 +75,15 @@ class TokensRoot : public settings::RootNode {
 
 public:
     explicit TokensRoot(const QString& path, TokensRoot* fallback = nullptr, QObject* parent = nullptr);
+
+    Q_INVOKABLE void setScreenScale(const QString& screen, qreal scale);
+    [[nodiscard]] qreal screenScale(const QString& screen) const;
+
+signals:
+    void screenScaleChanged(const QString& screen, qreal scale);
+
+private:
+    QHash<QString, qreal> m_screenScales;
 };
 
 namespace detail {

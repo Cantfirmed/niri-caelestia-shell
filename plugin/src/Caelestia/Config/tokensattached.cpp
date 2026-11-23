@@ -24,6 +24,12 @@ Tokens::Tokens(QObject* parent)
     , m_anim(new AnimTokens(this)) {
     bindAnim();
     bindFont();
+    connect(TokensSingleton::instance(), &TokensRoot::screenScaleChanged, this,
+        [this](const QString& screen, qreal) {
+            if (screen == m_screen)
+                updateDisplayScale();
+        });
+    updateDisplayScale();
     initialize();
 }
 
@@ -52,6 +58,7 @@ void Tokens::inheritScreen(const QString& screen) {
     }
 
     bindFont();
+    updateDisplayScale();
     propagateScreen();
     emit sourceChanged();
 }
@@ -81,6 +88,28 @@ void Tokens::bindAnim() {
 void Tokens::bindFont() {
     auto* appearance = m_config ? m_config->appearance() : ConfigSingleton::instance()->appearance();
     m_font->bindFont(appearance->font());
+
+    disconnect(m_ignoreScaleConn);
+    m_ignoreScaleConn = connect(appearance, &AppearanceConfig::ignoreDisplayScaleChanged, this, &Tokens::updateDisplayScale);
+}
+
+void Tokens::updateDisplayScale() {
+    auto* const appearance = m_config ? m_config->appearance() : ConfigSingleton::instance()->appearance();
+    const qreal s = (appearance && appearance->ignoreDisplayScale() && !m_screen.isEmpty())
+                        ? TokensSingleton::instance()->screenScale(m_screen)
+                        : 1.0;
+    const qreal ds = s > 0.0 ? (1.0 / s) : 1.0;
+
+    m_font->setDisplayScale(ds);
+
+    if (!qFuzzyCompare(m_uiScale + 1.0, ds + 1.0)) {
+        m_uiScale = ds;
+        emit uiScaleChanged();
+    }
+}
+
+qreal Tokens::uiScale() const {
+    return m_uiScale;
 }
 
 #define TOKENS_ATTACHED_GETTER(Type, name)                                                                             \
@@ -99,12 +128,12 @@ const AppearanceTransparency* Tokens::transparency() {
     return ConfigSingleton::instance()->appearance()->transparency(); // Transparency is always global
 }
 
-const SizeTokens* Tokens::sizes() const {
-    if (m_tokens)
-        return m_tokens->sizes();
+const ScaledSizeTokens* Tokens::sizes() const {
+    if (m_config)
+        return m_config->scaledSizes();
     if ((m_complete || !qobject_cast<QQuickItem*>(parent())) && parent())
         qCWarning(lcConfig, "Tokens.sizes accessed without a screen set on %s", parent()->metaObject()->className());
-    return TokensSingleton::instance()->sizes();
+    return ConfigSingleton::instance()->scaledSizes();
 }
 
 const FontTokens* Tokens::font() const {

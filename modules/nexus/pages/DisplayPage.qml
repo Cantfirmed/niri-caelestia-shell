@@ -1111,6 +1111,13 @@ PageBase {
                     }
                 }
 
+                ToggleRow {
+                    text: Tr.tr("Keep Caelestia UI unscaled")
+                    subtext: Tr.tr("Counteract display scaling for bar, dashboard, sidebar, and Nexus")
+                    checked: GlobalConfig.appearance.ignoreDisplayScale
+                    onToggled: GlobalConfig.appearance.ignoreDisplayScale = checked
+                }
+
                 Rectangle { height: 1; color: Colours.palette.m3outlineVariant; Layout.fillWidth: true }
 
                 RowLayout {

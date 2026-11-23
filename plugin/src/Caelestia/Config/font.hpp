@@ -136,6 +136,7 @@ public:
     explicit FontTokens(QObject* parent = nullptr);
 
     void bindFont(AppearanceFont* font);
+    void setDisplayScale(qreal scale);
 
     [[nodiscard]] FontStyle* headline() const;
     [[nodiscard]] FontStyle* title() const;
@@ -155,6 +156,7 @@ private:
     void rebuildScale();
 
     AppearanceFont* m_font = nullptr;
+    qreal m_displayScale = 1.0;
     FontStyle* m_headline;
     FontStyle* m_title;
     FontStyle* m_body;

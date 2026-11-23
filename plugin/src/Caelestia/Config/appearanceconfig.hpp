@@ -34,6 +34,7 @@ class AppearanceRounding : public settings::ObjectNode {
 
 public:
     void bindTokens(RoundingTokens* tokens);
+    void setDisplayScale(qreal scale);
 
     [[nodiscard]] int extraSmall() const;
     [[nodiscard]] int small() const;
@@ -50,6 +51,7 @@ signals:
 
 private:
     RoundingTokens* m_tokens = nullptr;
+    qreal m_displayScale = 1.0;
 };
 
 class AppearanceSpacing : public settings::ObjectNode {
@@ -68,6 +70,7 @@ class AppearanceSpacing : public settings::ObjectNode {
 
 public:
     void bindTokens(SpacingTokens* tokens);
+    void setDisplayScale(qreal scale);
 
     [[nodiscard]] int extraSmall() const;
     [[nodiscard]] int small() const;
@@ -83,6 +86,7 @@ signals:
 
 private:
     SpacingTokens* m_tokens = nullptr;
+    qreal m_displayScale = 1.0;
 };
 
 class AppearancePadding : public settings::ObjectNode {
@@ -101,6 +105,7 @@ class AppearancePadding : public settings::ObjectNode {
 
 public:
     void bindTokens(PaddingTokens* tokens);
+    void setDisplayScale(qreal scale);
 
     [[nodiscard]] int extraSmall() const;
     [[nodiscard]] int small() const;
@@ -116,6 +121,7 @@ signals:
 
 private:
     PaddingTokens* m_tokens = nullptr;
+    qreal m_displayScale = 1.0;
 };
 
 namespace detail {
@@ -273,6 +279,7 @@ class AppearanceTransparency : public settings::ObjectNode {
 class AppearanceConfig : public settings::ObjectNode {
     CONFIG_NODE(AppearanceConfig, settings::ObjectNode)
 
+    CONFIG_PROPERTY(bool, ignoreDisplayScale, false)
     CONFIG_PROPERTY(qreal, deformScale, 1)
     CONFIG_SUBOBJECT(AppearanceRounding, rounding)
     CONFIG_SUBOBJECT(AppearanceSpacing, spacing)
