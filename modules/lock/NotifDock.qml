@@ -42,6 +42,7 @@ ColumnLayout {
         Loader {
             asynchronous: true
             anchors.centerIn: parent
+            width: clipRect.width
             active: opacity > 0
             opacity: Notifs.list.length > 0 && !Config.lock.hideNotifs ? 0 : 1
 
@@ -49,10 +50,18 @@ ColumnLayout {
                 spacing: Tokens.spacing.largeIncreased
 
                 Image {
+                    readonly property int imgSize: Math.max(0, Math.min(Math.round(clipRect.width * 0.7), Math.round(clipRect.height - noNotifsText.implicitHeight - Tokens.spacing.largeIncreased)))
+
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: imgSize
+                    Layout.preferredHeight: imgSize
+                    Layout.maximumWidth: Math.round(clipRect.width * 0.8)
+                    Layout.maximumHeight: Math.max(0, Math.round(clipRect.height - noNotifsText.implicitHeight - Tokens.spacing.largeIncreased))
+
                     asynchronous: true
                     source: Paths.absolutePath(Config.paths.lockNoNotifsPic)
                     fillMode: Image.PreserveAspectFit
-                    sourceSize.width: clipRect.width * 0.8 * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1)
+                    sourceSize.width: Math.max(1, Math.round(imgSize * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1)))
 
                     layer.enabled: true
                     layer.effect: Colouriser {
@@ -62,7 +71,12 @@ ColumnLayout {
                 }
 
                 StyledText {
+                    id: noNotifsText
+
+                    Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
                     text: Config.lock.hideNotifs ? Tr.tr("Unlock for notifications") : Tr.tr("No notifications")
                     color: Colours.palette.m3outlineVariant
                     font: Tokens.font.mono.builders.large.weight(Font.Medium).build()

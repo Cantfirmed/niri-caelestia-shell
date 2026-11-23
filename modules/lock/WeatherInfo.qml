@@ -8,7 +8,9 @@ StyledRect {
     id: root
 
     required property int rootHeight
-    readonly property bool showForecast: rootHeight >= Tokens.sizes.lock.showForecastHeight
+    property real effectiveHeight: rootHeight
+    readonly property int cardPadding: Math.min(Tokens.padding.extraLarge, Math.max(Tokens.padding.small, Math.round(rootHeight * 0.04)))
+    readonly property bool showForecast: effectiveHeight >= Tokens.sizes.lock.showForecastHeight
 
     implicitHeight: {
         const base = brief.implicitHeight + brief.anchors.topMargin;
@@ -16,6 +18,7 @@ StyledRect {
             return base + Tokens.spacing.largeIncreased + forecast.implicitHeight + forecast.anchors.margins;
         return base + brief.anchors.topMargin;
     }
+    clip: true
     radius: Tokens.rounding.extraExtraLarge
     color: Colours.tPalette.m3surfaceContainer
 
@@ -30,11 +33,15 @@ StyledRect {
     BriefInfo {
         id: brief
 
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: Tokens.padding.large
+        anchors.rightMargin: Tokens.padding.large
         anchors.top: parent.top
-        anchors.topMargin: Tokens.padding.extraLarge
+        anchors.topMargin: root.cardPadding
 
         rootHeight: root.rootHeight
+        effectiveHeight: root.effectiveHeight
     }
 
     Loader {

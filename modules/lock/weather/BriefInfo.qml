@@ -9,11 +9,15 @@ ColumnLayout {
     id: root
 
     required property int rootHeight
+    property real effectiveHeight: rootHeight
 
     spacing: Tokens.spacing.extraSmall
 
     StyledText {
+        Layout.fillWidth: true
         Layout.alignment: Qt.AlignHCenter
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
         animate: true
         text: Weather.description
         color: Colours.palette.m3onSurfaceVariant
@@ -42,8 +46,11 @@ ColumnLayout {
     }
 
     StyledText {
-        visible: root.rootHeight > Tokens.sizes.lock.showWeatherDetailsHeight
+        visible: root.effectiveHeight > Tokens.sizes.lock.showWeatherDetailsHeight
+        Layout.fillWidth: true
         Layout.alignment: Qt.AlignHCenter
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
         animate: true
         // TRANSLATORS: %1 = apparent temperature, unit already included
         text: Tr.tr("Feels like %1").arg(Weather.temp)
@@ -52,8 +59,11 @@ ColumnLayout {
     }
 
     StyledText {
-        visible: root.rootHeight > Tokens.sizes.lock.showWeatherDetailsHeight
+        visible: root.effectiveHeight > Tokens.sizes.lock.showWeatherDetailsHeight
+        Layout.fillWidth: true
         Layout.alignment: Qt.AlignHCenter
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
         animate: true
         text: {
             const today = Weather.forecast[0];

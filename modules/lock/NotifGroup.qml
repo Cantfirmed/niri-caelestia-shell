@@ -65,9 +65,14 @@ StyledRect {
         spacing: Tokens.spacing.medium
 
         Item {
+            id: notifIcon
+
+            readonly property int imageSize: Math.round(Tokens.sizes.notifs.image * Math.max(0.75, Config.appearance.font.scale))
+            readonly property int badgeSize: Math.round(Tokens.sizes.notifs.badge * Math.max(0.75, Config.appearance.font.scale))
+
             Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-            implicitWidth: TokenConfig.sizes.notifs.image
-            implicitHeight: TokenConfig.sizes.notifs.image
+            implicitWidth: imageSize
+            implicitHeight: imageSize
 
             Component {
                 id: imageComp
@@ -76,13 +81,13 @@ StyledRect {
                     source: Qt.resolvedUrl(root.image)
                     fillMode: Image.PreserveAspectCrop
                     sourceSize: {
-                        const size = TokenConfig.sizes.notifs.image * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1);
+                        const size = Math.round(notifIcon.imageSize * ((QsWindow.window as QsWindow)?.devicePixelRatio ?? 1));
                         return Qt.size(size, size);
                     }
                     cache: false
                     asynchronous: true
-                    width: TokenConfig.sizes.notifs.image
-                    height: TokenConfig.sizes.notifs.image
+                    width: notifIcon.imageSize
+                    height: notifIcon.imageSize
                 }
             }
 
@@ -90,7 +95,7 @@ StyledRect {
                 id: appIconComp
 
                 ColouredIcon {
-                    implicitSize: Math.round(TokenConfig.sizes.notifs.image * 0.6)
+                    implicitSize: Math.round(notifIcon.imageSize * 0.6)
                     source: Quickshell.iconPath(root.appIcon)
                     colour: root.urgency === "critical" ? Colours.palette.m3onError : root.urgency === "low" ? Colours.palette.m3onSurface : Colours.palette.m3onSecondaryContainer
                     layer.enabled: root.appIcon.endsWith("symbolic")
@@ -126,15 +131,15 @@ StyledRect {
                 active: root.appIcon && root.image
 
                 sourceComponent: StyledRect {
-                    implicitWidth: Tokens.sizes.notifs.badge
-                    implicitHeight: Tokens.sizes.notifs.badge
+                    implicitWidth: notifIcon.badgeSize
+                    implicitHeight: notifIcon.badgeSize
 
                     color: root.urgency === "critical" ? Colours.palette.m3error : root.urgency === "low" ? Colours.palette.m3surfaceContainerHighest : Colours.palette.m3secondaryContainer
                     radius: Tokens.rounding.full
 
                     ColouredIcon {
                         anchors.centerIn: parent
-                        implicitSize: Math.round(Tokens.sizes.notifs.badge * 0.6)
+                        implicitSize: Math.round(notifIcon.badgeSize * 0.6)
                         source: Quickshell.iconPath(root.appIcon)
                         colour: root.urgency === "critical" ? Colours.palette.m3onError : root.urgency === "low" ? Colours.palette.m3onSurface : Colours.palette.m3onSecondaryContainer
                         layer.enabled: root.appIcon.endsWith("symbolic")
@@ -171,12 +176,13 @@ StyledRect {
 
                 StyledRect {
                     implicitWidth: expandBtn.implicitWidth + Tokens.padding.large
-                    implicitHeight: groupCount.implicitHeight + Tokens.padding.extraSmall
+                    implicitHeight: Math.max(expandBtn.implicitHeight, groupCount.implicitHeight) + Tokens.padding.extraSmall
 
                     color: root.urgency === "critical" ? Colours.palette.m3error : Colours.layer(Colours.palette.m3surfaceContainerHighest, 2)
                     radius: Tokens.rounding.full
 
                     opacity: root.notifs.length > Config.notifs.groupPreviewNum ? 1 : 0
+                    visible: opacity > 0
                     Layout.preferredWidth: root.notifs.length > Config.notifs.groupPreviewNum ? implicitWidth : 0
 
                     StateLayer {
@@ -281,6 +287,7 @@ StyledRect {
                 Layout.fillWidth: true
 
                 opacity: root.expanded ? 1 : 0
+                visible: opacity > 0
                 Layout.preferredHeight: root.expanded ? implicitHeight : 0
                 active: opacity > 0
 

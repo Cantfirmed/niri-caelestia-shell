@@ -15,7 +15,7 @@ Item {
         return metrics.tightBoundingRect.y - metrics.boundingRect.y;
     }
 
-    implicitWidth: hours.implicitWidth + minutes.implicitWidth + Tokens.spacing.small
+    implicitWidth: hours.implicitWidth + Math.max(minutes.implicitWidth, amPmLoader.active ? amPmLoader.implicitWidth : 0) + Tokens.spacing.small
     implicitHeight: hourMetrics.tightBoundingRect.height
 
     StyledText {
@@ -53,6 +53,8 @@ Item {
     }
 
     Loader {
+        id: amPmLoader
+
         anchors.left: minutes.left
         anchors.leftMargin: minuteMetrics.tightBoundingRect.x
         y: hourMetrics.tightBoundingRect.height - implicitHeight
@@ -64,8 +66,8 @@ Item {
             color: Colours.tPalette.m3surfaceContainerHigh
             radius: Tokens.rounding.large
 
-            implicitWidth: minuteMetrics.tightBoundingRect.width
-            implicitHeight: amPmMetrics.tightBoundingRect.height + Tokens.padding.large * 2
+            implicitWidth: Math.max(minuteMetrics.tightBoundingRect.width, amPmMetrics.tightBoundingRect.width + Tokens.padding.medium * 2)
+            implicitHeight: Math.min(Math.max(0, hourMetrics.tightBoundingRect.height - minuteMetrics.tightBoundingRect.height - Tokens.spacing.small), amPmMetrics.tightBoundingRect.height + Math.round(Tokens.padding.large * 2 * root.centerScale))
 
             StyledText {
                 id: amPm

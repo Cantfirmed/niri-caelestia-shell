@@ -139,17 +139,17 @@ WlSessionLockSurface {
                 Anim {
                     target: lockBg
                     property: "radius"
-                    to: lockContent.Tokens.rounding.extraLarge * 1.5
+                    to: lockContent.targetRadius
                 }
                 Anim {
                     target: lockContent
                     property: "implicitWidth"
-                    to: (root.screen?.height ?? 0) * lockContent.Tokens.sizes.lock.heightMult * lockContent.Tokens.sizes.lock.ratio
+                    to: lockContent.targetWidth
                 }
                 Anim {
                     target: lockContent
                     property: "implicitHeight"
-                    to: (root.screen?.height ?? 0) * lockContent.Tokens.sizes.lock.heightMult
+                    to: lockContent.targetHeight
                 }
             }
         }
@@ -213,8 +213,15 @@ WlSessionLockSurface {
     Item {
         id: lockContent
 
-        readonly property int size: lockIcon.implicitHeight + Tokens.padding.large * 4
-        readonly property int radius: size / 4 * Tokens.rounding.scale
+        readonly property int maxWidth: Math.max(0, root.width - Tokens.padding.extraLarge * 2)
+        readonly property int maxHeight: Math.max(0, root.height - Tokens.padding.extraLarge * 2)
+        readonly property int targetHeight: Math.min(maxHeight, Math.round((root.screen?.height ?? root.height) * Tokens.sizes.lock.heightMult))
+        readonly property int targetWidth: Math.min(maxWidth, Math.round(targetHeight * Tokens.sizes.lock.ratio))
+        readonly property int targetRadius: Math.min(Math.round(targetHeight / 2), Math.round(Tokens.rounding.extraLarge * 1.5))
+
+        readonly property int rawSize: lockIcon.implicitHeight + Tokens.padding.large * 4
+        readonly property int size: targetWidth > 0 && targetHeight > 0 ? Math.min(rawSize, targetWidth, targetHeight) : rawSize
+        readonly property int radius: Math.min(Math.round(size / 2), Math.round(size / 4 * Tokens.rounding.scale))
 
         anchors.centerIn: parent
         implicitWidth: size
@@ -223,6 +230,30 @@ WlSessionLockSurface {
         visible: Config.lock.enabled
         rotation: 180
         scale: 0
+
+        Binding {
+            when: !initAnim.running && !unlockAnim.running
+            restoreMode: Binding.RestoreNone
+            target: lockContent
+            property: "implicitWidth"
+            value: lockContent.targetWidth
+        }
+
+        Binding {
+            when: !initAnim.running && !unlockAnim.running
+            restoreMode: Binding.RestoreNone
+            target: lockContent
+            property: "implicitHeight"
+            value: lockContent.targetHeight
+        }
+
+        Binding {
+            when: !initAnim.running && !unlockAnim.running
+            restoreMode: Binding.RestoreNone
+            target: lockBg
+            property: "radius"
+            value: lockContent.targetRadius
+        }
 
         StyledRect {
             id: lockBg
@@ -253,8 +284,8 @@ WlSessionLockSurface {
             id: content
 
             anchors.centerIn: parent
-            width: (root.screen?.height ?? 0) * (Tokens.sizes?.lock?.heightMult ?? 0.8) * (Tokens.sizes?.lock?.ratio ?? 1.6) - (Tokens.padding?.extraLargeIncreased ?? 24)
-            height: (root.screen?.height ?? 0) * (Tokens.sizes?.lock?.heightMult ?? 0.8) - (Tokens.padding?.extraLargeIncreased ?? 24)
+            width: Math.max(0, lockContent.targetWidth - (Tokens.padding?.extraLargeIncreased ?? 24))
+            height: Math.max(0, lockContent.targetHeight - (Tokens.padding?.extraLargeIncreased ?? 24))
 
             lock: root
             opacity: 0

@@ -27,6 +27,7 @@ Item {
         return shapes;
     }
 
+    implicitHeight: Math.max(placeholder.implicitHeight, charList.implicitHeight * 1.5)
     clip: true
 
     Connections {
@@ -65,6 +66,9 @@ Item {
 
         anchors.centerIn: parent
         anchors.verticalCenterOffset: 1
+        width: Math.min(implicitWidth, parent.width)
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
 
         text: nonAnimPlaceholder.text
 
@@ -101,7 +105,7 @@ Item {
         anchors.horizontalCenterOffset: implicitWidth > root.width ? -(implicitWidth - root.width) / 2 : 0
 
         implicitWidth: fullWidth
-        implicitHeight: Tokens.font.body.medium.pointSize
+        implicitHeight: Math.max(8, Math.round(Tokens.font.body.medium.pointSize * root.centerScale))
 
         orientation: Qt.Horizontal
         spacing: Tokens.spacing.extraSmall
@@ -254,6 +258,7 @@ Item {
 
             sourceComponent: StyledText {
                 text: root.buffer[char.index]
+                font: Tokens.font.body.builders.medium.scale(root.centerScale).build()
             }
 
             Behavior on opacity {
