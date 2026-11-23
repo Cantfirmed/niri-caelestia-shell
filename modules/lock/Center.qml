@@ -12,14 +12,29 @@ ColumnLayout {
     id: root
 
     required property var lock
-    readonly property real centerScale: Math.min(1, (lock.screen?.height ?? 1440) / 1440)
-    readonly property int centerWidth: Tokens.sizes.lock.centerWidth * centerScale
+    readonly property real fontScale: Math.max(0.5, Config.appearance.font.scale)
+    readonly property real centerScale: {
+        const ref = root.height > 0 ? root.height / (976 * Tokens.uiScale) : ((lock.screen?.height ?? 1440) / Tokens.uiScale) / 1440;
+        return Math.max(0.45, Math.min(1, ref));
+    }
+    readonly property real clockScale: centerScale * Math.min(1.1, fontScale) / fontScale
+    readonly property int centerWidth: {
+        const scaled = Math.round(Tokens.sizes.lock.centerWidth * centerScale);
+        const maxFromParent = parent && parent.width > 0 ? Math.round(parent.width * 0.45) : scaled;
+        return Math.min(scaled, maxFromParent);
+    }
+    readonly property int fixedChildrenHeight: clock.implicitHeight + dateText.implicitHeight
+        + passwordInput.implicitHeight + stateMessage.implicitHeight + sessionRow.implicitHeight
+        + clock.Layout.topMargin + clock.Layout.bottomMargin
+        + sessionRow.Layout.topMargin + sessionRow.Layout.bottomMargin
+        + spacing * 7
+    readonly property int maxProfileHeight: Math.max(Math.round(64 * Tokens.uiScale), root.height - fixedChildrenHeight - profilePic.Layout.topMargin - profilePic.Layout.bottomMargin)
 
     Layout.preferredWidth: centerWidth
     Layout.fillWidth: false
     Layout.fillHeight: true
 
-    spacing: Tokens.spacing.largeIncreased
+    spacing: Math.min(Math.round(Tokens.spacing.largeIncreased * centerScale), Math.max(4, Math.round(root.height * 0.02)))
 
     // Top flex spacer to push the content down and center it vertically
     Item {
@@ -28,14 +43,21 @@ ColumnLayout {
     }
 
     Clock {
+        id: clock
+
         Layout.alignment: Qt.AlignHCenter
-        Layout.topMargin: Tokens.padding.large
-        Layout.bottomMargin: Tokens.spacing.medium
-        centerScale: root.centerScale
+        Layout.topMargin: Math.round(Tokens.padding.large * root.centerScale)
+        Layout.bottomMargin: Math.round(Tokens.spacing.medium * root.centerScale)
+        centerScale: root.clockScale
     }
 
     StyledText {
+        id: dateText
+
+        Layout.fillWidth: true
         Layout.alignment: Qt.AlignHCenter
+        horizontalAlignment: Text.AlignHCenter
+        elide: Text.ElideRight
 
         text: Time.format("dddd • d MMM").toUpperCase()
         color: Colours.palette.m3onSurface
@@ -43,13 +65,18 @@ ColumnLayout {
     }
 
     ProfilePic {
+        id: profilePic
+
         Layout.alignment: Qt.AlignHCenter
-        Layout.topMargin: Tokens.spacing.extraExtraLarge * root.centerScale
-        Layout.bottomMargin: Tokens.spacing.extraLarge * root.centerScale
+        Layout.topMargin: Math.round(Tokens.spacing.extraLarge * root.centerScale)
+        Layout.bottomMargin: Math.round(Tokens.spacing.large * root.centerScale)
         centerWidth: root.centerWidth
+        maxHeight: root.height > 0 ? root.maxProfileHeight : -1
     }
 
     PasswordInput {
+        id: passwordInput
+
         Layout.alignment: Qt.AlignHCenter
         centerScale: Math.max(0.8, root.centerScale)
         centerWidth: root.centerWidth
@@ -57,27 +84,33 @@ ColumnLayout {
     }
 
     StateMessage {
+        id: stateMessage
+
         Layout.fillWidth: true
         pam: root.lock.pam
     }
 
     // ── Session controls ───────────────────────────────────────────────────────
     RowLayout {
+        id: sessionRow
+
         Layout.alignment: Qt.AlignHCenter
-        Layout.topMargin: Tokens.spacing.medium
-        Layout.bottomMargin: Tokens.spacing.medium
-        spacing: Tokens.spacing.extraExtraLarge
+        Layout.topMargin: Math.round(Tokens.spacing.medium * root.centerScale)
+        Layout.bottomMargin: Math.round(Tokens.spacing.medium * root.centerScale)
+        spacing: Math.round(Tokens.spacing.extraExtraLarge * root.centerScale)
 
         component SessionBtn: IconButton {
             id: sBtn
             required property var command
 
-            implicitWidth: 48 * root.centerScale
-            implicitHeight: 48 * root.centerScale
+            readonly property real iconScale: Math.min(1.25, root.fontScale) / root.fontScale
+
+            font: Tokens.font.icon.builders.large.scale(1.3 * root.centerScale * iconScale).build()
+            implicitWidth: Math.max(Math.round(48 * Tokens.uiScale * root.centerScale), Math.round(font.pointSize * 1.33 + Tokens.padding.small * 2 * root.centerScale))
+            implicitHeight: implicitWidth
             radius: Tokens.rounding.full
             inactiveColour: "transparent"
             inactiveOnColour: Colours.palette.m3onSurfaceVariant
-            font: Tokens.font.icon.builders.large.scale(1.3 * root.centerScale).build()
 
             function exec(): void {
                 if (sBtn === sReboot || sBtn === sShutdown)

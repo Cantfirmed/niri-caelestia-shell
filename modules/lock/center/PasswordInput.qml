@@ -96,8 +96,8 @@ StyledRect {
                         anchors.fill: undefined
                         anchors.centerIn: parent
                         implicitWidth: {
-                            const w = parent.implicitHeight + Tokens.padding.small * 2;
-                            return w + (w % 2);
+                            const w = Math.min(iconWrapper.height, parent.implicitHeight + Tokens.padding.small * 2);
+                            return w - (w % 2);
                         }
                         implicitHeight: implicitWidth
                         radius: Tokens.rounding.full
@@ -115,7 +115,7 @@ StyledRect {
                 id: loadingComp
 
                 LoadingIndicator {
-                    implicitSize: iconWrapper.height - Tokens.padding.small * 2
+                    implicitSize: Math.max(12, iconWrapper.height - Tokens.padding.small * 2)
                 }
             }
         }

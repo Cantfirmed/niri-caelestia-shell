@@ -15,9 +15,13 @@ StyledRect {
     id: root
 
     required property real rootHeight
-    readonly property int cBoxSize: Tokens.font.body.medium.pointSize * 2
+    property real effectiveHeight: rootHeight
+    readonly property int cardPadding: Math.min(Tokens.padding.extraLarge, Math.max(Tokens.padding.small, Math.round(rootHeight * 0.04)))
+    readonly property int cBoxSize: Math.min(Math.round(Tokens.font.body.medium.pointSize * 2), Math.max(12, Math.round(rootHeight * 0.045)))
+    readonly property real widthThresholdScale: Math.max(1, Config.appearance.font.scale * 0.85 + Config.appearance.padding.scale * 0.15)
 
-    implicitHeight: layout.implicitHeight + layout.anchors.topMargin + layout.anchors.margins
+    implicitHeight: layout.implicitHeight + layout.anchors.topMargin + layout.anchors.bottomMargin
+    clip: true
     radius: Tokens.rounding.medium
     color: Colours.tPalette.m3surfaceContainer
 
@@ -25,9 +29,9 @@ StyledRect {
         id: layout
 
         anchors.fill: parent
-        anchors.margins: Tokens.padding.extraLarge
-        anchors.topMargin: Tokens.padding.extraLarge
-        anchors.bottomMargin: Tokens.padding.extraLarge
+        anchors.margins: root.cardPadding
+        anchors.topMargin: root.cardPadding
+        anchors.bottomMargin: root.cardPadding
 
         spacing: Tokens.spacing.small
 
@@ -77,7 +81,9 @@ StyledRect {
                 id: iconLoader
 
                 Layout.fillHeight: true
-                active: root.width > Tokens.sizes.lock.largeLogoWidth
+                Layout.preferredWidth: Math.min(height, Math.round(root.width * 0.32))
+                Layout.maximumWidth: Math.round(root.width * 0.32)
+                active: root.width > Tokens.sizes.lock.largeLogoWidth * root.widthThresholdScale
 
                 sourceComponent: SysInfo.isDefaultLogo ? caelestiaLogo : distroIcon
             }
@@ -92,7 +98,7 @@ StyledRect {
                     model: {
                         const items = [];
                         const hasBatt = UPower.displayDevice.isLaptopBattery;
-                        const rHeight = root.rootHeight;
+                        const rHeight = root.effectiveHeight;
 
                         if (!hasBatt && rHeight > Tokens.sizes.lock.fetch4LinesHeight)
                             // TRANSLATORS: keep the label padded to 4 chars so the column stays aligned
@@ -135,7 +141,7 @@ StyledRect {
 
             Layout.topMargin: iconLoader.active ? Tokens.spacing.small : 0
             Layout.alignment: Qt.AlignHCenter
-            active: root.rootHeight > Tokens.sizes.lock.showColourBoxRowHeight
+            active: root.effectiveHeight > Tokens.sizes.lock.showColourBoxRowHeight
 
             sourceComponent: RowLayout {
                 id: coloursRow
@@ -162,6 +168,8 @@ StyledRect {
         id: caelestiaLogo
 
         Logo {
+            implicitWidth: height
+            implicitHeight: height
             width: height
         }
     }
@@ -183,6 +191,6 @@ StyledRect {
     }
 
     component MonoText: StyledText {
-        font: root.width > Tokens.sizes.lock.largeFontWidth ? Tokens.font.mono.medium : Tokens.font.mono.small
+        font: root.width > Tokens.sizes.lock.largeFontWidth * root.widthThresholdScale ? Tokens.font.mono.medium : Tokens.font.mono.small
     }
 }

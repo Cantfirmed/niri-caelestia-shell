@@ -19,6 +19,7 @@ StyledRect {
         id: header
 
         anchors.left: parent.left
+        anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Tokens.padding.largeIncreased
 
@@ -33,6 +34,8 @@ StyledRect {
         StyledText {
             id: title
 
+            Layout.fillWidth: true
+            elide: Text.ElideRight
             text: Tr.tr("Hourly forecast")
             font: Tokens.font.title.medium
         }
@@ -40,6 +43,8 @@ StyledRect {
 
     RowLayout {
         id: layout
+
+        readonly property int itemMinWidth: Math.max(Math.round(Tokens.sizes.lock.forecastItemWidth * Math.max(0.75, Config.appearance.font.scale)), Math.round(Tokens.font.title.medium.pointSize * 1.5 + Tokens.padding.medium * 2))
 
         anchors.left: parent.left
         anchors.right: parent.right
@@ -50,7 +55,7 @@ StyledRect {
         spacing: Tokens.spacing.small
 
         Repeater {
-            model: CUtils.clamp(Math.floor((layout.width + layout.spacing) / (Tokens.sizes.lock.forecastItemWidth + layout.spacing)), 0, Weather.hourlyForecast.length)
+            model: CUtils.clamp(Math.floor((layout.width + layout.spacing) / (layout.itemMinWidth + layout.spacing)), 0, Weather.hourlyForecast.length)
 
             ColumnLayout {
                 id: hour

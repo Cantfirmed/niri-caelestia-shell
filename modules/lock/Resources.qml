@@ -16,8 +16,14 @@ StyledRect {
     id: root
 
     readonly property real fontScale: {
-        const diff = width / 391 - 1; // 391 is the width at 1080 height screen
-        return 1 + Math.pow(Math.abs(diff), 0.8) * Math.sign(diff);
+        if (width <= 0)
+            return 1;
+        const normWidth = width / Math.max(1, 391 * Tokens.uiScale);
+        const diff = normWidth - 1; // 391 is the width at 1080 height screen
+        const raw = Math.max(0.5, 1 + Math.pow(Math.abs(diff), 0.8) * Math.sign(diff));
+        const userFontScale = Math.max(0.5, Config.appearance.font.scale);
+        const maxCombined = normWidth * 1.1;
+        return Math.min(raw, maxCombined / userFontScale);
     }
 
     implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
@@ -55,13 +61,24 @@ StyledRect {
             shape: MaterialShape.Pentagon
 
             MaterialShape {
-                x: cpu.mShape.pointAtAngle(45).x - implicitSize / 2 + Tokens.padding.medium
-                y: cpu.mShape.pointAtAngle(45).y - implicitSize / 2
+                id: tempBadge
+
+                readonly property real tempScale: {
+                    if (cpu.width <= 0)
+                        return 1;
+                    const normCpu = cpu.width / Math.max(1, 112 * Tokens.uiScale);
+                    const userFontScale = Math.max(0.5, Config.appearance.font.scale);
+                    return Math.max(0.45, Math.min(normCpu, (normCpu * 1.1) / userFontScale));
+                }
+
+                x: Math.min(cpu.width - implicitSize * 0.85, cpu.mShape.pointAtAngle(45).x - implicitSize / 2 + Math.min(Tokens.padding.medium, cpu.width * 0.12))
+                y: Math.max(-implicitSize * 0.15, cpu.mShape.pointAtAngle(45).y - implicitSize / 2)
 
                 shape: Cpu.temperature > 90 ? MaterialShape.SoftBurst : MaterialShape.Circle
                 color: Cpu.temperature > 90 ? Colours.palette.m3errorContainer : Colours.palette.m3secondaryContainer
                 implicitSize: {
-                    const size = Math.round(tempLabel.implicitHeight * 2);
+                    const maxBadge = Math.max(16, Math.round(cpu.width * 0.45));
+                    const size = Math.min(maxBadge, Math.round(tempLabel.implicitHeight * 2));
                     return size % 2 === 0 ? size : size + 1; // Ensure even size so center works properly
                 }
 
@@ -77,7 +94,7 @@ StyledRect {
 
                     text: Units.formatSensorTemp(Cpu.temperature)
                     color: Cpu.temperature > 90 ? Colours.palette.m3onErrorContainer : Colours.palette.m3secondary
-                    font: Tokens.font.title.builders.medium.scale(cpu.width / 112).width(50).build()
+                    font: Tokens.font.title.builders.medium.scale(tempBadge.tempScale).width(50).build()
                 }
             }
         }

@@ -13,8 +13,10 @@ StyledClippingRect {
     id: root
 
     required property var lock
+    property real rootHeight: 720
+    readonly property int cardPadding: Math.min(Tokens.padding.extraLarge, Math.max(Tokens.padding.small, Math.round(rootHeight * 0.04)))
 
-    implicitHeight: layout.implicitHeight + layout.anchors.margins * 2
+    implicitHeight: layout.implicitHeight + cardPadding * 2
     radius: Tokens.rounding.extraLarge
     color: Colours.tPalette.m3surfaceContainer
 
@@ -51,7 +53,7 @@ StyledClippingRect {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.margins: Tokens.padding.extraLarge
+        anchors.margins: root.cardPadding
         spacing: Tokens.spacing.extraSmall
 
         StyledText {
@@ -96,7 +98,7 @@ StyledClippingRect {
                 checked: Players.active?.isPlaying ?? false
                 disabled: !Players.active?.canTogglePlaying
                 onClicked: Players.active?.togglePlaying()
-                implicitWidth: implicitHeight + Tokens.padding.largeIncreased * 2
+                implicitWidth: implicitHeight + Math.min(Tokens.padding.largeIncreased * 2, Math.round(root.width * 0.15))
             }
 
             IconButton {
