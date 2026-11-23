@@ -739,10 +739,64 @@ Biri settings are cleanly bifurcated into two separate Nexus pages under the `bi
 - **Validation**:
   - Always verify generated configurations using `niri validate --config ~/.config/niri/config.kdl`.
 
+### Per-Screen Scaling & Layout Invariants (Bar, Sidebar, Lockscreen)
+
+These invariants prevent clipping, overflow, and misalignment across display scales (`0.8x`, `1.0x`, `1.25x`, `1.5x` with `ignoreDisplayScale: true`, and native fractional scales with `ignoreDisplayScale: false`):
+
+1. **Always use per-screen `Tokens.*`, never mix with global `Appearance.*`**:
+   - `services/Appearance.qml` is a global singleton that ignores per-screen `displayScale` and `ignoreDisplayScale`, whereas `Tokens.*` scales per screen.
+   - Mixing `Appearance.padding/spacing/rounding/font` with `Tokens.*` inside per-screen panels (`modules/bar/`, `modules/sidebar/`, `modules/lock/`) causes asymmetrical margins and misaligned workspace pills. Always use `Tokens.*`.
+2. **Never use unscaled `TokenConfig.sizes.*` in UI components**:
+   - Use per-screen scaled `Tokens.sizes.*` (not raw `TokenConfig.sizes.*`) for component dimensions (e.g. `NotifGroup.qml` notification images).
+   - Scale any hardcoded pixel dimensions or offsets (popout widths/heights, minimap strips, clock offsets) by `Tokens.uiScale`, and use content-driven minimums so text never clips at `1.25x`–`1.5x`.
+3. **`MaterialIcon.size` is in points (`1pt ≈ 1.33px`), not pixels**:
+   - Passing a pixel budget directly to `MaterialIcon.size` renders icons ~33% larger than intended and overflows pills/cells.
+   - When fitting a `MaterialIcon` inside a pixel-bounded container (such as bar workspace cells in `WindowIcon.qml`), derive the target pixel size from `cellWidth = innerWidth - Tokens.padding.extraSmall * 2` and divide by `1.33` for `MaterialIcon.size`.
+   - For text glyphs inside tight cells (`WorkspaceIcon.qml`), set `fontSizeMode: Text.Fit` and `minimumPointSize: 1`.
+4. **HiDPI `Image`s with `devicePixelRatio` `sourceSize` MUST declare explicit logical dimensions**:
+   - Setting `sourceSize.width: base * devicePixelRatio` without explicit logical `Layout.preferredWidth`/`Layout.preferredHeight` (or `width`/`height` + max bounds) causes Qt Quick to use the physical pixel `sourceSize` as `implicitWidth`, blowing the image up 1.5x–2x on HiDPI displays and clipping sibling text (fixed in `modules/sidebar/NotifDock.qml` and `modules/lock/NotifDock.qml`).
+5. **Animated `Binding`s MUST use `restoreMode: Binding.RestoreNone`**:
+   - In Qt 6, `Binding` defaults to `RestoreBindingOrValue`. On animated targets (such as `lockContent.implicitWidth`, `lockContent.implicitHeight`, and `lockBg.radius` in `modules/lock/LockSurface.qml`), omitting `restoreMode: Binding.RestoreNone` causes the property to immediately snap back to its pre-animation value the instant `unlockAnim` flips `when` to `false`.
+6. **Responsive collapse & screen-bound clamping**:
+   - Clamp card target dimensions and radii to screen bounds (`LockSurface.qml`).
+   - Normalize responsive visibility thresholds (e.g. `WeatherInfo.qml`, `Fetch.qml`) by content/font scale (`effectiveHeight = root.height / contentScale`), dampen hero typography/shape scales, and dynamically bound flexible items (`ProfilePic.maxHeight` in `Center.qml`) so high scales (`1.25x`–`1.5x`) never push `PasswordInput` or `Sleep`/`Reboot`/`Shutdown` controls off-screen.
+   - Normalize shape-relative ratios by `Tokens.uiScale` (and guard `width <= 0`) to prevent double-scaling (`Resources.qml`).
+7. **Bar edge clearance & entry filtering**:
+   - In `modules/bar/Bar.qml`, `vPadding` must clear at least `border.thickness + Tokens.padding.small`, and `bar.entries` must filter out unhandled entry IDs (e.g. `divider`) so phantom 0-height `Loader`s do not distort spacing or edge-index margin logic.
+   - Clamp `OsIcon` and `TrayItem` to `Tokens.sizes.bar.innerWidth`, clamp `ActiveWindow` `maxHeight`/`elideWidth` to `>= 0`, and avoid `StateLayer` overflow hacks that extend past a button's `implicitHeight` (`Power.qml`).
+
+### Performance, Idle CPU & Memory Invariants
+
+Idle desktop targets verified after hardening (`c2b9792e`): **~3–5% CPU** (down from ~39–42%), **`QSGRenderThread` ~0.0% idle** (down from 14% continuous 120Hz), **~823 MiB RSS / ~438 MiB Private_Dirty** (down from 1,455 MiB / 710 MiB). Preserve these invariants in all new and modified code:
+
+1. **Lazy-load hidden drawers & modals via `Loader`**:
+   - Wrap drawer/modal content trees in `Loader { active: (visibilities?.<prop> ?? false) || root.visible }` (matching `launcher`, `session`, `osd`, `dashboard`, `utilities`, `manga`, `novel`, `soundpanel`, `displayselect`, `hotkeys`, `shaderselect`).
+   - Never pin `hasBeenActive = true` via `Component.onCompleted: Qt.callLater(...)` — doing so keeps full drawer scene graphs and FBOs resident in RAM forever.
+   - **Precondition**: Verify there are **zero `IpcHandler`s** inside any component moved into a lazy `Loader`; keep `IpcHandler`s in `modules/Shortcuts.qml` or outside the `Loader` so IPC targets remain registered at startup.
+2. **Gate infinite animations, GIFs & polling timers on `visible` / active state**:
+   - Gate every infinite `NumberAnimation`, `RotationAnimation`, `SequentialAnimation`, `FrameAnimation`, `AnimatedImage.playing`, and media position `Timer` on `visible` (and drawer visibility where applicable).
+   - Always use `running: visible && ...` instead of `running: true; paused: !visible`. Paused animations remain registered with Qt's `QUnifiedTimer` and continue waking the render thread at display refresh rate (120Hz).
+3. **Gate offscreen FBOs (`layer.enabled`) strictly**:
+   - **Never** write `layer.enabled: opacity < 1` — that allocates an offscreen FBO while the item is completely invisible at `opacity === 0`.
+   - Use `layer.enabled: opacity > 0 && opacity < 1` for fade transitions (`Menu.qml`, `User.qml`, `Pages.qml`), `root.shadowOpacity > 0` for fullscreen shadows (`ContentWindow.qml`), and `root.opacity > 0 && Config.background.visualiser.blur` (with `visible: opacity > 0`) for the audio visualiser (`Visualiser.qml`).
+4. **Service polling & subprocess hygiene**:
+   - Use adaptive or backed-off polling intervals rather than tight fixed timers (e.g. `services/Tailscale.qml`: `4s` while transitioning, `15s` connected, `30s` disconnected, stop polling on exit code `127`; `services/Manga.qml` & `services/Novel.qml`: `2s` startup → `30s` once `serverReady`).
+   - When binding a backend health-poller's `running` property to a runtime plugin toggle (`GlobalConfig.extra.{manga,novel}`), stop `serverProcess` and reset `serverReady = false` inside `onRunningChanged` when `!running` — placing cleanup only inside `onTriggered` becomes unreachable when the toggle turns off at runtime.
+   - Share a single service-level timer for list-wide periodic updates (e.g. `services/Notifs.qml` shared 30s `ageUpdateTimer`, active only when `list.length > 0`) instead of spawning per-item timers (`NotifData.qml`).
+5. **Profiling & multi-scale verification**:
+   ```bash
+   # Per-thread CPU (QSGRenderThread must be ~0.0% when desktop is idle)
+   ps -L -p "$(pgrep -x quickshell)" -o tid,pcpu,comm
+
+   # Memory footprint (check Rss, Pss, Private_Dirty)
+   cat "/proc/$(pgrep -x quickshell)/smaps_rollup"
+   ```
+   - For layout/scaling changes, visually verify across `0.8x`, `1.0x`, `1.25x`, and `1.5x` (`ignoreDisplayScale: true`) plus `ignoreDisplayScale: false` (native display scale) using `grim` captures and trap-guarded `qs -c niri-caelestia-shell ipc call lock lock` / `unlock` cycles (always restoring `shell.json` on exit).
+
 ### Adding a new panel
 
-1. Add a boolean property to `DrawerVisibilities.qml`
-2. Create the panel's `Wrapper.qml` + `Content.qml` in a new `modules/myPanel/` directory
+1. Add a boolean property to `components/ScreenState.qml` and `components/DrawerVisibilities.qml`
+2. Create the panel's `Wrapper.qml` + `Content.qml` in a new `modules/myPanel/` directory — lazy-load `Content.qml` via `Loader { active: (visibilities?.myPanel ?? false) || root.visible }`, keep any `IpcHandler` outside the `Loader`, and use per-screen `Tokens.*`
 3. Add import + alias + instantiation in `Panels.qml`
 4. Add an `R {}` entry in `Regions.qml` for mask punching
 5. Add hover detection in `Interactions.qml` (if desired)

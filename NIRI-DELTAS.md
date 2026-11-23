@@ -359,3 +359,19 @@ To ensure customizations are never silently lost during future upstream pulls or
 3. **Aspect Ratio Cover Normalization:** Wallpapers of varying aspect ratios are normalized using dynamic cover crop math (`root.crop(img)`). Samplers inside `wallfx.frag` scale and center textures without distortion across multi-monitor setups or display resolution changes.
 4. **Threaded Render Loop Compatibility:** To honor `QSG_RENDER_LOOP=threaded`, texture decoders must use `asynchronous: true` and map computation is handled asynchronously by `scripts/wallfx.py` via `Process`.
 5. **C++ Configuration Preservation:** `BackgroundConfig` subobject `CONFIG_SUBOBJECT(BackgroundTransition, transition)` must be retained in `plugin/src/Caelestia/Config/backgroundconfig.hpp` alongside defaults in `shell.json`.
+
+---
+
+## 8. Scaling & Performance Hardening (Post-v2.5.0)
+
+Upstream ports touching `modules/lock/`, `modules/sidebar/`, `modules/bar/`, `modules/drawers/`, `components/controls/`, or `services/` must preserve these fork hardening fixes (merged in `c2b9792e`):
+
+* **Per-Screen Scaling (`modules/bar/`, `modules/sidebar/`, `modules/lock/`):**
+  - Per-screen panels use `Tokens.*` and `Tokens.sizes.*` (never global `Appearance.*` or unscaled `TokenConfig.sizes.*`), scale hardcoded pixel sizes by `Tokens.uiScale`, divide pixel targets by `1.33` for `MaterialIcon.size`, and declare explicit logical bounds on HiDPI `Image`s whose `sourceSize` is multiplied by `devicePixelRatio` (`NotifDock.qml`).
+  - `modules/lock/LockSurface.qml` clamps card geometry to screen bounds and sets `restoreMode: Binding.RestoreNone` on animated `lockContent`/`lockBg` `Binding`s so `unlockAnim` does not snap tiny.
+  - `modules/lock/Center.qml`, `WeatherInfo.qml`, `Fetch.qml`, and `Resources.qml` normalize responsive collapse thresholds by content/font scale and bound `ProfilePic.maxHeight` so `PasswordInput` and Sleep/Reboot/Shutdown controls remain on-screen at `1.25x`–`1.5x`.
+* **Idle CPU / RAM & FBO Hygiene:**
+  - Hidden drawers/modals (`dashboard`, `utilities`, `manga`, `novel`, `soundpanel`, `displayselect`, `hotkeys`, `shaderselect`) lazy-load via `Loader { active: (visibilities?.<prop> ?? false) || root.visible }` without `hasBeenActive` startup pinning.
+  - Infinite animations/GIFs/timers are gated with `running: visible && ...` (not `running: true; paused: ...`) so `QSGRenderThread` drops to `0.0%` idle.
+  - Offscreen FBOs (`layer.enabled`) are gated strictly (`opacity > 0 && opacity < 1`, `shadowOpacity > 0`, `opacity > 0 && Config.background.visualiser.blur`) rather than `opacity < 1` or unconditional `true`.
+  - `services/Manga.qml` and `services/Novel.qml` stop `serverProcess` and reset `serverReady = false` in `healthPoller.onRunningChanged` when disabled at runtime; `services/Notifs.qml` uses a single shared 30s `ageUpdateTimer` instead of per-notification timers; `services/Tailscale.qml` uses adaptive polling.

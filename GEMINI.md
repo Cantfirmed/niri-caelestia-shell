@@ -149,3 +149,25 @@ Refer to [`NIRI-DELTAS.md`](file:///home/patrick/.config/niri_caelestia/NIRI-DEL
 - **Filter Viewport Animations**: Niri emits `WindowLayoutsChanged` on every frame of horizontal camera scrolling (`tile_pos_in_workspace_view`). Event handlers in `niriipc.cpp` must filter out sub-pixel animation updates and only trigger model resets (`resetData()`) when structural layout (`pos_in_scrolling_layout`) or dimensions (`window_size`) change.
 - **Prevent Socket Buffer Starvation**: Niri's IPC server enforces a strict 64-item event stream channel buffer. Blocking the Qt main thread during event bursts causes buffer overflow and forced client disconnection. Maintain socket receive buffer (`SO_RCVBUF`) at 1MB and avoid heavy synchronous operations in IPC callbacks.
 
+---
+
+## 8. Per-Screen Scaling & Layout Invariants
+
+- **Per-Screen `Tokens.*` Only:** Always use per-screen `Tokens.*` inside per-screen panels (`bar`, `sidebar`, `lock`); never mix global `Appearance.*` (`services/Appearance.qml`) with `Tokens.*`, because `Appearance.*` ignores per-screen `displayScale` / `ignoreDisplayScale`.
+- **No Unscaled `TokenConfig.sizes.*`:** Never reference raw `TokenConfig.sizes.*` in UI components; use `Tokens.sizes.*` and scale hardcoded pixel dimensions/offsets by `Tokens.uiScale`.
+- **`MaterialIcon.size` Points vs. Pixels:** `MaterialIcon.size` is in points (`1pt ≈ 1.33px`), not pixels. When fitting an icon inside a pixel-bounded container (e.g. bar cells/pills), derive the pixel size from `cellWidth` and divide by `1.33`.
+- **HiDPI `Image` Logical Bounds:** Any `Image` with `sourceSize` multiplied by `devicePixelRatio` MUST declare explicit logical `Layout.preferredWidth`/`Layout.preferredHeight` (or `width`/`height`) so it does not blow up 1.5x–2x on HiDPI displays.
+- **`Binding.RestoreNone` on Animated Targets:** `Binding`s on animated lockscreen card properties (`modules/lock/LockSurface.qml`) MUST set `restoreMode: Binding.RestoreNone` so `unlockAnim` does not snap tiny when `when` flips `false`.
+- **Scale-Aware Collapse & Screen Clamping:** Normalize responsive collapse thresholds (`WeatherInfo`, `Fetch`, `Center`) by content/font scale and clamp card/control geometry to screen bounds so `1.25x`–`1.5x` scales never push `PasswordInput` or session buttons off-screen.
+- **Bar Clearance & Entry Hygiene:** Bar `vPadding` must clear `border.thickness + Tokens.padding.small`, `bar.entries` must filter unhandled IDs (like `divider`), and bar buttons must avoid `StateLayer` overflow hacks.
+
+---
+
+## 9. Performance, Idle CPU & Memory Invariants
+
+- **Lazy-Load Hidden Drawers & Modals:** Wrap hidden drawer/modal content in `Loader { active: (visibilities?.<prop> ?? false) || root.visible }`. Verify zero `IpcHandler`s live inside lazy-loaded children, and never pin `hasBeenActive = true` at startup.
+- **Gate Infinite Animations & Timers on `visible`:** Gate all infinite `NumberAnimation`, `RotationAnimation`, `SequentialAnimation`, `FrameAnimation`, `AnimatedImage.playing`, and polling timers on `visible` / active state using `running: visible && ...` (never `running: true; paused: ...`) so `QUnifiedTimer` unregisters when hidden.
+- **Strict `layer.enabled` FBO Gating:** Never use `layer.enabled: opacity < 1` (allocates FBOs at `opacity === 0`). Gate strictly on `opacity > 0 && opacity < 1` for fades, `shadowOpacity > 0` for fullscreen shadows, and `opacity > 0 && blur` for the visualiser.
+- **Service Polling & Cleanup Hygiene:** Use adaptive/backed-off polling intervals (`Tailscale`, `Manga`, `Novel`), stop background server processes and reset `serverReady = false` in `onRunningChanged` when a plugin toggle is disabled at runtime, and use a single shared timer (`Notifs.qml`) for list-wide updates instead of per-item timers.
+- **Profiling & Multi-Scale Verification:** Verify idle threads with `ps -L` (`QSGRenderThread` ~0.0% idle) and memory via `smaps_rollup` (`Rss`/`Pss`/`Private_Dirty`); visually test scaling across `0.8x`/`1.0x`/`1.25x`/`1.5x` plus `ignoreDisplayScale=false` using `grim` and trap-guarded `ipc call lock lock`/`unlock`.
+
